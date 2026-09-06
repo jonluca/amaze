@@ -1,5 +1,7 @@
 # AmazeSolver
 
+The repository now also includes **[Prism Roll for iOS](ios/README.md)**: a native 3D maze-painting game with unlimited, timed, and limited-move modes, daily challenges and streaks, collectible coins, 12 ball skins, four world themes, rewarded ads, and Game Center/StoreKit integration. Open `ios/PrismRoll.xcodeproj` to play in the simulator. The original solver and its notes remain below.
+
 There is a pretty fun game called "Amaze!!!", [iOS link](https://itunes.apple.com/us/app/amaze/id1452526406?mt=8), in which the premise is to cover a full game board with paint. 
 
 I have been playing it somewhat obsessively while traveling for the past few months (as seen by the fact that I'm on level 14073 - don't mind that, though, as the levels actually reset and wrap around to the beginning after a hundred or so, which was a disappoinment).

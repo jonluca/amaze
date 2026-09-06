@@ -1,0 +1,33 @@
+{
+  "identifier": "db9c2663-623e-4237-8f35-8ad44cb7cceb",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "e95bdb5a-5676-4947-b626-3dd9082219bc",
+      "localizations": [
+        {
+          "description": "Remove between-level ads. Optional reward videos remain.",
+          "displayName": "No Ads",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.jonluca.prismroll.removeads",
+      "referenceName": "No Ads - Local Test Only",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_askToBuyEnabled": false,
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

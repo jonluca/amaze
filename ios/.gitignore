@@ -1,0 +1,14 @@
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+artifacts/
+.DS_Store
+
+# Local App Store account records, uploads, and release evidence.
+release/
+release-screenshots/
+release-draft/*
+!release-draft/storekit/
+release-draft/storekit/*
+!release-draft/storekit/PrismRoll-Local.storekit

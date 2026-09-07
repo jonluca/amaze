@@ -27,6 +27,6 @@ The change adds 13 haptic lifecycle/pattern tests, two completion-clock tests, n
 - `FinalTests.xcresult`: 78 native tests and five UI tests passed, including three consecutive Classic levels, fast short/diagonal swipes outside the board, native controls, and Time Rush progression, pause/resume, navigation, and restart.
 - `PolishedGeometryTests.xcresult`: all 12 geometry/layout tests and the three-level UI playthrough passed after the final snapshot anchoring adjustment.
 - `polished-level-entry.mp4`: the final iPhone 17 simulator recording was inspected frame by frame. The completed board stays visible, exits upward, and the incoming board settles without a blank frame or a downward jump. `level-transition-preview.mp4` is a short excerpt.
-- `validation-result.json` records these results and final rendering/haptic source hashes. The checked changes are local; this pass did not archive or upload a build.
+- `validation-result.json` records these results and final rendering/haptic source hashes. The checked changes ship in **TestFlight 1.0.0 (7)**; see [release verification](VALIDATION.md).
 
 Simulator checks validate timing and lifecycle, but cannot validate the physical sensation. Final intensity tuning requires play on an iPhone with Core Haptics.

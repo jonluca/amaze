@@ -1,6 +1,6 @@
 # Tighter Time Rush timing
 
-September 7, 2026. Local changes after TestFlight 1.0.0 (6); not yet uploaded.
+September 7, 2026. Included in **TestFlight 1.0.0 (7)**; see [release verification](VALIDATION.md).
 
 Build 6 allowed 0.95–0.75 seconds for every move in a stored covering route, plus ten seconds and a one-minute minimum. That route can include inefficient travel. Charging the same allowance for painting and predictable returns produced overly long rounds.
 

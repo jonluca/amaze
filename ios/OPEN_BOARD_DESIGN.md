@@ -36,4 +36,4 @@ Validation: 28 native checks and 3 gameplay UI flows passed in ios/artifacts/Maz
 
 Evidence: ios/artifacts/MazeDepth/se-level30.png, phone-level29.png, se-play-proof.json, native-ui.log and tested-source.json. Tests used build 6 plus the depth/color changes in an isolated source copy while separate tasks modified Time Rush and haptic/transition behavior. Their later integration additions to PlayView and MazeSceneRenderer are preserved; they were not part of this isolated test run.
 
-No commit, version change or TestFlight upload was performed for this follow-up.
+This follow-up ships in **TestFlight 1.0.0 (7)**; see [release verification](VALIDATION.md).

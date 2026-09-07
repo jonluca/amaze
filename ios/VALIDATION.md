@@ -1,5 +1,19 @@
 # Validation — September 7, 2026
 
+## Build 7 TestFlight release
+
+Verified **September 7, 2026 at 1:36 PM Pacific**: **1.0.0 (7)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The sole existing tester retains access, automatic notifications are enabled, and the 1,055-character en-US testing notes match exactly. Installation of build 7 and email inbox delivery were not independently verified.
+
+Build 7 includes [rolling haptics and vertical level transitions](HAPTICS_TRANSITIONS.md), [deeper boards and contrasting paint](OPEN_BOARD_DESIGN.md#depth-and-contrasting-paint-follow-up), [tighter Time Rush timing](TIME_RUSH_TIMING.md), and the Duel-entry save fix. Entering a Duel now persists the latest solo countdown and retires the active daily-session flag while preserving both saved runs. The release commit also fixes Python solver invalid-input hangs and incorrect graph starting positions, and restores the missing completion-clock source in the engine test package.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34159698095) compiled source `0d15da2b48f37dbb7fcc436a11a83086d2ce3d5f` with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Downloaded archive checksum, source provenance, package lock, and requested entitlements matched before local distribution signing and export. The IPA passed strict deep signature, embedded profile/certificate, all five distribution entitlements including Game Center, arm64, production ads, three privacy manifests, AppIcon linkage, absence of Debug/test artifacts, and executable/archive/dSYM UUID checks. Original compiler and SDK metadata were retained.
+
+A clean `git archive` of that exact commit passed **85 engine/input tests in Release configuration** and **six Python regression tests**. **50 native state tests** passed after the Duel persistence fix; its two new tests failed before the fix. The build 7 simulator passed **three gameplay UI flows** covering short flicks, three automatic Classic advances, and Time Rush stage progression, pause, Journey resume, and restart. Screenshots of Classic level 4 and the restarted 55-second Time Rush round were visually inspected. Test counts overlap; physical haptic sensation and sustained device ProMotion performance require device testing.
+
+IPA SHA-256: `788433866c402d53f2ddd21f7e42d44efa600b319301855ad1d1bf205918c771`. Size: **6,209,260 bytes**. Build ID: `07eadec0-d553-4662-87a4-c0c668997b83`. Private evidence is in `release/build7/`, including `release-result.json`, `production-verification.json`, clean-source test results, UI results, and exact audience/notes readbacks. Archive, IPA, clean source, and exported UI screenshots are in `artifacts/ProductionBuild7/`.
+
+The App Store version remains attached to **build 3 and Waiting for Review**, matching the pre-release snapshot. Existing TestFlight builds and the audience remain unchanged. Unrelated Python solver and screenshot-import scratch changes, images, and their staged state were preserved.
+
 ## Build 6 TestFlight release
 
 Verified **September 7, 2026 at 12:18 PM Pacific**: **1.0.0 (6)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. Its sole tester is the existing owner account; no individual or external audience was added. Automatic notifications are enabled, the 1,206-character en-US testing notes match exactly, and Apple's processed masked and unmasked icons were visually verified in the browser. Email inbox delivery and installation of build 6 are not independently verified.

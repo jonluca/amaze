@@ -23,9 +23,9 @@ The [reference audit](FEATURE_AUDIT.md) distinguishes official current features,
 
 Open `PrismRoll.xcodeproj`, select the **PrismRoll** scheme and an iPhone/iPad simulator, then Run. Dependencies are pinned in `Package.resolved`: Google Mobile Ads 13.9.0 and User Messaging Platform 3.1.0. Deployment target is iOS 17.
 
-For a physical device, choose your development team in Signing & Capabilities. The project contains the Prism Roll bundle and team identifiers; a separate publisher needs its own signing, App Store, and advertising configuration. Prism Roll's App Store record and No Ads product have been created. A signed verification archive was produced with a beta SDK, but no build has been uploaded or submitted.
+For a physical device, choose your development team in Signing & Capabilities. The project contains the Prism Roll bundle and team identifiers; a separate publisher needs its own signing, App Store, and advertising configuration. Prism Roll's App Store record and No Ads product have been created. Version **1.0.0 (2)** has a production archive built on GitHub with Xcode **26.6 (17F113)** and the **iOS 26.5 SDK**, followed by local distribution signing and export. Upload, processing, and review status are tracked in [VALIDATION.md](VALIDATION.md).
 
-The current release configuration is build **2**. Production AdMob app and unit identifiers have been verified and configured; live publisher ad delivery and consent remain unverified. The unsigned generic iOS Release build passed in 11.6 seconds: `artifacts/ProductionConfigBuild2/Build/Products/Release-iphoneos/PrismRoll.app`, with checks recorded in `artifacts/ProductionConfigBuild2/verification.json`. The output is version 1.0.0 (2), arm64, using SDK `iphoneos27.0`; all three production identifiers pass the Release guard, the four Debug bypass strings and local StoreKit fixture are absent, and the support/privacy URLs are compiled in. The configured [support](https://thoughtahead.com/prism-roll/support.html) and [privacy policy](https://thoughtahead.com/prism-roll/privacy.html) URLs await publication verification. See [VALIDATION.md](VALIDATION.md) for the distinction between current release status and earlier validation results.
+Version **1.0.0 (2)** and **No Ads** are **Waiting for Review**. Production AdMob identifiers and published privacy messages are configured; sample-ad requests and US opt-out were exercised, while production serving and European consent delivery remain unverified. The production archive contains the app and both Google SDK privacy manifests. The public [support](https://thoughtahead.com/prism-roll/support.html) and [privacy policy](https://thoughtahead.com/prism-roll/privacy.html) URLs are verified; see [VALIDATION.md](VALIDATION.md) for release evidence and service limits.
 
 The project is generated from `project.yml` using [XcodeGen](https://github.com/yonaskolb/XcodeGen). Regenerate after adding source files:
 
@@ -36,6 +36,16 @@ xcodebuild -project PrismRoll.xcodeproj -scheme PrismRoll \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO build
 ```
+
+## Production archive and local export
+
+The manual [production archive workflow](../.github/workflows/ios-production-archive.yml) runs on GitHub's `macos-26` image with `DEVELOPER_DIR` scoped to `/Applications/Xcode_26.6.app/Contents/Developer`. It archives the shared **PrismRoll** scheme in Release for physical iOS devices with signing disabled. It checks the toolchain, version/build, production ad identifiers, arm64 executable, and privacy manifests, then uploads the archive, source entitlements, package lock, provenance, and checksum. No Apple signing identity, provisioning profile, or private key is sent to GitHub.
+
+[Build 2's successful run](https://github.com/jonluca/amaze/actions/runs/34068850920) archived source commit `611143747ec64c7bf3332f810167637533cb4882`. Its downloaded archive checksum and executable SDK metadata were verified locally. The local export passed strict code-signature verification and matched the app's dSYM UUID; the production SDK metadata remained unchanged.
+
+For another release, update the workflow's expected version/build and configuration checks before dispatching it for the intended source commit. Download its archive artifact and verify `SHA256SUMS` before extraction. Sign and export on the release Mac using its existing distribution identity and App Store provisioning profile.
+
+**Preserve entitlements before export.** Exporting this unsigned archive directly omitted Game Center from the resulting signature. The successful route signed the archived app locally with entitlements derived from the project's requested capabilities and the matching provisioning profile, then ran `xcodebuild -exportArchive` with the local distribution configuration. Verify the final IPA's signature and embedded profile, including the correct application and team identifiers, `com.apple.developer.game-center = true`, `get-task-allow = false`, and `beta-reports-active = true`. Do not change SDK or Xcode metadata to make an archive appear to use a different toolchain.
 
 ## Test
 
@@ -61,9 +71,9 @@ Use iOS **26.1** for the shared scheme's local StoreKit tests; the same fixture 
 
 ## Advertising setup
 
-Debug uses Google's official test ad units. Release is configured with verified publisher-owned app, rewarded, and interstitial identifiers and rejects Google's sample identifiers. Production inventory and published consent-message behavior still need live verification. Every ad request asks for non-personalized ads; publisher first-party ID and personalization are disabled, and restricted data processing is enabled globally. The first release is intended to use Google demand only. See [Ads/README.md](PrismRoll/Ads/README.md) for exact keys and configuration.
+Debug uses Google's official test ad units. Release is configured with verified publisher-owned app, rewarded, and interstitial identifiers and rejects Google's sample identifiers. Production serving awaits Google's account/app approval and public-store linking. Every ad request asks for non-personalized ads; publisher first-party ID and personalization are disabled, and restricted data processing is enabled globally. Published regional messages select Google, but this does not imply Google-only worldwide demand. See [Ads/README.md](PrismRoll/Ads/README.md) for exact keys and configuration and [VALIDATION.md](VALIDATION.md) for US and European consent results.
 
-The app does not request tracking authorization. That release policy requires the live advertising configuration to avoid cross-company tracking; non-personalized ads still collect operational data and do not remove consent obligations. Coins are local gameplay currency; the separate No Ads purchase uses verified StoreKit entitlements. See [purchase setup](PrismRoll/Services/PURCHASES.md) and [Duel setup](PrismRoll/Services/Duel/README.md). Distribution still requires an eligible final archive, verified live services and policy URLs, and privacy disclosures matching the actual configuration. No copyrighted game assets are bundled.
+The app does not request tracking authorization. That release policy requires the live advertising configuration to avoid cross-company tracking; non-personalized ads still collect operational data and do not remove consent obligations. Coins are local gameplay currency; the separate No Ads purchase uses verified StoreKit entitlements. See [purchase setup](PrismRoll/Services/PURCHASES.md) and [Duel setup](PrismRoll/Services/Duel/README.md). The submitted app uses published policy URLs and privacy disclosures matching the configured SDKs. No reference game assets are bundled.
 
 ## Source layout
 

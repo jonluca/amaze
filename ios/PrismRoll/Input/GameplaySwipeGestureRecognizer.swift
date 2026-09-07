@@ -31,11 +31,7 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         guard isEnabled else { return }
         for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
-            guard sequence.begin(ObjectIdentifier(touch), at: touch.location(in: view)) else {
-                // An extra finger must not cancel a stroke already in progress.
-                ignore(touch, for: event)
-                continue
-            }
+            guard sequence.begin(ObjectIdentifier(touch), at: touch.location(in: view)) else { continue }
             strokeSessionID = sessionID
         }
     }

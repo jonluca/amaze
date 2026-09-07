@@ -48,7 +48,11 @@ struct MazeMotionTimeline {
             // Floating-point remainder must not cost another whole display
             // frame after the ball has effectively reached its destination.
             if move.duration - elapsed < 0.000000001 { elapsed = move.duration }
-            let fraction = min(1, elapsed / move.duration)
+            let timeFraction = min(1, elapsed / move.duration)
+            // Start at full speed, then settle into the wall without a hard
+            // linear stop. This monotonic cubic stays ahead of linear motion,
+            // reaches exactly one with zero velocity, and never overshoots.
+            let fraction = timeFraction + timeFraction * timeFraction * (1 - timeFraction)
             let origin = SIMD2(Float(move.origin.column), Float(move.origin.row))
             let target = SIMD2(Float(move.position.column), Float(move.position.row))
             let next = origin + (target - origin) * Float(fraction)
@@ -61,7 +65,7 @@ struct MazeMotionTimeline {
                 }
                 crossedCells = reached
             }
-            if fraction >= 1 {
+            if timeFraction >= 1 {
                 painted.formUnion(move.painted)
                 if move.isComplete { update.completedAt = move.position }
                 moves.removeFirst()

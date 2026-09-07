@@ -15,6 +15,8 @@ final class MazeSceneRenderer {
     private let shadowMaterial = SCNMaterial()
     private let ballRoot = SCNNode()
     private let ball = SCNNode(geometry: SCNSphere(radius: 0.405))
+    private let paintEffects = MazePaintEffects()
+    var preparationResources: [Any] { [scene] + paintEffects.preparationResources }
     private var paintTiles: [GridCell: SCNNode] = [:]
     private var pathMarkers: [GridCell: SCNNode] = [:]
     private var coins: [GridCell: SCNNode] = [:]
@@ -103,6 +105,7 @@ final class MazeSceneRenderer {
         }
         if changedSkin || changedLevel {
             skinID = skin.id
+            paintEffects.setTint(paintTint)
             let material = BallMaterialFactory.paint(paintTint)
             for tile in paintTiles.values { tile.geometry?.materials = [material] }
             if theme != .timber, let accent = boardRoot.childNode(withName: "board-accent", recursively: false)?.geometry?.firstMaterial {
@@ -168,10 +171,10 @@ final class MazeSceneRenderer {
             }
         }
         SCNTransaction.commit()
-        // A fast frame may cross several cells; one small splash retains the
-        // wet trail without allocating dozens of overlapping particle meshes.
-        if let cell = frame.paintedCells.last { MazePaintEffects.splash(at: cell, level: level, root: boardRoot, tint: paintTint, delay: 0) }
-        if let cell = frame.completedAt { MazePaintEffects.celebrate(at: cell, level: level, root: boardRoot, ball: ball, tint: paintTint, delay: 0) }
+        // A fast frame may cross several cells; a bounded, prepared splash pool
+        // keeps the wet trail without uploading geometry during movement.
+        if let cell = frame.paintedCells.last { paintEffects.splash(at: cell, level: level, root: boardRoot) }
+        if let cell = frame.completedAt { paintEffects.celebrate(at: cell, level: level, root: boardRoot, ball: ball) }
     }
 
     func stop() {
@@ -193,6 +196,7 @@ final class MazeSceneRenderer {
 
     private func snap(to position: GridCell, painted: Set<GridCell>, level: MazeLevel) {
         motion.reset(position: position, painted: painted)
+        paintEffects.reset()
         ballRoot.removeAllActions()
         ball.removeAllActions()
         boardRoot.enumerateChildNodes { node, _ in node.removeAllActions() }
@@ -208,7 +212,6 @@ final class MazeSceneRenderer {
             coin.opacity = painted.contains(cell) ? 0 : 1
             if !painted.contains(cell) { MazeCoinBuilder.animate(coin, reduceMotion: reduceMotion) }
         }
-        for child in boardRoot.childNodes where child.name == "celebration" || child.name == "paint-effect" { child.removeFromParentNode() }
     }
 
     private func rebuildPathMarkers() {

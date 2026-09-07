@@ -16,13 +16,14 @@ struct BallSceneView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.isOpaque = false
         view.antialiasingMode = .multisampling4X
-        view.preferredFramesPerSecond = 30
+        SceneFrameRatePolicy.apply(to: view)
         view.isUserInteractionEnabled = false
         updateUIView(view, context: context)
         return view
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
+        SceneFrameRatePolicy.apply(to: view)
         context.coordinator.update(skin: skin, isAnimated: isAnimated, reduceMotion: reduceMotion)
         view.isPlaying = isAnimated && !reduceMotion
     }

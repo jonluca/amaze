@@ -15,7 +15,7 @@ final class MazeSceneCoordinator: NSObject {
     private var preparationRevision: Int?
     private var firstFrameObserver: MazeFirstFrameObserver?
     private var displayLink: CADisplayLink?
-    private var lastFrameTimestamp: CFTimeInterval?
+    private var frameClock = MazeFrameClock()
     private var isStopped = false
     private var isActive = true
     private var publishedReady: Bool?
@@ -33,7 +33,7 @@ final class MazeSceneCoordinator: NSObject {
         view.backgroundColor = .clear
         view.isOpaque = false
         view.antialiasingMode = .multisampling4X
-        view.preferredFramesPerSecond = 60
+        SceneFrameRatePolicy.apply(to: view)
         view.autoenablesDefaultLighting = false
         view.allowsCameraControl = false
         view.isPlaying = false
@@ -43,14 +43,15 @@ final class MazeSceneCoordinator: NSObject {
         }
         view.onVisibilityChange = { [weak self] visible in
             guard let self else { return }
-            self.lastFrameTimestamp = nil
+            self.frameClock.reset()
+            if let view = self.canvasView { SceneFrameRatePolicy.apply(to: view, displayLink: self.displayLink) }
             self.displayLink?.isPaused = !visible || !self.isReady || !self.isActive
             self.canvasView?.isPlaying = visible && self.isReady && self.isActive
         }
         renderer.onPreparationNeeded = { [weak self] in self?.beginPreparation() }
         renderer.onResourcesReady = { [weak self] in self?.prepareSceneIfReady() }
         let link = CADisplayLink(target: self, selector: #selector(advanceFrame(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        SceneFrameRatePolicy.apply(to: view, displayLink: link)
         link.isPaused = true
         link.add(to: .main, forMode: .common)
         displayLink = link
@@ -81,7 +82,7 @@ final class MazeSceneCoordinator: NSObject {
     func setActive(_ active: Bool) {
         guard active != isActive else { return }
         isActive = active
-        lastFrameTimestamp = nil
+        frameClock.reset()
         displayLink?.isPaused = !active || !isReady || canvasView?.window == nil
         canvasView?.isPlaying = active && canvasView?.scene != nil
         publishResultIfReady()
@@ -156,7 +157,7 @@ final class MazeSceneCoordinator: NSObject {
         publishReadiness()
         preparationRevision = nil
         firstFrameObserver = nil
-        lastFrameTimestamp = nil
+        frameClock.reset()
         displayLink?.isPaused = true
         canvasView?.delegate = nil
         canvasView?.isPlaying = false
@@ -172,7 +173,7 @@ final class MazeSceneCoordinator: NSObject {
         preparationRevision = revision
         // SceneKit uploads resources and compiles its pipelines on its own
         // background preparation thread, before the scene becomes visible.
-        view.prepare([renderer.scene]) { [weak self, weak view] _ in
+        view.prepare(renderer.preparationResources) { [weak self, weak view] _ in
             DispatchQueue.main.async {
                 guard let self, let view, !self.isStopped,
                       self.renderer.contentRevision == revision else { return }
@@ -192,7 +193,7 @@ final class MazeSceneCoordinator: NSObject {
         canvasView?.setPreparing(false)
         canvasView?.delegate = nil
         firstFrameObserver = nil
-        lastFrameTimestamp = nil
+        frameClock.reset()
         displayLink?.isPaused = !isActive || canvasView?.window == nil
         publishReadiness()
         publishResultIfReady()
@@ -200,8 +201,7 @@ final class MazeSceneCoordinator: NSObject {
 
     @objc private func advanceFrame(_ link: CADisplayLink) {
         guard isReady else { return }
-        let interval = lastFrameTimestamp.map { link.timestamp - $0 } ?? link.duration
-        lastFrameTimestamp = link.timestamp
+        let interval = frameClock.interval(timestamp: link.timestamp, targetTimestamp: link.targetTimestamp)
         renderer.advance(by: interval)
         publishResultIfReady()
     }

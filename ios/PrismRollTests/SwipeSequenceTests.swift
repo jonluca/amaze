@@ -13,9 +13,9 @@ final class SwipeSequenceTests: XCTestCase {
         }
     }
 
-    func testSubthresholdTapAndAmbiguousDiagonalDoNotBecomeMovesAtLiftOff() {
-        for point in [CGPoint(x: 7.99, y: 1), CGPoint(x: 1, y: -7.99),
-                      CGPoint(x: 20, y: 20), CGPoint(x: -20, y: -20)] {
+    func testSubthresholdTravelDoesNotBecomeAMoveAtLiftOff() {
+        for point in [CGPoint(x: 7.99, y: 0), CGPoint(x: 0, y: -7.99),
+                      CGPoint(x: 5.6, y: 5.6), CGPoint(x: -5.6, y: -5.6)] {
             var sequence = SwipeSequence<Int>()
             sequence.begin(1, at: .zero)
             XCTAssertNil(sequence.end(1, at: point))
@@ -50,14 +50,55 @@ final class SwipeSequenceTests: XCTestCase {
         XCTAssertFalse(sequence.hasActiveContacts)
     }
 
-    func testExtraFingerBeforeDirectionIsKnownDoesNotCancelPrimaryStroke() {
+    func testOverlappingFingerIsTrackedBeforeFirstDirectionIsKnown() {
         var sequence = SwipeSequence<Int>()
         XCTAssertTrue(sequence.begin(1, at: .zero))
-        XCTAssertFalse(sequence.begin(2, at: CGPoint(x: 100, y: 100)))
-        XCTAssertNil(sequence.direction(for: 2, at: CGPoint(x: 100, y: 80)))
+        XCTAssertTrue(sequence.begin(2, at: CGPoint(x: 100, y: 100)))
+        XCTAssertEqual(sequence.direction(for: 2, at: CGPoint(x: 100, y: 80)), .up)
         XCTAssertNil(sequence.end(2, at: CGPoint(x: 100, y: 70)))
         XCTAssertTrue(sequence.contains(1))
         XCTAssertEqual(sequence.end(1, at: CGPoint(x: -8, y: 0)), .left)
+    }
+
+    func testFastAngledFlicksResolveAtLiftOffAcrossTheWholeCircle() {
+        for degrees in 0..<360 {
+            let angle = Double(degrees) * .pi / 180
+            let point = CGPoint(x: cos(angle) * 9, y: sin(angle) * 9)
+            let expected: MoveDirection = abs(point.x) > abs(point.y)
+                ? (point.x > 0 ? .right : .left) : (point.y > 0 ? .down : .up)
+            var sequence = SwipeSequence<Int>()
+            sequence.begin(1, at: .zero)
+            XCTAssertEqual(sequence.end(1, at: point), expected, "Dropped flick at \(degrees) degrees")
+            XCTAssertFalse(sequence.hasActiveContacts)
+        }
+    }
+
+    func testDiagonalWaitsForClarityButCannotDisappearAtLiftOff() {
+        var sequence = SwipeSequence<Int>()
+        sequence.begin(1, at: .zero)
+        XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 11, y: 12)))
+        XCTAssertEqual(sequence.end(1, at: CGPoint(x: 11, y: 12)), .down)
+        XCTAssertNil(sequence.end(1, at: CGPoint(x: 11, y: 12)))
+    }
+
+    func testShortAngledFlickUsesTravelDistanceRatherThanAnAxisAlignedSquare() {
+        var sequence = SwipeSequence<Int>()
+        sequence.begin(1, at: .zero)
+        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 7, y: 4)), .right)
+        XCTAssertNil(sequence.end(1, at: CGPoint(x: 7, y: 4)))
+    }
+
+    func testUnrecognizedHeldContactAndCancelledContactDoNotBlockFreshFlicks() {
+        var sequence = SwipeSequence<Int>()
+        sequence.begin(1, at: .zero)
+        sequence.begin(2, at: .zero)
+        sequence.cancel(2)
+        for contact in 3..<103 {
+            XCTAssertTrue(sequence.begin(contact, at: .zero))
+            XCTAssertEqual(sequence.end(contact, at: CGPoint(x: 0, y: -9)), .up)
+        }
+        XCTAssertNil(sequence.end(1, at: CGPoint(x: 1, y: 1)))
+        XCTAssertFalse(sequence.hasActiveContacts)
     }
 
     func testRapidSequentialStrokesHaveNoCooldownAndKeepEveryDirection() {

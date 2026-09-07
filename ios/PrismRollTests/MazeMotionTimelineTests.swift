@@ -4,6 +4,126 @@ import simd
 @testable import PrismRoll
 
 final class MazeMotionTimelineTests: XCTestCase {
+    func testSlideStartsImmediatelyAndSettlesWithoutOvershooting() {
+        for length in [1, 4, 10] {
+            let move = squareMoves(count: 1, length: length)[0]
+            var timeline = MazeMotionTimeline()
+            timeline.reset(position: move.origin, painted: [move.origin])
+            timeline.enqueue(move)
+            var previous: Float = 0
+            var firstStep: Float = 0
+            var lastStep: Float = 0
+            let sampleCount = 1_000
+            for sample in 1...sampleCount {
+                let update = timeline.advance(by: move.duration / Double(sampleCount))
+                let position = timeline.position.x
+                let step = position - previous
+                if sample == 1 { firstStep = step }
+                if sample == sampleCount { lastStep = step }
+                XCTAssertGreaterThan(step, 0, "A moving ball must not hesitate or reverse")
+                XCTAssertLessThanOrEqual(position, Float(length), "The ball crossed a wall")
+                XCTAssertGreaterThanOrEqual(position + 0.00001, Float(length * sample) / Float(sampleCount),
+                                            "Easing must not lag behind the original linear movement")
+                XCTAssertEqual(update.rotations.reduce(SIMD2<Float>.zero, +).x, step, accuracy: 0.00001,
+                               "Rotation must follow the same distance as the ball")
+                XCTAssertEqual(update.completedAt != nil, sample == sampleCount)
+                previous = position
+            }
+            XCTAssertGreaterThan(firstStep, Float(length) * 0.0009, "Do not add a slow ease-in before responding")
+            XCTAssertLessThan(lastStep, firstStep * 0.01, "The ball should decelerate into the final position")
+            XCTAssertEqual(timeline.position.x, Float(length))
+            XCTAssertFalse(timeline.isMoving)
+        }
+    }
+
+    func testTrajectoryAndPaintAgreeAtCommonThirtySixtyAndOneTwentyHertzSamples() {
+        for count in [1, 8, 32] {
+            for length in [1, 4, 10] {
+                let moves = squareMoves(count: count, length: length)
+                var timelines = (0..<3).map { _ in MazeMotionTimeline() }
+                for index in timelines.indices {
+                    timelines[index].reset(position: moves[0].origin, painted: [moves[0].origin])
+                    for move in moves { timelines[index].enqueue(move) }
+                }
+                for _ in 0..<4 {
+                    for index in timelines.indices {
+                        let subframes = 1 << index
+                        for _ in 0..<subframes {
+                            _ = timelines[index].advance(by: 1 / Double(30 * subframes))
+                        }
+                    }
+                    for timeline in timelines.dropFirst() {
+                        XCTAssertEqual(timeline.position.x, timelines[0].position.x, accuracy: 0.00001)
+                        XCTAssertEqual(timeline.position.y, timelines[0].position.y, accuracy: 0.00001)
+                        XCTAssertEqual(timeline.painted, timelines[0].painted,
+                                       "Paint cannot depend on the display refresh rate")
+                        XCTAssertEqual(timeline.pendingMoveCount, timelines[0].pendingMoveCount)
+                    }
+                }
+                XCTAssertTrue(timelines.allSatisfy { !$0.isMoving })
+            }
+        }
+    }
+
+    func testPaintCrossingsFollowEasedPositionInsteadOfElapsedTime() {
+        let move = squareMoves(count: 1, length: 4)[0]
+        var timeline = MazeMotionTimeline()
+        timeline.reset(position: move.origin, painted: [move.origin])
+        timeline.enqueue(move)
+        // At half the time, the ball has reached 2.5 cells. A linear paint
+        // clock would still leave the third cell unpainted behind the ball.
+        let update = timeline.advance(by: move.duration / 2)
+        XCTAssertEqual(timeline.position.x, 2.5, accuracy: 0.00001)
+        XCTAssertEqual(update.paintedCells, Array(move.path.prefix(3)))
+        XCTAssertEqual(update.rotations, [SIMD2<Float>(2.5, 0)])
+        XCTAssertNil(update.completedAt)
+        let end = timeline.advance(by: move.duration / 2)
+        XCTAssertEqual(end.paintedCells, [move.position])
+        XCTAssertEqual(end.completedAt, move.position)
+        XCTAssertEqual(timeline.painted, move.painted)
+        XCTAssertFalse(timeline.isMoving)
+    }
+
+    func testChangingRefreshRatePreservesTrajectoryAndResetDropsOldTurns() {
+        let moves = squareMoves(count: 8, length: 4)
+        var adaptive = MazeMotionTimeline()
+        var reference = MazeMotionTimeline()
+        adaptive.reset(position: moves[0].origin, painted: [moves[0].origin])
+        reference.reset(position: moves[0].origin, painted: [moves[0].origin])
+        for move in moves {
+            adaptive.enqueue(move)
+            reference.enqueue(move)
+        }
+        for fps in [120, 120, 120, 60, 60, 80, 80, 120, 120] {
+            let update = adaptive.advance(by: 1 / Double(fps))
+            var referencePaint: [GridCell] = []
+            var referenceCompletion: GridCell?
+            for _ in 0..<(480 / fps) {
+                let subframe = reference.advance(by: 1.0 / 480)
+                referencePaint.append(contentsOf: subframe.paintedCells)
+                referenceCompletion = subframe.completedAt ?? referenceCompletion
+            }
+            XCTAssertEqual(adaptive.position.x, reference.position.x, accuracy: 0.00001)
+            XCTAssertEqual(adaptive.position.y, reference.position.y, accuracy: 0.00001)
+            XCTAssertEqual(update.paintedCells, referencePaint)
+            XCTAssertEqual(update.completedAt, referenceCompletion)
+        }
+        XCTAssertFalse(adaptive.isMoving)
+        for move in moves { adaptive.enqueue(move) }
+        _ = adaptive.advance(by: 1.0 / 80)
+        XCTAssertTrue(adaptive.isMoving)
+        adaptive.reset(position: moves[0].origin, painted: [moves[0].origin])
+        let idle = adaptive.advance(by: 1.0 / 60)
+        XCTAssertEqual(adaptive.position, .zero)
+        XCTAssertEqual(adaptive.painted, [moves[0].origin])
+        XCTAssertTrue(idle.rotations.isEmpty)
+        XCTAssertNil(idle.completedAt)
+        adaptive.enqueue(moves[0])
+        _ = adaptive.advance(by: 1.0 / 120)
+        XCTAssertGreaterThan(adaptive.position.x, 0)
+        XCTAssertLessThan(adaptive.position.x, 1, "Reset must discard the earlier burst's catch-up rate")
+    }
+
     func testIsolatedSlidesFinishWithinOneHundredMilliseconds() {
         for fps in [30.0, 60.0, 120.0] {
             for length in [1, 4, 10] {

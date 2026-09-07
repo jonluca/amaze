@@ -1,6 +1,6 @@
 # Swipe direction correction
 
-September 7, 2026. Local fix after TestFlight 1.0.0 (5); not uploaded.
+September 7, 2026. Included in **TestFlight 1.0.0 (6)**. See [release verification](VALIDATION.md).
 
 ## Reproduction
 
@@ -26,4 +26,4 @@ All 25 focused pure input tests passed. Coverage includes the 24 wobble traces, 
 
 **34 native input/touch tests and four UI flows passed**, with zero failures. The UI flows verify actual row/column changes for all four angled swipe directions, twenty short diagonal flicks with Pause/Resume, twenty ten-point reversals outside the board, and three automatic level transitions.
 
-These native/UI checks used an isolated copy of the released build 5 source plus this input fix because another task is concurrently changing maze generation and rendering in the shared checkout. All eight input and test files exactly match their tested copies. This validates the input fix against build 5; the parallel maze changes require their own integration checks. Evidence is in `artifacts/SwipeDirection/`: `replay-before.json`, `replay-after.json`, `focused-tests-final.log`, `tested-source.json`, and `NativeAndUI.xcresult`.
+The initial native/UI checks used released build 5 plus the input correction, with all eight input and test files matching their tested copies. The final combined source subsequently passed 37 native checks and five UI flows, including the updated maze generation and rendering. A clean export of the build 6 commit passed all 80 engine/input tests. Evidence: `artifacts/SwipeDirection/`, `artifacts/OpenBoard/NativeAndUI.xcresult`, and `release/build6/clean-source-engine-result.json`.

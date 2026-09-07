@@ -1,5 +1,17 @@
 # Validation — September 7, 2026
 
+## Build 6 TestFlight release
+
+Verified **September 7, 2026 at 12:18 PM Pacific**: **1.0.0 (6)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. Its sole tester is the existing owner account; no individual or external audience was added. Automatic notifications are enabled, the 1,206-character en-US testing notes match exactly, and Apple's processed masked and unmasked icons were visually verified in the browser. Email inbox delivery and installation of build 6 are not independently verified.
+
+Build 6 contains the [maze progression update](MAZE_GROWTH.md), [freeform board design](OPEN_BOARD_DESIGN.md), and [swipe direction correction](SWIPE_DIRECTION.md). A clean export of source `32fbf570ab38696e970dd4e3de5a2877215b174f` passed all **80 engine/input tests with zero failures**. Final integration passed **37 native tests and five gameplay UI flows**. A complete **115-swipe iPhone SE playthrough** advanced Classic 100 to 101; the halfway position and paint count matched independently calculated results. These counts overlap earlier suites. Sustained physical-device 120 FPS has not been measured.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34154570526) compiled that source with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Source provenance, package resolution, entitlements, and archive checksum matched before local distribution signing and export. Strict deep signature, ZIP integrity, embedded profile/certificate, all five distribution entitlements including Game Center, production ads, three privacy manifests, AppIcon linkage, and executable/archive/dSYM UUID checks passed. No Debug bypass flags or test fixtures were packaged. Original compiler and SDK metadata were retained. The first dispatch stopped at checkout because it used a short commit ID; the successful run used the full SHA.
+
+IPA SHA-256: `7200228f9c0fe5b63329eb2e9b5058e4bcf25383136e5d55fd6b040ac94348b5`. Size: **6,189,350 bytes**. Build ID: `21d946be-8b60-4328-94ca-8dc0c6b15939`. Private release evidence is in `release/build6/`: `release-result.json`, `production-verification.json`, `clean-source-engine-result.json`, `clean-source-engine.log`, `icon-verification.json`, and the exact audience/notes readbacks. The signed archive and IPA are in `artifacts/ProductionBuild6/`. Integration/playthrough evidence is in `artifacts/OpenBoard/`: `NativeAndUI.xcresult`, `final-source.json`, `se-first50-proof.json`, and `se-playthrough-proof.json`.
+
+Builds 2, 3, 4, and 5 remain in the owner group. **The App Store version remains attached to build 3 and Waiting for Review**, matching its pre-release snapshot. This TestFlight release did not replace the review submission. Unrelated Python/image files and their staged state were preserved.
+
 ## Build 5 TestFlight release
 
 Verified **September 7, 2026 at 10:08 AM Pacific**: **1.0.0 (5)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. Its sole tester is the existing owner account; no individual or external audience was added. Automatic notifications are enabled, the 1,240-character en-US testing notes match exactly, and Apple's processed masked and unmasked icons were visually verified. Email inbox delivery and installation of build 5 are not independently verified.

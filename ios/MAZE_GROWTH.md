@@ -1,6 +1,6 @@
 # Larger mazes and sustained progression
 
-September 7, 2026. Local development changes; not yet uploaded to TestFlight.
+September 7, 2026. Included in **TestFlight 1.0.0 (6)**. See [release verification](VALIDATION.md).
 
 ## Progression
 
@@ -52,6 +52,8 @@ Across 100 sampled levels per mode at levels 1000–1099, the final generator pr
 Fresh-process optimized Mac measurements: Classic 1 cold 1.76 ms; Time Rush 1 cold 12.43 ms; Time Rush 40 cold 47.01 ms. The largest measured fresh hint among the 72 audited boards was 0.40 ms. Full values and source hashes are in `artifacts/MazeGrowth/comparison.md`, `after.json`, `performance.json`, and `after-source-sha256.json`.
 
 ### Regression evidence
+
+- A clean export of the exact build 6 source commit `32fbf570ab38696e970dd4e3de5a2877215b174f` passed all 80 engine/input tests with zero failures. Evidence: `release/build6/clean-source-engine-result.json` and `clean-source-engine.log`.
 
 - The initial integration snapshot passed all 201 native tests on iPhone 17 Pro / iOS 26.1, including 272 fallback orientations, 500 Time Rush stages, rendering bounds, rapid painting, old saved courses, and claim-once rewards: `Native.xcresult`, `native-summary.json`, and `native-initial-source-sha256.json`.
 - The final generator's preferred-start change passed all 80 distinct pure engine/input tests across the full run and one focused test correction. The correction removes an obsolete assumption that every starting position blocks upward movement; it now tests an actual adjacent wall. Evidence: `engine-final.log` and `engine-blocked-regression.log`. Other test failures were absent.

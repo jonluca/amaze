@@ -10,7 +10,7 @@ The maze now follows its playable footprint instead of sitting inside a rectangu
 - The backdrop is not animated. Static floor, grid, rim, and channel shading use four scene nodes regardless of maze size. Paint tiles and coins retain their existing behavior.
 - Large-text scrolling controls use an opaque dark background for legibility.
 
-Validation evidence is recorded under the ignored directory `ios/artifacts/OpenBoard/`. This design is local and is not part of TestFlight build 5.
+Included in **TestFlight 1.0.0 (6)**; see [release verification](VALIDATION.md). Visual and gameplay evidence is recorded under the ignored directory `ios/artifacts/OpenBoard/`.
 
 ## Validation, September 7, 2026
 
@@ -24,4 +24,4 @@ Validation evidence is recorded under the ignored directory `ios/artifacts/OpenB
 - Screenshot evidence in ios/artifacts/OpenBoard/: phone-level30.png, se-level100.png, se-level100-mid.png, se-level101.png, ipad-level100.png, phone-large-text.png, and phone-large-text-controls.png.
 - Test evidence in the same directory: NativeAndUI.xcresult, native-ui.log, final-build.log, se-first50-proof.json, se-playthrough-proof.json, tested-source.json, and final-source.json.
 
-Simulator checks verify appearance and input/state behavior; they do not measure physical-device ProMotion frame delivery. No commit, push, build-number change, or TestFlight upload was performed for this design pass.
+Simulator checks verify appearance and input/state behavior; they do not measure physical-device ProMotion frame delivery.

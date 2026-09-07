@@ -164,6 +164,10 @@ class AmazeGame:
             nodes = [n for n in nodes if n not in sol]
         return sol
 
+    def solve_bfs(self):
+        nodes = self.paths.nodes()
+        sol = nx.bfs
+
 
 def get_dfs_solution(amaze):
     solution = amaze.solve_dfs()

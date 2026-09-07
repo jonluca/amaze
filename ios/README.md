@@ -2,17 +2,19 @@
 
 A native SwiftUI + SceneKit maze-painting game inspired by the swipe-to-paint mechanics of [AMAZE](https://apps.apple.com/us/app/amaze/id1452526406). Prism Roll has its own name, interface, procedural levels, materials, and artwork. The original solver elsewhere in this repository is preserved.
 
+The latest [difficulty pass](DIFFICULTY.md) adds a stronger progression curve, branching layouts, required backtracking, and tighter move budgets. The [responsiveness pass](SWIPE_RESPONSIVENESS.md) adds automatic level progression, shorter flick recognition, overlapping-stroke handling, faster queued animation, and cheaper saves. These build on the [research-informed UX pass](RESEARCH_UX.md) and [earlier playtest fixes](UX_PLAYTEST.md). These source changes are not yet in TestFlight or the pending review build.
+
 ## Play
 
-Swipe up, down, left, or right anywhere in the gameplay area, including the heading and empty space around the board. The native touch recognizer acts once a stroke crosses 12 points with a clear direction, before the finger lifts. Buttons, tabs, pickers, scrolling controls, and presented sheets keep their normal interactions. The ball rolls until a wall stops it, painting every tile it crosses. Paint all open tiles to finish. Blocked swipes do not count as moves.
+Swipe up, down, left, or right anywhere in the gameplay area, including the heading and empty space around the board. The native touch recognizer acts once a stroke crosses 8 points with a clear direction, before the finger lifts. Buttons, tabs, pickers, scrolling controls, and presented sheets keep their normal interactions. The ball rolls until a wall stops it, painting every tile it crosses. Paint all open tiles to advance automatically. Blocked swipes do not count as moves.
 
 Build **1.0.0 (3)** is the current production build and is available in private TestFlight; it and No Ads are Waiting for Review. It adds native `TabView` navigation, `NavigationStack` toolbars, a segmented mode `Picker`, and `List`/`Form` screens. Accessibility text sizes keep the board visible while the controls scroll. The camera uses a smaller fit with a 68% width and 78% height budget inside the 3D canvas. Texture generation runs away from the UI actor, the scene waits for prepared resources and its first rendered frame, and the launch screen uses the app's dark background. Ordered move events preserve rapid turns through display updates; old touches and callbacks cannot affect a reset run. The replacement [generated icon and its prompt](Design/README.md) are included.
 
-- **Classic:** unlimited swipes and deterministic levels growing from 4×4 to 9×9, with validated covering solutions.
-- **Time Rush:** independent progression, a visible countdown that begins on the first valid swipe, timeout and free retry. Background time, menus, and reward videos pause the clock.
-- **Limited Moves:** a separate progression with an achievable swipe budget and free retry. Blocked swipes cost nothing.
-- **Reward videos:** hints, +30 seconds, +3 moves, skipping a regular level, and doubling a completion reward. Benefits require the SDK earned-reward callback; failed or dismissed ads grant nothing.
-- **Coins:** 50 per new completion; collectible coins on every fifth Classic board. Claim-once ledgers prevent replay farming. Coins unlock and equip 12 original skins.
+- **Classic:** unlimited swipes and deterministic levels growing from 5×5 to 10×10. One introductory maze leads into branching layouts with required backtracking and verified solutions. The first five boards require 8, 13, 14, 15, and 16 swipes at minimum.
+- **Time Rush:** five mazes per round with one shared 60–90-second countdown starting on the first valid swipe. Mazes advance automatically; the completion reward arrives after all five. A free retry restarts the entire round. Background time, menus, and reward videos pause the clock. See [Time Rush](TIME_RUSH.md).
+- **Limited Moves:** a harder separate progression with an achievable swipe budget and free retry. The allowance tightens from three spare moves to one beyond the verified route. Blocked swipes cost nothing.
+- **Reward videos:** hints, +30 seconds, +3 moves, skipping a regular level, and optional 50-coin bonuses on completed Journey rows. Benefits require the SDK earned-reward callback; failed or dismissed ads grant nothing.
+- **Coins:** 50 per new completion; three collectible coins on every fifth Classic board. Claim-once ledgers and per-level collectible allowances prevent replay farming across changed layouts. Coins unlock and equip 12 original skins.
 - **Daily rewards:** consecutive daily claims earn 25–55 coins. A date-seeded daily maze awards 100 coins once, alongside four milestone challenges.
 - **Worlds:** Aurora, Timber, Porcelain, and Midnight themes with recessed corridors, continuous paint, reflective textured balls, animated coins, and native 3D collection previews.
 - **Duel:** real two-player Game Center matchmaking with a shared maze, opponent progress, and a first-finish result. Requires configured Game Center and two accounts to verify an actual match.
@@ -57,7 +59,7 @@ The pure engine tests also run without a simulator:
 swift test --package-path ios/EnginePackage
 ```
 
-The package symlinks the app’s actual Core and test sources; there is no second engine implementation. Simulator tests include engine behavior, persistence/reward lifecycle, and UI flows for solving mazes, purchases, replay, relaunch, challenges, and settings:
+The package symlinks the app’s actual Core, pure swipe recognition, and test sources; there is no second engine implementation. Simulator tests include engine behavior, persistence/reward lifecycle, and UI flows for solving mazes, purchases, replay, relaunch, challenges, and settings:
 
 ```sh
 cd ios
@@ -67,7 +69,7 @@ xcodebuild -project PrismRoll.xcodeproj -scheme PrismRoll \
   CODE_SIGNING_ALLOWED=NO test
 ```
 
-Use iOS **26.1** for the shared scheme's local StoreKit tests; the same fixture encountered a StoreKit runtime failure on iOS 26.5. Use a destination UDID if several simulators match. The local fixture uses simulated pricing and does not exercise App Store Connect purchases. The current pure package compiles and discovers 31 tests after the platform-guard correction; its last complete 31-test pass predates that correction.
+Use iOS **26.1** for the shared scheme's local StoreKit tests; the same fixture encountered a StoreKit runtime failure on iOS 26.5. Use a destination UDID if several simulators match. The local fixture uses simulated pricing and does not exercise App Store Connect purchases. The current pure engine/input package passes 50 tests.
 
 The build 3 polish checkpoint passed 69 unit/state tests in `PolishTests-2`, then five renderer regressions and seven UI flows in `PolishTests-3`; these counts overlap. A final short-flick smoke test passed after the final edits. Coverage includes 600 synchronous moves, stale-snapshot rejection, reset/modal suppression, native controls, and accessibility text layout. See [VALIDATION.md](VALIDATION.md) for the exact runs, earlier UI-selector failures, and measured processing times.
 

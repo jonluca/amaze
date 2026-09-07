@@ -9,4 +9,5 @@ struct GameSnapshot: Codable {
     var dailyID: String?
     var dailyActive: Bool
     var themeID: String
+    var timeRushSession: TimeRushSession? = nil
 }

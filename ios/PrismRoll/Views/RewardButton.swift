@@ -9,29 +9,51 @@ struct RewardButton: View {
     var body: some View {
         Button(action: watch) {
             VStack(spacing: 4) {
-                Label(title, systemImage: icon)
+                Label(isIntroductoryHint ? "Free hint" : title, systemImage: icon)
                     .font(.subheadline.weight(.semibold))
-                Label("Watch ad", systemImage: "play.rectangle")
-                    .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    if availability == .loading { ProgressView().controlSize(.mini) }
+                    Text(isIntroductoryHint ? "First maze · no ad" : availability.caption)
+                }
+                .font(.caption).foregroundStyle(Palette.secondary)
             }
             .frame(maxWidth: .infinity, minHeight: 36)
         }
         .buttonStyle(.bordered)
         .controlSize(.regular)
-        .disabled(ads.isPresenting || store.isRewardPending)
-            .accessibilityLabel(kind == .hint ? "Show hint" : kind.title)
+        .disabled(ads.isPresenting || ads.isPrivacyFormPresenting || store.isRewardPending || availability == .loading)
+            .accessibilityLabel(isIntroductoryHint ? "Free hint, first maze, no ad" : "\(kind == .hint ? "Show hint" : kind.title), \(availability.caption)")
+            .accessibilityHint(isIntroductoryHint ? "Shows the next direction. No ad is required." : availability.accessibilityHint)
             .accessibilityIdentifier("reward_\(kind.rawValue)")
     }
-    private func watch() {
+
+    private var isIntroductoryHint: Bool { kind == .hint && store.offersIntroductoryHints }
+
+    private var availability: RewardedAdAvailability {
+        if isIntroductoryHint { return .ready }
 #if DEBUG
-        if (ProcessInfo.processInfo.arguments.contains("--uitesting") || ProcessInfo.processInfo.arguments.contains("--ui-hints")), kind == .hint { store.showHint(); return }
+        if isTestHint { return .ready }
 #endif
-        guard let request = store.rewardRequest(kind) else { return }
+        return ads.rewardedAvailability
+    }
+
+#if DEBUG
+    private var isTestHint: Bool {
+        kind == .hint && (ProcessInfo.processInfo.arguments.contains("--uitesting")
+            || ProcessInfo.processInfo.arguments.contains("--ui-hints"))
+    }
+#endif
+
+    private func watch() {
+        if isIntroductoryHint { store.showHint(); return }
+#if DEBUG
+        if isTestHint { store.showHint(); return }
+#endif
         guard ads.canShowRewarded else {
             ads.prepare()
-            store.notice = "No video is available right now. Please try again shortly."
             return
         }
+        guard let request = store.rewardRequest(kind) else { return }
         store.beginReward()
         ads.presentRewarded(onReward: { store.applyReward(request) }, onDismiss: { store.finishReward() })
     }

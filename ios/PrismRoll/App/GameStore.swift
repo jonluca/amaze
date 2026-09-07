@@ -12,15 +12,18 @@ final class GameStore: ObservableObject {
     /// Direct delivery preserves every accepted turn between SwiftUI display updates.
     let moveEvents = PassthroughSubject<GameMoveEvent, Never>()
     @Published private(set) var clock: TimedRunState?
+    @Published private(set) var timeRushSession: TimeRushSession?
     @Published private(set) var dailyChallenge: DailyChallenge
     @Published private(set) var isDaily = false
     @Published private(set) var duelID: String?
     @Published var theme: BoardTheme { didSet { save() } }
     @Published var hint: MoveDirection?
+    @Published private(set) var blockedDirection: MoveDirection?
     @Published var notice: String?
     @Published private(set) var earnedPoints = 0
     @Published private(set) var isRewardPending = false
     private let defaults: UserDefaults
+    private let snapshotEncoder = GameSnapshotEncoder()
     private let dateProvider: () -> Date
     private let uptimeProvider: () -> TimeInterval
     private var savedRuns: [String: MazeRun]
@@ -30,6 +33,8 @@ final class GameStore: ObservableObject {
     private var appActive = true
     private var playVisible = true
     private var modalOpen = false
+    private var presentationReady = true
+    private var tracksPresentationReadiness = false
     private var rewardedRequestIDs: Set<UUID> = []
     private let feedback = UIImpactFeedbackGenerator(style: .soft)
 
@@ -57,6 +62,7 @@ final class GameStore: ObservableObject {
         progress = loadedProgress
         savedRuns = loadedRuns
         savedClocks = snapshot?.clocks ?? [:]
+        timeRushSession = snapshot?.timeRushSession
         savedDailyRun = snapshot?.dailyID == daily.id ? snapshot?.dailyRun : nil
         dailyChallenge = daily
         mode = loadedMode
@@ -73,16 +79,27 @@ final class GameStore: ObservableObject {
         run = loadedRun
         clock = resumeDaily ? nil : snapshot?.clocks[loadedMode.rawValue] ?? loadedRun.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
         lastTick = uptime()
+        if !resumeDaily && loadedMode == .timed { restoreSoloRun() }
     }
 
     var skin: BallSkin { BallSkin.catalog.first { $0.id == progress.selectedSkinID } ?? BallSkin.catalog[0] }
     var fraction: Double { Double(run.painted.count) / Double(max(run.level.openCells.count, 1)) }
     var isDuel: Bool { duelID != nil }
+    var isTimeRush: Bool { mode == .timed && !isDaily && !isDuel }
+    var timeRushMazeNumber: Int { (timeRushSession?.stageIndex ?? 0) + 1 }
+    var timeRushMazeCount: Int { timeRushSession?.course.mazeCount ?? 5 }
+    var timeRushMazesCompleted: Int { timeRushMazeNumber - 1 + (run.isComplete ? 1 : 0) }
+    var isAwaitingTimeRushMaze: Bool { isTimeRush && run.isComplete && timeRushMazeNumber < timeRushMazeCount }
     var timeExpired: Bool { clock.map { $0.hasStarted && $0.remainingSeconds <= 0 } ?? false }
     var isFailed: Bool { !run.isComplete && (run.isFailed || timeExpired) }
-    var hasEnded: Bool { run.isComplete || isFailed }
+    var hasEnded: Bool { (run.isComplete && !isAwaitingTimeRushMaze) || isFailed }
+    var offersIntroductoryHints: Bool {
+        !isDaily && !isDuel && mode == .endless && run.level.number == 1
+            && !hasEnded && !progress.hasCompleted(run.level)
+    }
+    var showsTutorial: Bool { offersIntroductoryHints && !progress.tutorialDismissed }
     var bonusClaimed: Bool { progress.hasClaimedAdBonus(level: run.level) }
-    var canClaimAdBonus: Bool { !isDaily && !isDuel && run.isComplete && progress.hasCompleted(run.level) && !bonusClaimed }
+    var canClaimAdBonus: Bool { !isDaily && !isDuel && run.isComplete && hasEnded && progress.hasCompleted(run.level) && !bonusClaimed }
     var currentUnlockedLevel: Int {
         switch mode {
         case .endless: progress.endlessLevel
@@ -97,8 +114,8 @@ final class GameStore: ObservableObject {
     var currentStreak: Int { progress.dailyCurrentStreak(at: dateProvider()) }
     var canClaimDaily: Bool { progress.canClaimDailyReward(at: dateProvider()) }
     var dailyReward: Int { progress.dailyRewardAmount(at: dateProvider()) }
-    var clockRunning: Bool { appActive && playVisible && !modalOpen && !isRewardPending && !hasEnded && clock?.hasStarted == true }
-    var acceptsGameplayInput: Bool { appActive && playVisible && !modalOpen && notice == nil && !hasEnded && !isRewardPending }
+    var clockRunning: Bool { appActive && playVisible && presentationReady && !modalOpen && !isRewardPending && !hasEnded && !run.isComplete && clock?.hasStarted == true }
+    var acceptsGameplayInput: Bool { appActive && playVisible && presentationReady && !modalOpen && notice == nil && !hasEnded && !run.isComplete && !isRewardPending }
 
     func tick() {
         if appActive { refreshDaily() }
@@ -118,6 +135,19 @@ final class GameStore: ObservableObject {
         if let visible { playVisible = visible }
         if let modal { modalOpen = modal }
         if changed { inputID = UUID() }
+        lastTick = uptimeProvider()
+        save()
+    }
+
+    /// The UI opts into readiness tracking; headless consumers have no scene to wait for.
+    func setPresentationReady(_ ready: Bool, for runID: UUID) {
+        guard runID == self.runID else { return }
+        tick()
+        guard runID == self.runID else { return }
+        tracksPresentationReadiness = true
+        guard presentationReady != ready else { return }
+        presentationReady = ready
+        inputID = UUID()
         lastTick = uptimeProvider()
         save()
     }
@@ -144,7 +174,13 @@ final class GameStore: ObservableObject {
         guard inputID == self.inputID, originalRun == runID, acceptsGameplayInput else { return }
         let start = run.position
         let path = run.move(direction)
-        guard !path.isEmpty else { return }
+        guard !path.isEmpty else {
+            blockedDirection = direction
+            hint = nil
+            if progress.hapticsEnabled { feedback.impactOccurred(intensity: 0.25) }
+            return
+        }
+        blockedDirection = nil
         moveEvents.send(GameMoveEvent(runID: runID, start: start, path: path, position: run.position,
                                      painted: run.painted, isComplete: run.isComplete, moves: run.moves))
         clock?.hasStarted = true
@@ -154,7 +190,9 @@ final class GameStore: ObservableObject {
         if progress.hapticsEnabled { feedback.impactOccurred(intensity: 0.7) }
         if progress.soundEnabled { AudioServicesPlaySystemSound(1104) }
         if run.isComplete {
-            earnedPoints = isDuel ? 0 : isDaily ? progress.completeDailyChallenge(dailyChallenge, at: dateProvider()) : progress.completeLevel(run.level)
+            if !isAwaitingTimeRushMaze {
+                earnedPoints = isDuel ? 0 : isDaily ? progress.completeDailyChallenge(dailyChallenge, at: dateProvider()) : progress.completeLevel(run.level)
+            }
             if progress.hapticsEnabled { UINotificationFeedbackGenerator().notificationOccurred(.success) }
         }
         save()
@@ -164,37 +202,70 @@ final class GameStore: ObservableObject {
         guard next != mode || isDaily || isDuel else { return }
         tick(); cacheCurrentRun()
         isDaily = false; duelID = nil; mode = next
-        run = savedRuns[next.rawValue] ?? MazeRun(level: .generate(number: currentUnlockedLevel, mode: next))
-        clock = savedClocks[next.rawValue] ?? run.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        restoreSoloRun()
         clearTransientState(); save()
     }
 
     func replay() {
-        run.reset()
-        clock = run.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        if isTimeRush, var session = timeRushSession {
+            session.stageIndex = 0
+            timeRushSession = session
+            run = MazeRun(level: session.currentLevel)
+            clock = freshClock(limit: session.course.timeLimit)
+        } else {
+            run.reset()
+            clock = freshClock(limit: run.level.timeLimit)
+        }
         clearTransientState(); save()
     }
 
     func nextLevel() {
         if isDaily || isDuel { endSpecialSession(); return }
         let following = run.level.number == Int.max ? Int.max : run.level.number + 1
-        run = MazeRun(level: .generate(number: max(following, currentUnlockedLevel), mode: mode))
-        clock = run.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        let number = max(following, currentUnlockedLevel)
+        if isTimeRush { startTimeRush(number: number) }
+        else {
+            run = MazeRun(level: .generate(number: number, mode: mode))
+            clock = freshClock(limit: run.level.timeLimit)
+        }
         clearTransientState(); save()
+    }
+
+    /// A rendered completion or ad callback can advance only its own finished run.
+    @discardableResult
+    func advanceCompletedLevel(for completedRunID: UUID) -> Bool {
+        guard completedRunID == runID, run.isComplete, hasEnded, !isDuel else { return false }
+        nextLevel()
+        return true
     }
 
     func openLevel(_ number: Int) {
         guard number >= 1, number <= currentUnlockedLevel else { return }
+        tick(); cacheCurrentRun()
         isDaily = false; duelID = nil
-        run = MazeRun(level: .generate(number: number, mode: mode))
-        clock = run.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        if isTimeRush {
+            if let session = timeRushSession, session.isValid, session.course.number == number,
+               let saved = savedRuns[mode.rawValue], saved.level == session.currentLevel,
+               !saved.isComplete || session.stageIndex < session.course.mazeCount - 1 {
+                restoreSoloRun()
+            } else {
+                startTimeRush(number: number)
+            }
+        } else if let saved = savedRuns[mode.rawValue], saved.level.number == number, !saved.isComplete {
+            run = saved
+            clock = savedClocks[mode.rawValue] ?? saved.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        } else {
+            run = MazeRun(level: .generate(number: number, mode: mode))
+            clock = run.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        }
         clearTransientState(); save()
     }
 
-    func openDaily() {
+    func openDaily(replayCompleted: Bool = false) {
         tick(); cacheCurrentRun()
         isDaily = true; duelID = nil
         run = savedDailyRun ?? MazeRun(level: dailyChallenge.level)
+        if replayCompleted && run.isComplete { run.reset() }
         clock = nil
         clearTransientState(); save()
     }
@@ -210,13 +281,13 @@ final class GameStore: ObservableObject {
     func endSpecialSession() {
         cacheCurrentRun()
         isDaily = false; duelID = nil
-        run = savedRuns[mode.rawValue] ?? MazeRun(level: .generate(number: currentUnlockedLevel, mode: mode))
-        clock = savedClocks[mode.rawValue] ?? run.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        restoreSoloRun()
         clearTransientState(); save()
     }
 
     func showHint() {
-        guard !hasEnded, !isDuel else { return }
+        guard !hasEnded, !run.isComplete, !isDuel else { return }
+        blockedDirection = nil
         hint = run.hintDirection
     }
 
@@ -225,7 +296,7 @@ final class GameStore: ObservableObject {
         tick()
         guard originalRun == runID, !isDuel else { return nil }
         switch kind {
-        case .hint: guard !hasEnded else { return nil }
+        case .hint: guard !hasEnded, !run.isComplete else { return nil }
         case .extraTime: guard clock != nil, !run.isComplete else { return nil }
         case .extraMoves: guard run.remainingMoves != nil, !run.isComplete else { return nil }
         case .skip: guard !isDaily, !run.isComplete else { return nil }
@@ -269,7 +340,6 @@ final class GameStore: ObservableObject {
     }
     func selectSkin(_ skin: BallSkin) {
         if progress.purchaseSkin(skin) {
-            notice = "\(skin.name) equipped"
             if progress.hapticsEnabled { feedback.impactOccurred() }
         } else { notice = "Earn \(max(0, skin.price - progress.points)) more coins to unlock \(skin.name)." }
         save()
@@ -277,13 +347,61 @@ final class GameStore: ObservableObject {
     func claimAdBonus(for level: MazeLevel) { progress.claimAdBonus(level: level); save() }
     func setHaptics(_ enabled: Bool) { progress.hapticsEnabled = enabled; save() }
     func setSound(_ enabled: Bool) { progress.soundEnabled = enabled; save() }
+    func setDirectionButtons(_ enabled: Bool) { progress.directionButtonsEnabled = enabled; save() }
+    func dismissTutorial() { progress.tutorialDismissed = true; save() }
 
     private func clearTransientState() {
         runID = UUID(); inputID = UUID(); earnedPoints = 0; hint = nil; notice = nil
+        blockedDirection = nil
         isRewardPending = false; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
+        if tracksPresentationReadiness { presentationReady = false }
+    }
+    /// Advance only after the previous maze's final movement has been presented.
+    /// Loading and presentation are excluded from the player's shared time budget.
+    @discardableResult
+    func advanceTimeRushMaze(after completedRunID: UUID) -> Bool {
+        guard completedRunID == runID, isAwaitingTimeRushMaze,
+              var session = timeRushSession, session.isValid,
+              (clock?.remainingSeconds ?? 0) > 0 else { return false }
+        session.stageIndex += 1
+        timeRushSession = session
+        run = MazeRun(level: session.currentLevel)
+        clearTransientState()
+        save()
+        return true
+    }
+
+    private func startTimeRush(number: Int) {
+        let session = TimeRushSession(course: .generate(number: number))
+        timeRushSession = session
+        run = MazeRun(level: session.currentLevel)
+        clock = freshClock(limit: session.course.timeLimit)
+    }
+
+    private func restoreSoloRun() {
+        let saved = savedRuns[mode.rawValue]
+        if mode == .timed {
+            if let session = timeRushSession, session.isValid,
+               let saved, saved.level == session.currentLevel {
+                run = saved
+                clock = savedClocks[mode.rawValue] ?? freshClock(limit: session.course.timeLimit)
+            } else {
+                // Legacy single-maze saves start the new course at the same round.
+                // The wallet, unlocks, and completion ledger remain unchanged.
+                startTimeRush(number: saved?.level.number ?? currentUnlockedLevel)
+            }
+        } else {
+            run = saved ?? MazeRun(level: .generate(number: currentUnlockedLevel, mode: mode))
+            clock = savedClocks[mode.rawValue] ?? freshClock(limit: run.level.timeLimit)
+        }
+    }
+
+    private func freshClock(limit: TimeInterval?) -> TimedRunState? {
+        guard let limit else { return nil }
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--short-timer"), clock != nil { clock = TimedRunState(remainingSeconds: 2) }
+        if ProcessInfo.processInfo.arguments.contains("--short-timer") { return TimedRunState(remainingSeconds: 2) }
 #endif
+        return TimedRunState(remainingSeconds: limit)
     }
     private func cacheCurrentRun() {
         if isDuel { return }
@@ -294,7 +412,8 @@ final class GameStore: ObservableObject {
     private func save() {
         cacheCurrentRun()
         let snapshot = GameSnapshot(progress: progress, runs: savedRuns, clocks: savedClocks, mode: mode,
-                                    dailyRun: savedDailyRun, dailyID: dailyChallenge.id, dailyActive: isDaily, themeID: theme.rawValue)
-        if let data = try? JSONEncoder().encode(snapshot) { defaults.set(data, forKey: "prism.snapshot.v2") }
+                                    dailyRun: savedDailyRun, dailyID: dailyChallenge.id, dailyActive: isDaily, themeID: theme.rawValue,
+                                    timeRushSession: timeRushSession)
+        if let data = try? snapshotEncoder.encode(snapshot) { defaults.set(data, forKey: "prism.snapshot.v2") }
     }
 }

@@ -20,6 +20,7 @@ final class DuelService: NSObject, ObservableObject {
     private var currentMatch: GKMatch?
     private var matchmakingController: GKMatchmakerViewController?
     private var session: DuelSession?
+    private var handshake = DuelHandshake()
     private var authenticationStarted = false
 
     func authenticate() {
@@ -46,7 +47,7 @@ final class DuelService: NSObject, ObservableObject {
         request.minPlayers = 2
         request.maxPlayers = 2
         // Change this when the level generator or wire protocol changes.
-        request.playerGroup = 1
+        request.playerGroup = DuelHandshake.version
         guard let controller = GKMatchmakerViewController(matchRequest: request) else {
             status = "Game Center matchmaking is unavailable."
             return
@@ -85,9 +86,16 @@ final class DuelService: NSObject, ObservableObject {
               match.players.first?.gamePlayerID == senderID,
               data.count <= 1_024,
               let message = try? JSONDecoder().decode(DuelMessage.self, from: data) else { return }
+        let wasCompatible = handshake.isCompatible
+        guard handshake.accepts(message) else {
+            endWithError("Both players need a compatible version of Prism Roll.")
+            return
+        }
         switch message {
-        case .hello(let version):
-            guard version == 1 else { endWithError("Your opponent needs a compatible app version."); return }
+        case .hello:
+            // Each side acknowledges its first compatible hello once. This
+            // also reaches a peer whose delegate missed the initial greeting.
+            if !wasCompatible, !send(.hello(version: DuelHandshake.version)) { return }
             prepareHostSession()
         case .setup(let id, let proposedSeed):
             receiveSetup(id: id, proposedSeed: proposedSeed, from: senderID)
@@ -122,12 +130,12 @@ final class DuelService: NSObject, ObservableObject {
             endWithError("A two-player match could not be established.")
             return
         }
+        handshake = DuelHandshake()
         currentMatch = match
         match.delegate = self
         opponentName = match.players[0].displayName
         status = "Preparing the same maze for both players…"
-        _ = send(.hello(version: 1))
-        prepareHostSession()
+        _ = send(.hello(version: DuelHandshake.version))
     }
 
     func matchmakingEnded(_ controller: GKMatchmakerViewController, error: Error?) {
@@ -149,7 +157,12 @@ final class DuelService: NSObject, ObservableObject {
     }
 
     func acceptedInvite(_ invite: GKInvite) {
-        guard !isMatching, !isPlaying, let controller = GKMatchmakerViewController(invite: invite) else { return }
+        guard !isMatching, !isPlaying else { return }
+        guard invite.playerGroup == UInt(DuelHandshake.version) else {
+            status = "Both players need a compatible version of Prism Roll."
+            return
+        }
+        guard let controller = GKMatchmakerViewController(invite: invite) else { return }
         presentMatchmaker(controller)
     }
 
@@ -188,7 +201,7 @@ final class DuelService: NSObject, ObservableObject {
     }
 
     private func prepareHostSession() {
-        guard let match = currentMatch, let opponent = match.players.first else { return }
+        guard handshake.isCompatible, let match = currentMatch, let opponent = match.players.first else { return }
         let local = GKLocalPlayer.local.gamePlayerID
         let host = min(local, opponent.gamePlayerID)
         guard host == local else { return }
@@ -213,7 +226,7 @@ final class DuelService: NSObject, ObservableObject {
     }
 
     private func startRound() {
-        guard var state = session, !state.started else { return }
+        guard handshake.isCompatible, var state = session, !state.started else { return }
         state.started = true
         session = state
         matchID = state.id
@@ -279,6 +292,7 @@ final class DuelService: NSObject, ObservableObject {
         currentMatch?.disconnect()
         currentMatch = nil
         session = nil
+        handshake = DuelHandshake()
         isMatching = false
         isPlaying = false
     }

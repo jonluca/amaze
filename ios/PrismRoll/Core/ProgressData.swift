@@ -9,11 +9,14 @@ struct ProgressData: Codable, Equatable, Sendable {
     var selectedSkinID = "coral"
     var hapticsEnabled = true
     var soundEnabled = true
+    var directionButtonsEnabled = false
+    var tutorialDismissed = false
     private(set) var completedLevels = 0
     private(set) var claimedMilestoneIDs: Set<String> = []
     private var rewardedLevelKeys: Set<String> = []
     private var bonusLevelKeys: Set<String> = []
     private var collectedCoinKeys: Set<String> = []
+    private var collectedCoinCounts: [String: Int] = [:]
     private var completedDailyChallengeIDs: Set<String> = []
     private var dailyLogin = DailyStreak()
     private var dailyChallenges = DailyStreak()
@@ -21,7 +24,8 @@ struct ProgressData: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case points, endlessLevel, challengeLevel, timedLevel, ownedSkinIDs, selectedSkinID
         case hapticsEnabled, soundEnabled, completedLevels, claimedMilestoneIDs
-        case rewardedLevelKeys, bonusLevelKeys, collectedCoinKeys, completedDailyChallengeIDs
+        case directionButtonsEnabled, tutorialDismissed
+        case rewardedLevelKeys, bonusLevelKeys, collectedCoinKeys, collectedCoinCounts, completedDailyChallengeIDs
         case dailyLogin, dailyChallenges
     }
 
@@ -37,11 +41,23 @@ struct ProgressData: Codable, Equatable, Sendable {
         selectedSkinID = try values.decodeIfPresent(String.self, forKey: .selectedSkinID) ?? "coral"
         hapticsEnabled = try values.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
         soundEnabled = try values.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
+        directionButtonsEnabled = try values.decodeIfPresent(Bool.self, forKey: .directionButtonsEnabled) ?? false
+        tutorialDismissed = try values.decodeIfPresent(Bool.self, forKey: .tutorialDismissed) ?? false
         rewardedLevelKeys = try values.decodeIfPresent(Set<String>.self, forKey: .rewardedLevelKeys) ?? []
         bonusLevelKeys = try values.decodeIfPresent(Set<String>.self, forKey: .bonusLevelKeys) ?? []
         completedLevels = try values.decodeIfPresent(Int.self, forKey: .completedLevels) ?? rewardedLevelKeys.count
         claimedMilestoneIDs = try values.decodeIfPresent(Set<String>.self, forKey: .claimedMilestoneIDs) ?? []
         collectedCoinKeys = try values.decodeIfPresent(Set<String>.self, forKey: .collectedCoinKeys) ?? []
+        if let counts = try values.decodeIfPresent([String: Int].self, forKey: .collectedCoinCounts) {
+            collectedCoinCounts = counts
+        } else {
+            // Older saves identify coins by coordinates. Preserve their level's
+            // earned allowance when a generator update moves those coordinates.
+            for key in collectedCoinKeys {
+                guard let separator = key.lastIndex(of: ":") else { continue }
+                collectedCoinCounts[String(key[..<separator]), default: 0] += 1
+            }
+        }
         completedDailyChallengeIDs = try values.decodeIfPresent(Set<String>.self, forKey: .completedDailyChallengeIDs) ?? []
         dailyLogin = try values.decodeIfPresent(DailyStreak.self, forKey: .dailyLogin) ?? DailyStreak()
         dailyChallenges = try values.decodeIfPresent(DailyStreak.self, forKey: .dailyChallenges) ?? DailyStreak()
@@ -57,6 +73,11 @@ struct ProgressData: Codable, Equatable, Sendable {
 
     func hasClaimedAdBonus(level: MazeLevel) -> Bool {
         bonusLevelKeys.contains(completionKey(for: level))
+    }
+
+    func canClaimAdBonus(number: Int, mode: GameMode) -> Bool {
+        let key = "\(mode.rawValue):\(number)"
+        return rewardedLevelKeys.contains(key) && !bonusLevelKeys.contains(key)
     }
 
     /// The caller awards only a completed run. The ledger survives retries and relaunches.
@@ -79,15 +100,21 @@ struct ProgressData: Codable, Equatable, Sendable {
         rewardedLevelKeys.lazy.filter { $0.hasPrefix("\(mode.rawValue):") }.count
     }
 
-    /// Credit a coin the first time that tile is painted, even if the run is still in progress.
+    /// Each level has one collectible allowance, even if a later update changes its layout.
     @discardableResult
     mutating func awardCollectedCoins(for run: MazeRun) -> Int {
         let prefix = completionKey(for: run.level)
+        var claimed = max(0, collectedCoinCounts[prefix, default: 0])
+        guard claimed < MazeLevel.maximumCoinCount else { return 0 }
         var award = 0
-        for cell in run.collectedCoinCells {
+        for cell in run.collectedCoinCells.sorted() where claimed < MazeLevel.maximumCoinCount {
             let key = "\(prefix):\(cell.row),\(cell.column)"
-            if collectedCoinKeys.insert(key).inserted { award += MazeLevel.coinValue }
+            if collectedCoinKeys.insert(key).inserted {
+                claimed += 1
+                award += MazeLevel.coinValue
+            }
         }
+        if award > 0 { collectedCoinCounts[prefix] = claimed }
         points += award
         return award
     }

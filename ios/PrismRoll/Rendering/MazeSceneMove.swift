@@ -5,5 +5,5 @@ struct MazeSceneMove {
     let painted: Set<GridCell>
     let isComplete: Bool
 
-    var duration: Double { min(0.18, max(0.07, Double(path.count) * 0.035)) }
+    var duration: Double { min(0.10, max(0.045, Double(path.count) * 0.018)) }
 }

@@ -32,9 +32,11 @@ enum MazeCoinBuilder {
         return root
     }
 
-    static func animate(_ root: SCNNode) {
-        root.eulerAngles.x = -0.4
-        if !UIAccessibility.isReduceMotionEnabled {
+    static func animate(_ root: SCNNode, reduceMotion: Bool) {
+        root.removeAction(forKey: "coin-bob")
+        root.removeAction(forKey: "coin-spin")
+        root.eulerAngles = SCNVector3(-0.4, 0, 0)
+        if !reduceMotion {
             let rise = SCNAction.moveBy(x: 0, y: 0.07, z: 0, duration: 0.75)
             rise.timingMode = .easeInEaseOut
             root.runAction(.repeatForever(.sequence([rise, rise.reversed()])), forKey: "coin-bob")

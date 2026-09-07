@@ -7,6 +7,7 @@ final class MazeSceneCoordinator: NSObject {
     let renderer = MazeSceneRenderer()
     var onSwipe: (MoveDirection) -> Void
     var onReady: (Bool) -> Void = { _ in }
+    var onResultReady: () -> Void = {}
     private(set) var isReady = false
     private weak var canvasView: MazeCanvasView?
     private var moveSubscription: AnyCancellable?
@@ -20,6 +21,9 @@ final class MazeSceneCoordinator: NSObject {
     private var publishedReady: Bool?
     private var publishedRunID: UUID?
     private var publishedRevision: Int?
+    private var resultRunID: UUID?
+    private var resultRevision: Int?
+    private var resultMoveCount: Int?
 
     init(onSwipe: @escaping (MoveDirection) -> Void) { self.onSwipe = onSwipe }
 
@@ -68,7 +72,10 @@ final class MazeSceneCoordinator: NSObject {
         guard subscribedRunID != runID || (moveSubscription == nil) != (events == nil) else { return }
         moveSubscription?.cancel()
         subscribedRunID = runID
-        moveSubscription = events?.sink { [weak self] event in self?.renderer.receive(event) }
+        moveSubscription = events?.sink { [weak self] event in
+            self?.renderer.receive(event)
+            self?.publishResultIfReady()
+        }
     }
 
     func setActive(_ active: Bool) {
@@ -77,6 +84,39 @@ final class MazeSceneCoordinator: NSObject {
         lastFrameTimestamp = nil
         displayLink?.isPaused = !active || !isReady || canvasView?.window == nil
         canvasView?.isPlaying = active && canvasView?.scene != nil
+        publishResultIfReady()
+    }
+
+    func publishResultIfReady() {
+        if !renderer.hasResult {
+            resultRunID = nil
+            resultRevision = nil
+            resultMoveCount = nil
+            return
+        }
+        guard !isStopped, isActive, isReady, renderer.resultReady, !hasPublishedResult else { return }
+        let runID = subscribedRunID
+        let revision = renderer.contentRevision
+        let moveCount = renderer.acceptedMoveCount
+        let callback = onResultReady
+        // A finished game can still have accepted visual turns to play. Notify
+        // SwiftUI only after those turns settle, outside its update transaction.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.isStopped, self.isActive, self.isReady,
+                  self.subscribedRunID == runID, self.renderer.contentRevision == revision,
+                  self.renderer.acceptedMoveCount == moveCount,
+                  self.renderer.resultReady, !self.hasPublishedResult else { return }
+            self.resultRunID = runID
+            self.resultRevision = revision
+            self.resultMoveCount = moveCount
+            callback()
+        }
+    }
+
+    private var hasPublishedResult: Bool {
+        guard resultMoveCount == renderer.acceptedMoveCount else { return false }
+        if let subscribedRunID { return resultRunID == subscribedRunID }
+        return resultRevision == renderer.contentRevision
     }
 
     func publishReadiness() {
@@ -155,6 +195,7 @@ final class MazeSceneCoordinator: NSObject {
         lastFrameTimestamp = nil
         displayLink?.isPaused = !isActive || canvasView?.window == nil
         publishReadiness()
+        publishResultIfReady()
     }
 
     @objc private func advanceFrame(_ link: CADisplayLink) {
@@ -162,6 +203,7 @@ final class MazeSceneCoordinator: NSObject {
         let interval = lastFrameTimestamp.map { link.timestamp - $0 } ?? link.duration
         lastFrameTimestamp = link.timestamp
         renderer.advance(by: interval)
+        publishResultIfReady()
     }
 
     private func roll(_ direction: MoveDirection) -> Bool {

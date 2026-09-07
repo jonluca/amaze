@@ -6,8 +6,7 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
     var onSwipe: (MoveDirection, UUID) -> Void = { _, _ in }
     private var sessionID = UUID()
     private var strokeSessionID: UUID?
-    private var stroke: SwipeStroke?
-    private weak var trackedTouch: UITouch?
+    private var sequence = SwipeSequence<ObjectIdentifier>()
 
     init() {
         super.init(target: nil, action: nil)
@@ -19,9 +18,10 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
     }
 
     func configure(enabled: Bool, sessionID: UUID, onSwipe: @escaping (MoveDirection, UUID) -> Void) {
-        if self.sessionID != sessionID {
+        if self.sessionID != sessionID || !enabled {
             // Changing session cancels a finger already down during a reset/modal.
             isEnabled = false
+            clearSequence()
             self.sessionID = sessionID
         }
         self.onSwipe = onSwipe
@@ -29,36 +29,41 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        guard trackedTouch == nil, touches.count == 1, let touch = touches.first else {
-            state = stroke?.hasEmitted == true ? .cancelled : .failed
-            return
+        guard isEnabled else { return }
+        for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard sequence.begin(ObjectIdentifier(touch), at: touch.location(in: view)) else {
+                // An extra finger must not cancel a stroke already in progress.
+                ignore(touch, for: event)
+                continue
+            }
+            strokeSessionID = sessionID
         }
-        trackedTouch = touch
-        strokeSessionID = sessionID
-        stroke = SwipeStroke(origin: touch.location(in: view))
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
-        guard let touch = trackedTouch, touches.contains(touch) else { return }
-        consume(touch.location(in: view))
+        consumeSamples(from: touches, event: event)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
-        guard let touch = trackedTouch, touches.contains(touch) else { return }
-        // A very short flick may arrive as an end point with no intervening sample.
-        consume(touch.location(in: view))
-        state = stroke?.hasEmitted == true ? .ended : .failed
+        guard touches.contains(where: { sequence.contains(ObjectIdentifier($0)) }) else { return }
+        consumeSamples(from: touches, event: event)
+        for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
+            emit(sequence.end(ObjectIdentifier(touch), at: touch.location(in: view)))
+        }
+        guard isEnabled, strokeSessionID == sessionID, !sequence.hasActiveContacts else { return }
+        state = sequence.hasEmitted ? .ended : .failed
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
-        state = stroke?.hasEmitted == true ? .cancelled : .failed
+        guard touches.contains(where: { sequence.contains(ObjectIdentifier($0)) }) else { return }
+        for touch in touches { sequence.cancel(ObjectIdentifier(touch)) }
+        guard !sequence.hasActiveContacts else { return }
+        state = sequence.hasEmitted ? .cancelled : .failed
     }
 
     override func reset() {
         super.reset()
-        trackedTouch = nil
-        stroke = nil
-        strokeSessionID = nil
+        clearSequence()
     }
 
     override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool { false }
@@ -72,10 +77,34 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool { true }
 
-    private func consume(_ point: CGPoint) {
-        guard isEnabled, strokeSessionID == sessionID, let direction = stroke?.direction(at: point),
+    private func consumeSamples(from touches: Set<UITouch>, event: UIEvent) {
+        let expectedSessionID = strokeSessionID
+        var samples: [(contact: ObjectIdentifier, point: CGPoint, timestamp: TimeInterval)] = []
+        for touch in touches {
+            let contact = ObjectIdentifier(touch)
+            guard sequence.needsDirection(for: contact) else { continue }
+            // Use real recorded samples, never predicted positions that may reverse.
+            for sample in event.coalescedTouches(for: touch) ?? [] {
+                samples.append((contact, sample.location(in: view), sample.timestamp))
+            }
+            // Include lift-off even if UIKit omitted it from the coalesced samples.
+            samples.append((contact, touch.location(in: view), touch.timestamp))
+        }
+        for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard isEnabled, strokeSessionID == expectedSessionID, strokeSessionID == sessionID else { return }
+            emit(sequence.direction(for: sample.contact, at: sample.point))
+        }
+    }
+
+    private func emit(_ direction: MoveDirection?) {
+        guard isEnabled, strokeSessionID == sessionID, let direction,
               let strokeSessionID else { return }
-        state = .began
+        state = state == .possible ? .began : .changed
         onSwipe(direction, strokeSessionID)
+    }
+
+    private func clearSequence() {
+        sequence = SwipeSequence()
+        strokeSessionID = nil
     }
 }

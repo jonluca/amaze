@@ -16,12 +16,12 @@ Mobile Ads already depends on UMP; pinning the latter explicitly keeps the Swift
 ## App wiring
 
 - Create one app-owned `@StateObject` instance of `AdService`.
-- Call `prepare()` after the root view appears, on returning to the foreground, and at level transitions. Duplicate work is coalesced; transient failures retry only on later calls and at least 30 seconds apart.
-- Call `presentInterstitial(onDismiss:)` exactly once from each completed level's Continue action. Advance in `onDismiss`. The service counts these completed levels and becomes eligible after four; unavailable ads call the continuation immediately. It never shows interstitials during gameplay, at launch, or after failure/retry.
+- Call `prepare()` after the root view appears, on returning to the foreground, and at level transitions. Duplicate work is coalesced; failed ad loads retry only on later calls and at least 30 seconds after the failure. A successfully consumed ad can refill immediately. Changed-consent cancellation does not count as a load failure, and canceled work rechecks current consent before loading its replacement.
+- Call `presentInterstitial(onDismiss:)` exactly once from each completed level's Continue action. Advance in `onDismiss`. The service becomes eligible after four completions and, after any full-screen ad, at least 90 seconds since dismissal. The 90-second minimum is this app's product choice, not a Google-mandated interval. Unavailable ads call the continuation immediately. Ads never appear from a delayed load callback, during gameplay, at launch, or after failure/retry.
 - Offer voluntary hints, time extensions, move extensions, skips, or completion bonuses only when `canShowRewarded` is true. Capture the corresponding game reward request before presentation. Call `presentRewarded(onReward:onDismiss:)`; apply the captured request only in `onReward`, and release the gameplay pause in `onDismiss`. The dismissal callback runs exactly once for an accepted attempt, including unavailable inventory, immediate presentation failure, early close, and earned-reward close. Closing alone never grants a reward. Persist completion bonus claims separately.
 - Disable Continue and the reward button while `isPresenting`; do not request a second presentation while one is active. A rewarded presentation resets the interstitial interval so Continue does not immediately show another ad.
 - When `privacyOptionsRequired` is true, show an accessible Settings action labeled “Ad privacy choices” that calls `presentPrivacyOptions()`.
-- Display `statusMessage` near the optional reward button or privacy controls.
+- Render `rewardedAvailability` beside each optional reward: loading disables the action with a progress indicator, ready offers “Watch ad”, and unavailable offers an explicit inline retry. Retry calls `prepare()` without pausing gameplay, promising a reward, or opening a failure alert. Keep `statusMessage` available in Settings for more detail.
 - Pause active countdowns while `isPresenting`, `isPrivacyFormPresenting`, or a gameplay reward request is pending. Consent UI and early ad dismissal must not consume play time.
 - Set `interstitialsDisabled` from the verified StoreKit No Ads entitlement. Disabled interstitials do not load or display and Continue runs immediately; voluntary rewarded videos are unchanged.
 
@@ -70,4 +70,7 @@ UMP updates at every app launch. The service checks UMP's live `canRequestAds` b
 - [UMP consent and privacy options](https://developers.google.com/admob/ios/privacy)
 - [Rewarded ads and test ID](https://developers.google.com/admob/ios/rewarded)
 - [Interstitial ads and test ID](https://developers.google.com/admob/ios/interstitial)
+- [Rewarded prompt design and clear value exchange](https://admob.google.com/home/resources/rewarded-ads-playbook/)
+- [Recommended interstitial placement and latency](https://support.google.com/admob/answer/6201350)
+- [Apple advertising requirements, section 2.5.18](https://developer.apple.com/app-store/review/guidelines/#software-requirements)
 - [Enable test ads](https://developers.google.com/admob/ios/test-ads)

@@ -9,16 +9,38 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab = "play"
     @State private var settingsOpen = false
+    @State private var restartPromptOpen = false
+    @State private var pauseOpen = false
+    @State private var restartRunID: UUID?
     @State private var readyRunID: UUID?
+    @State private var completedRunID: UUID?
+    @State private var advancingRunID: UUID?
+    @State private var adCheckedRunID: UUID?
     private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         TabView(selection: $tab) {
             navigationPage("Prism Roll") {
-                PlayView(isActive: playSceneActive) { ready, runID in
+                PlayView(isActive: playSceneActive, onRestart: requestRestart, onPause: requestPause,
+                         onCompletionReady: completedLevel) { ready, runID in
                     guard runID == store.runID else { return }
+                    store.setPresentationReady(ready, for: runID)
                     if ready { readyRunID = runID }
                     else if readyRunID == runID { readyRunID = nil }
+                }
+                .sheet(isPresented: $pauseOpen) { PauseView() }
+                .alert(store.isTimeRush ? "Restart this round?" : "Restart this level?", isPresented: $restartPromptOpen) {
+                    Button(store.isTimeRush ? "Restart round" : "Restart level", role: .destructive) {
+                        guard restartRunID == store.runID else { return }
+                        store.replay()
+                    }
+                    .accessibilityIdentifier("confirmRestart")
+                    Button("Keep playing", role: .cancel) {}
+                        .accessibilityIdentifier("cancelRestart")
+                } message: {
+                    Text(store.isTimeRush
+                         ? "Restarting returns to maze 1 of \(store.timeRushMazeCount) and resets the round timer, including extra time. Earned coins are kept."
+                         : "Restarting clears this run's paint and extra time or moves. Earned coins are kept.")
                 }
             }
                 .tabItem { Label("Play", systemImage: "square.grid.3x3.fill").accessibilityIdentifier("tab_play") }
@@ -36,7 +58,7 @@ struct RootView: View {
         .tint(Palette.violet)
         .gameplaySwipes(
             enabled: tab == "play" && readyRunID == store.runID && store.acceptsGameplayInput
-                && scenePhase == .active && !settingsOpen && !duel.isMatching
+                && scenePhase == .active && !settingsOpen && !restartPromptOpen && !pauseOpen && !duel.isMatching
                 && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
                 && !store.hasEnded && !store.isRewardPending && !(store.isDuel && duel.didWin != nil),
             sessionID: store.inputID,
@@ -48,7 +70,9 @@ struct RootView: View {
         } message: { Text(store.notice ?? "") }
         .onReceive(timer) { _ in store.tick() }
         .onAppear {
-            store.setActivity(active: scenePhase == .active, visible: tab == "play", modal: settingsOpen)
+            store.setPresentationReady(readyRunID == store.runID, for: store.runID)
+            store.setActivity(active: scenePhase == .active, visible: tab == "play")
+            syncModalState()
             prepareAds()
             duel.onStart = { seed, id in
                 guard scenePhase == .active, !ads.isPresenting, !ads.isPrivacyFormPresenting else {
@@ -85,6 +109,20 @@ struct RootView: View {
         }
         .onChange(of: duel.isMatching) { _, _ in syncModalState() }
         .onChange(of: settingsOpen) { _, _ in syncModalState() }
+        .onChange(of: restartPromptOpen) { _, _ in syncModalState() }
+        .onChange(of: pauseOpen) { _, _ in syncModalState() }
+        .onChange(of: playSceneActive) { _, active in
+            if active { advanceCompletedLevelIfReady() }
+        }
+        .onChange(of: readyRunID) { _, _ in advanceCompletedLevelIfReady() }
+        .onChange(of: store.runID) { _, _ in
+            restartPromptOpen = false
+            pauseOpen = false
+            restartRunID = nil
+            completedRunID = nil
+            advancingRunID = nil
+            adCheckedRunID = nil
+        }
         .onChange(of: ads.isPresenting) { _, _ in syncModalState() }
         .onChange(of: ads.isPrivacyFormPresenting) { _, _ in syncModalState() }
         .onChange(of: store.notice) { _, _ in syncModalState() }
@@ -98,11 +136,59 @@ struct RootView: View {
     }
 
     private var playSceneActive: Bool {
-        tab == "play" && scenePhase == .active && !settingsOpen && !duel.isMatching
+        tab == "play" && scenePhase == .active && !settingsOpen && !restartPromptOpen && !pauseOpen && !duel.isMatching
             && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
     }
 
-    private func syncModalState() { store.setActivity(modal: settingsOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
+    private func requestRestart() {
+        if store.run.moves > 0 || store.run.extraMovesGranted > 0
+            || (store.isTimeRush && store.timeRushMazeNumber > 1)
+            || (store.clock?.remainingSeconds ?? 0) > (store.run.level.timeLimit ?? 0) {
+            restartRunID = store.runID
+            restartPromptOpen = true
+        } else {
+            store.replay()
+        }
+    }
+
+    private func requestPause() {
+        let runID = store.runID
+        store.tick()
+        guard runID == store.runID, !store.isDuel, !store.hasEnded else { return }
+        pauseOpen = true
+        syncModalState()
+        if store.hasEnded { pauseOpen = false; syncModalState() }
+    }
+
+    private func completedLevel(_ runID: UUID) {
+        guard store.runID == runID, store.run.isComplete, !store.isDuel else { return }
+        completedRunID = runID
+        advanceCompletedLevelIfReady()
+    }
+
+    private func advanceCompletedLevelIfReady() {
+        guard let runID = completedRunID, runID == store.runID,
+              store.run.isComplete, !store.isDuel, playSceneActive,
+              readyRunID == runID, !store.isRewardPending, advancingRunID == nil else { return }
+        // Keep a settled result pending through menus/backgrounding. Intermediate
+        // mazes share the clock and never trigger a between-round advertisement.
+        if store.advanceTimeRushMaze(after: runID) { return }
+        guard store.hasEnded else { return }
+        if store.isDaily || adCheckedRunID == runID {
+            store.advanceCompletedLevel(for: runID)
+            return
+        }
+        advancingRunID = runID
+        adCheckedRunID = runID
+        ads.presentInterstitial {
+            guard advancingRunID == runID else { return }
+            advancingRunID = nil
+            syncModalState()
+            advanceCompletedLevelIfReady()
+        }
+    }
+
+    private func syncModalState() { store.setActivity(modal: settingsOpen || restartPromptOpen || pauseOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
     private func prepareAds() {
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()

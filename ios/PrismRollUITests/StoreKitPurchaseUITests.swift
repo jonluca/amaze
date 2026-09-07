@@ -50,11 +50,13 @@ final class StoreKitPurchaseUITests: XCTestCase {
     }
 
     private func scrollTo(_ element: XCUIElement, in app: XCUIApplication) {
-        for _ in 0..<6 {
+        for _ in 0..<12 {
             // XCTest can consider a row near the bottom edge hittable even when
             // the screenshot clips its content. Leave room for the disclosure.
             if element.isHittable, element.frame.midY < app.frame.height * 0.6 { return }
-            app.swipeUp()
+            let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.48))
+            origin.press(forDuration: 0.01, thenDragTo: end)
         }
     }
 

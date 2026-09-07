@@ -16,8 +16,12 @@ final class PrismRollUITests: XCTestCase {
         for _ in 0..<4 where !restart.isHittable { controls.swipeUp() }
         XCTAssertTrue(restart.isHittable)
         restart.tap()
-        let hint = app.buttons["Show hint"]
-        for _ in 0..<5 where !hint.isHittable { controls.swipeUp() }
+        let hint = app.buttons["reward_hint"]
+        for _ in 0..<12 where !hint.isHittable {
+            let start = controls.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            let end = controls.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.01, thenDragTo: end)
+        }
         XCTAssertTrue(hint.isHittable)
         hint.tap()
         XCTAssertTrue(board.isHittable, "Scrolling controls must leave the board available for swipes")
@@ -33,7 +37,7 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["levelTitle"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.tabBars.buttons["Play"].exists)
         XCTAssertTrue(app.segmentedControls["modePicker"].exists)
-        app.buttons["Show hint"].tap()
+        app.buttons["reward_hint"].tap()
         let hint = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Swipe '")).firstMatch.label
         let title = app.staticTexts["levelTitle"]
         XCTAssertTrue(title.exists)
@@ -76,10 +80,10 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
         capture(app, name: "01-first-level")
         solve(app)
-        XCTAssertTrue(app.staticTexts["Beautifully done."].exists)
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 002")
+        XCTAssertFalse(app.buttons["Keep rolling"].exists)
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("50"))
         capture(app, name: "02-completed")
-        app.buttons["nextLevel"].tap()
         solve(app)
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("100"))
         app.tabBars.buttons["Collection"].tap()
@@ -88,7 +92,7 @@ final class PrismRollUITests: XCTestCase {
         let affordableSkin = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'skin_' AND label CONTAINS '100 coins'")).firstMatch
         XCTAssertTrue(affordableSkin.exists)
         affordableSkin.tap()
-        app.alerts.buttons["Got it"].tap()
+        app.alerts.buttons.matching(identifier: "confirmSkinUnlock").firstMatch.tap()
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
         app.terminate()
         app.launchArguments = ["--no-ads", "--ui-hints"]
@@ -113,7 +117,8 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["movesRemaining"].exists)
         capture(app, name: "05-challenge")
         solve(app)
-        XCTAssertTrue(app.staticTexts["Beautifully done."].exists)
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 002")
+        XCTAssertFalse(app.buttons["Keep rolling"].exists)
         capture(app, name: "06-challenge-complete")
         app.buttons["Settings"].tap()
         XCTAssertTrue(app.switches["Gentle haptics"].exists)
@@ -124,9 +129,10 @@ final class PrismRollUITests: XCTestCase {
     @MainActor
     private func solve(_ app: XCUIApplication) {
         let board = app.otherElements["mazeBoard"]
+        let initialLevel = app.staticTexts["levelTitle"].label
         for _ in 0..<80 {
-            if app.buttons["nextLevel"].exists { return }
-            app.buttons["Show hint"].tap()
+            if app.staticTexts["levelTitle"].label != initialLevel { return }
+            app.buttons["reward_hint"].tap()
             let hint = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Swipe '")).firstMatch.label
             switch hint {
             case "Swipe up": board.swipeUp(velocity: .slow)
@@ -148,7 +154,7 @@ final class PrismRollUITests: XCTestCase {
         let budgetLabel = app.otherElements["movesRemaining"].label
         let budget = Int(budgetLabel.split(separator: " ")[0]) ?? 0
         XCTAssertGreaterThan(budget, 0)
-        app.buttons["Show hint"].tap()
+        app.buttons["reward_hint"].tap()
         let hint = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Swipe '")).firstMatch.label
         let board = app.otherElements["mazeBoard"]
         for index in 0..<budget {
@@ -177,7 +183,7 @@ final class PrismRollUITests: XCTestCase {
         app.segmentedControls["modePicker"].buttons["Time Rush"].tap()
         XCTAssertEqual(app.staticTexts["timeRemaining"].label, "00:02")
         capture(app, name: "07-time-rush")
-        app.buttons["Show hint"].tap()
+        app.buttons["reward_hint"].tap()
         let hint = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Swipe '")).firstMatch.label
         let board = app.otherElements["mazeBoard"]
         switch hint {

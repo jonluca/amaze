@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 struct BallSceneView: UIViewRepresentable {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let skin: BallSkin
     var isAnimated = false
 
@@ -22,8 +23,8 @@ struct BallSceneView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
-        context.coordinator.update(skin: skin, isAnimated: isAnimated)
-        view.isPlaying = isAnimated && !UIAccessibility.isReduceMotionEnabled
+        context.coordinator.update(skin: skin, isAnimated: isAnimated, reduceMotion: reduceMotion)
+        view.isPlaying = isAnimated && !reduceMotion
     }
 
     static func dismantleUIView(_ view: SCNView, coordinator: BallSceneCoordinator) {

@@ -5,7 +5,7 @@ import UserMessagingPlatform
 
 @MainActor
 final class AdService: NSObject, ObservableObject {
-    @Published private(set) var canShowRewarded = false
+    @Published private(set) var rewardedAvailability: RewardedAdAvailability = .loading
     @Published private(set) var isPresenting = false
     @Published private(set) var privacyOptionsRequired = false
     @Published private(set) var statusMessage = "Preparing optional ads…"
@@ -19,7 +19,8 @@ final class AdService: NSObject, ObservableObject {
         }
     }
 
-    private let configuration = AdConfiguration.current
+    private let configuration: AdConfiguration?
+    private let now: () -> Date
     private var consentTask: Task<Void, Never>?
     private var rewardedTask: Task<Void, Never>?
     private var interstitialTask: Task<Void, Never>?
@@ -27,18 +28,28 @@ final class AdService: NSObject, ObservableObject {
     private var didStartSDK = false
     private var consentRevision = 0
     private var lastConsentAttempt: Date?
-    private var lastRewardedAttempt: Date?
-    private var lastInterstitialAttempt: Date?
+    private var rewardedRetry = AdLoadRetryPolicy()
+    private var interstitialRetry = AdLoadRetryPolicy()
     private var rewardedAd: LoadedAd<RewardedAd>?
     private var interstitialAd: LoadedAd<InterstitialAd>?
     private var activePresentation: AdPresentation?
-    private var completionsSinceAd = 0
+    private var frequency = InterstitialFrequencyPolicy()
+
+    init(configuration: AdConfiguration? = .current, now: @escaping () -> Date = Date.init) {
+        self.configuration = configuration
+        self.now = now
+        super.init()
+        if configuration == nil { rewardedAvailability = .unavailable }
+    }
+
+    var canShowRewarded: Bool { rewardedAvailability == .ready && rewardedAd?.isFresh == true }
 
     /// Call after the root view is visible, on foreground, and after level transitions.
     /// UMP is refreshed once per launch; failed requests can retry on a later call.
     func prepare() {
         guard configuration != nil else {
             statusMessage = "Ads are not configured. Enjoy uninterrupted play."
+            rewardedAvailability = .unavailable
             return
         }
         guard !isPrivacyFormPresenting, !isPresenting else { return }
@@ -48,10 +59,10 @@ final class AdService: NSObject, ObservableObject {
             return
         }
         guard consentTask == nil, retryIsDue(lastConsentAttempt) else { return }
-        lastConsentAttempt = Date()
+        lastConsentAttempt = now()
         consentTask = Task { [weak self] in
             guard let self else { return }
-            defer { consentTask = nil }
+            defer { consentTask = nil; updateRewardedAvailability() }
             do {
                 try await ConsentInformation.shared.requestConsentInfoUpdate(with: RequestParameters())
                 privacyOptionsRequired = ConsentInformation.shared.privacyOptionsRequirementStatus == .required
@@ -69,12 +80,13 @@ final class AdService: NSObject, ObservableObject {
                 startAdsIfAllowed()
             }
         }
+        updateRewardedAvailability()
     }
 
     /// The callback runs only when Google's SDK reports the reward as earned.
     func presentRewarded(onReward: @escaping () -> Void, onDismiss: @escaping () -> Void = {}) {
         discardExpiredAds()
-        guard !isPresenting, !isPrivacyFormPresenting,
+        guard configuration != nil, !isPresenting, !isPrivacyFormPresenting,
               ConsentInformation.shared.canRequestAds,
               let loaded = rewardedAd else {
             statusMessage = "No video is available right now. You can keep playing."
@@ -86,34 +98,35 @@ final class AdService: NSObject, ObservableObject {
             try loaded.ad.canPresent(from: nil)
         } catch {
             rewardedAd = nil
-            canShowRewarded = false
+            updateRewardedAvailability()
             statusMessage = "The video could not open. You can keep playing."
             onDismiss()
             prepare()
             return
         }
         rewardedAd = nil
-        canShowRewarded = false
         activePresentation = .rewarded(loaded.ad, reward: onReward, dismiss: onDismiss)
         isPresenting = true
-        completionsSinceAd = 0
+        updateRewardedAvailability()
+        frequency.presentedAd()
         loaded.ad.present(from: nil) { [weak self, weak ad = loaded.ad] in
             guard let ad else { return }
             self?.grantEarnedReward(for: ad)
         }
     }
 
-    /// Invoke exactly once from each completed level's Continue action.
-    /// Every fourth completion is eligible; unavailable ads never delay the next level.
+    /// Invoke exactly once when a completed level advances automatically.
+    /// Four completions and 90 seconds since the last ad are required.
+    /// Unavailable ads never delay the next level or appear when loading finishes later.
     func presentInterstitial(onDismiss: @escaping () -> Void) {
         guard configuration != nil, !interstitialsDisabled else {
             onDismiss()
             return
         }
         guard !isPresenting else { return }
-        completionsSinceAd += 1
+        let isEligible = frequency.completedLevel(at: now())
         discardExpiredAds()
-        guard completionsSinceAd >= 4, !isPrivacyFormPresenting,
+        guard isEligible, !isPrivacyFormPresenting,
               ConsentInformation.shared.canRequestAds,
               let loaded = interstitialAd else {
             onDismiss()
@@ -130,9 +143,9 @@ final class AdService: NSObject, ObservableObject {
         }
         interstitialAd = nil
         activePresentation = .interstitial(loaded.ad, dismiss: onDismiss)
-        completionsSinceAd = 0
+        frequency.presentedAd()
         isPresenting = true
-        canShowRewarded = false
+        updateRewardedAvailability()
         loaded.ad.present(from: nil)
     }
 
@@ -143,7 +156,7 @@ final class AdService: NSObject, ObservableObject {
         invalidateLoadedAds()
         consentTask = Task { [weak self] in
             guard let self else { return }
-            defer { consentTask = nil }
+            defer { consentTask = nil; updateRewardedAvailability() }
             do {
                 try await ConsentForm.presentPrivacyOptionsForm(from: nil)
             } catch {
@@ -159,6 +172,7 @@ final class AdService: NSObject, ObservableObject {
         guard let presentation = activePresentation, presentation.ad === ad else { return }
         activePresentation = nil
         isPresenting = false
+        if !failed { frequency.dismissedAd(at: now()) }
         statusMessage = failed ? "The ad could not open. You can keep playing." : "Optional bonus ads"
         switch presentation {
         case .interstitial(_, let dismiss), .rewarded(_, _, let dismiss): dismiss()
@@ -191,44 +205,56 @@ final class AdService: NSObject, ObservableObject {
 
     private func loadRewarded() {
         guard let configuration, rewardedAd == nil, rewardedTask == nil,
-              retryIsDue(lastRewardedAttempt), ConsentInformation.shared.canRequestAds else { return }
+              rewardedRetry.canAttempt(at: now()), ConsentInformation.shared.canRequestAds else { return }
         let revision = consentRevision
-        lastRewardedAttempt = Date()
         rewardedTask = Task { [weak self] in
             guard let self else { return }
-            defer { rewardedTask = nil }
+            defer {
+                rewardedTask = nil
+                if revision != consentRevision, !isPrivacyFormPresenting, ConsentInformation.shared.canRequestAds {
+                    loadRewarded()
+                }
+                updateRewardedAvailability()
+            }
             do {
                 let ad = try await RewardedAd.load(with: configuration.rewardedUnitID, request: AdConfiguration.makeRequest())
                 guard !Task.isCancelled, revision == consentRevision,
                       ConsentInformation.shared.canRequestAds else { return }
                 ad.fullScreenContentDelegate = self
                 rewardedAd = LoadedAd(ad: ad)
-                canShowRewarded = !isPresenting && !isPrivacyFormPresenting
+                rewardedRetry.succeeded()
                 statusMessage = "Optional reward videos are ready."
             } catch {
-                guard revision == consentRevision else { return }
-                canShowRewarded = false
+                guard !Task.isCancelled, revision == consentRevision else { return }
+                rewardedRetry.failed(at: now())
                 statusMessage = "No bonus ad is available right now. Keep playing."
             }
         }
+        updateRewardedAvailability()
     }
 
     private func loadInterstitial() {
         guard !interstitialsDisabled, let configuration, interstitialAd == nil, interstitialTask == nil,
-              retryIsDue(lastInterstitialAttempt), ConsentInformation.shared.canRequestAds else { return }
+              interstitialRetry.canAttempt(at: now()), ConsentInformation.shared.canRequestAds else { return }
         let revision = consentRevision
-        lastInterstitialAttempt = Date()
         interstitialTask = Task { [weak self] in
             guard let self else { return }
-            defer { interstitialTask = nil }
+            defer {
+                interstitialTask = nil
+                if revision != consentRevision, !isPrivacyFormPresenting, ConsentInformation.shared.canRequestAds {
+                    loadInterstitial()
+                }
+            }
             do {
                 let ad = try await InterstitialAd.load(with: configuration.interstitialUnitID, request: AdConfiguration.makeRequest())
                 guard !Task.isCancelled, !interstitialsDisabled, revision == consentRevision,
                       ConsentInformation.shared.canRequestAds else { return }
                 ad.fullScreenContentDelegate = self
                 interstitialAd = LoadedAd(ad: ad)
+                interstitialRetry.succeeded()
             } catch {
-                // An unavailable interstitial never changes the level flow.
+                guard !Task.isCancelled, revision == consentRevision else { return }
+                interstitialRetry.failed(at: now())
             }
         }
     }
@@ -236,15 +262,14 @@ final class AdService: NSObject, ObservableObject {
     private func discardExpiredAds() {
         if rewardedAd?.isFresh == false { rewardedAd = nil }
         if interstitialAd?.isFresh == false { interstitialAd = nil }
-        canShowRewarded = rewardedAd != nil && !isPresenting && !isPrivacyFormPresenting
-            && ConsentInformation.shared.canRequestAds
+        updateRewardedAvailability()
     }
 
     private func invalidateLoadedAds() {
         consentRevision += 1
         rewardedAd = nil
         interstitialAd = nil
-        canShowRewarded = false
+        updateRewardedAvailability()
         rewardedTask?.cancel()
         interstitialTask?.cancel()
         // Tasks clear their own handles on completion; their results are revision-checked.
@@ -252,6 +277,20 @@ final class AdService: NSObject, ObservableObject {
 
     private func retryIsDue(_ previousAttempt: Date?) -> Bool {
         guard let previousAttempt else { return true }
-        return Date().timeIntervalSince(previousAttempt) >= 30
+        return now().timeIntervalSince(previousAttempt) >= 30
+    }
+
+    private func updateRewardedAvailability() {
+        let availability: RewardedAdAvailability
+        if configuration == nil || isPresenting || isPrivacyFormPresenting {
+            availability = .unavailable
+        } else if rewardedAd?.isFresh == true && ConsentInformation.shared.canRequestAds {
+            availability = .ready
+        } else if rewardedTask != nil || consentTask != nil {
+            availability = .loading
+        } else {
+            availability = .unavailable
+        }
+        if rewardedAvailability != availability { rewardedAvailability = availability }
     }
 }

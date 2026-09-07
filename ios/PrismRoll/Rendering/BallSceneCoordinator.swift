@@ -19,7 +19,7 @@ final class BallSceneCoordinator {
         scene.rootNode.addChildNode(sphere)
     }
 
-    func update(skin: BallSkin, isAnimated: Bool) {
+    func update(skin: BallSkin, isAnimated: Bool, reduceMotion: Bool) {
         if skinID != skin.id {
             skinID = skin.id
             materialTask?.cancel()
@@ -29,7 +29,7 @@ final class BallSceneCoordinator {
                 self.sphere.geometry?.materials = [material]
             }
         }
-        let animate = isAnimated && !UIAccessibility.isReduceMotionEnabled
+        let animate = isAnimated && !reduceMotion
         if animate, sphere.action(forKey: "turntable") == nil {
             sphere.runAction(.repeatForever(.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 18)), forKey: "turntable")
         } else if !animate { sphere.removeAction(forKey: "turntable") }

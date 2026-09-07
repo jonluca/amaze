@@ -11,6 +11,7 @@ struct MazeLevel: Codable, Equatable, Sendable {
     let coinCells: Set<GridCell>
 
     static let coinValue = 5
+    static let maximumCoinCount = 3
 
     private enum CodingKeys: String, CodingKey {
         case number, mode, width, height, openCells, start, solution, moveLimit, timeLimit, coinCells
@@ -49,7 +50,8 @@ struct MazeLevel: Codable, Equatable, Sendable {
 
     static func generate(number: Int, mode: GameMode) -> MazeLevel {
         let number = max(1, number)
-        let size = min(9, 4 + (number - 1) / 5)
+        let difficulty = MazeDifficulty(number: number, mode: mode)
+        let size = difficulty.size
         let salt: UInt64
         switch mode {
         case .endless: salt = 0x505249534D524F4C
@@ -58,48 +60,37 @@ struct MazeLevel: Codable, Equatable, Sendable {
         }
         var random = SeededGenerator(seed: UInt64(number) &* 0x9E3779B97F4A7C15 ^ salt)
         let width = size
-        let height = max(4, size - random.integer(lessThan: 2))
-        var selected: (cells: Set<GridCell>, start: GridCell, route: [MoveDirection])?
+        let height = size
+        var selected: MazeLayout?
+        var qualifyingCandidates = 0
 
-        // Bound generation work. A validated perimeter board is the safe fallback.
-        for _ in 0..<12 {
+        // Score structure after improving routes. Raw greedy length does not
+        // establish difficulty; distinct segment coverage and branches do.
+        for attempt in 0..<48 {
             var candidate: Set<GridCell> = []
+            let density = [66, 72, 78, 74][attempt % 4]
             for row in 0..<height {
-                for column in 0..<width where random.integer(lessThan: 100) >= 24 {
+                for column in 0..<width where random.integer(lessThan: 100) < density {
                     candidate.insert(GridCell(row: row, column: column))
                 }
             }
-            guard let region = MazeSolver.playableRegion(in: candidate),
-                  region.cells.count >= max(8, width * height / 3),
-                  region.cells.count < width * height,
-                  MazeSolver.isFullyPlayable(openCells: region.cells, start: region.start),
-                  let route = MazeSolver.coveringRoute(
-                    openCells: region.cells, position: region.start, painted: [region.start]
-                  ), route.count >= 3 else { continue }
-            if selected == nil || region.cells.count > selected!.cells.count {
-                selected = (region.cells, region.start, route)
+            guard let layout = MazeLayout.candidate(cells: candidate, difficulty: difficulty) else { continue }
+            qualifyingCandidates += 1
+            if selected == nil || difficulty.score(layout) > difficulty.score(selected!) {
+                selected = layout
             }
-            if region.cells.count >= width * height * 3 / 5 && route.count >= size + 2 { break }
+            if attempt >= 11 && qualifyingCandidates >= 3 { break }
         }
-
-        if selected == nil {
-            var ring: Set<GridCell> = []
-            for row in 0..<height {
-                for column in 0..<width where row == 0 || row == height - 1 || column == 0 || column == width - 1 {
-                    ring.insert(GridCell(row: row, column: column))
-                }
-            }
-            selected = (ring, GridCell(row: 0, column: 0), [.down, .right, .up, .left])
-        }
-        let board = selected!
-        let moveLimit = mode == .challenge ? board.route.count + max(2, board.route.count / 5) : nil
+        let board = selected ?? MazeFallbackLayouts.make(size: size, orientation: random.integer(lessThan: 8))
+        let allowance = number <= 5 ? 3 : number <= 20 ? 2 : 1
+        let moveLimit = mode == .challenge ? board.route.count + allowance : nil
         let timeLimit = mode == .timed ? Double(max(30, board.route.count * 2 + 15)) : nil
         var coinCells: Set<GridCell> = []
         if mode == .endless && number.isMultiple(of: 5) {
             // Use a separate generator so adding collectibles cannot change the maze.
             var coinRandom = SeededGenerator(seed: UInt64(number) ^ 0x434F494E424F4E55)
             var available = board.cells.subtracting([board.start]).sorted()
-            for _ in 0..<min(3, available.count) {
+            for _ in 0..<min(maximumCoinCount, available.count) {
                 coinCells.insert(available.remove(at: coinRandom.integer(lessThan: available.count)))
             }
         }

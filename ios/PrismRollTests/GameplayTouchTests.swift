@@ -6,10 +6,10 @@ import XCTest
 @MainActor
 final class GameplayTouchTests: XCTestCase {
     func testDirectionEmitsAtThresholdBeforeLiftAndOnlyOncePerStroke() {
-        for (point, expected) in [(CGPoint(x: 12, y: 1), MoveDirection.right),
-                                  (CGPoint(x: -12, y: 1), .left),
-                                  (CGPoint(x: 1, y: 12), .down),
-                                  (CGPoint(x: 1, y: -12), .up)] {
+        for (point, expected) in [(CGPoint(x: 8, y: 1), MoveDirection.right),
+                                  (CGPoint(x: -8, y: 1), .left),
+                                  (CGPoint(x: 1, y: 8), .down),
+                                  (CGPoint(x: 1, y: -8), .up)] {
             var stroke = SwipeStroke(origin: .zero)
             XCTAssertEqual(stroke.direction(at: point), expected)
             XCTAssertTrue(stroke.hasEmitted)
@@ -20,7 +20,7 @@ final class GameplayTouchTests: XCTestCase {
 
     func testTapJitterAndAmbiguousDiagonalDoNotMoveUntilDirectionIsClear() {
         var stroke = SwipeStroke(origin: CGPoint(x: 100, y: 200))
-        for offset: CGFloat in [0, 2, 5, 9, 11] {
+        for offset: CGFloat in [0, 2, 5, 6, 7.99] {
             XCTAssertNil(stroke.direction(at: CGPoint(x: 100 + offset, y: 200)))
         }
         XCTAssertNil(stroke.direction(at: CGPoint(x: 120, y: 220)))

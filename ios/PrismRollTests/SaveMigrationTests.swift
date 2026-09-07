@@ -20,6 +20,8 @@ final class SaveMigrationTests: XCTestCase {
         XCTAssertEqual(progress.selectedSkinID, "mint")
         XCTAssertFalse(progress.hapticsEnabled)
         XCTAssertFalse(progress.soundEnabled)
+        XCTAssertFalse(progress.directionButtonsEnabled)
+        XCTAssertFalse(progress.tutorialDismissed)
         XCTAssertEqual(progress.completedLevels, 2)
         XCTAssertEqual(progress.dailyStreak, 0)
         XCTAssertEqual(progress.dailyChallengeStreak, 0)
@@ -67,5 +69,34 @@ final class SaveMigrationTests: XCTestCase {
     func testMissingProgressFieldsUseDefaults() throws {
         let progress = try JSONDecoder().decode(ProgressData.self, from: Data("{}".utf8))
         XCTAssertEqual(progress, ProgressData())
+    }
+
+    func testControlAndTutorialPreferencesRoundTripWithoutChangingRewardHistory() throws {
+        let previousSave = Data("""
+        {
+          "points":175,"endlessLevel":3,"ownedSkinIDs":["coral","mint"],
+          "selectedSkinID":"mint","rewardedLevelKeys":["endless:1"],
+          "directionButtonsEnabled":true,"tutorialDismissed":true
+        }
+        """.utf8)
+        let decoded = try JSONDecoder().decode(ProgressData.self, from: previousSave)
+        var restored = try JSONDecoder().decode(ProgressData.self, from: JSONEncoder().encode(decoded))
+        XCTAssertTrue(restored.directionButtonsEnabled)
+        XCTAssertTrue(restored.tutorialDismissed)
+        XCTAssertEqual(restored.selectedSkinID, "mint")
+        XCTAssertEqual(restored.ownedSkinIDs, ["coral", "mint"])
+        XCTAssertEqual(restored.endlessLevel, 3)
+        XCTAssertEqual(restored.completeLevel(.generate(number: 1, mode: .endless)), 0)
+        XCTAssertEqual(restored.points, 175)
+        XCTAssertEqual(restored, decoded)
+    }
+
+    func testPartiallyMigratedControlPreferencesKeepIndependentDefaults() throws {
+        let controlsOnly = try JSONDecoder().decode(ProgressData.self, from: Data("{\"directionButtonsEnabled\":true}".utf8))
+        XCTAssertTrue(controlsOnly.directionButtonsEnabled)
+        XCTAssertFalse(controlsOnly.tutorialDismissed)
+        let tutorialOnly = try JSONDecoder().decode(ProgressData.self, from: Data("{\"tutorialDismissed\":true}".utf8))
+        XCTAssertFalse(tutorialOnly.directionButtonsEnabled)
+        XCTAssertTrue(tutorialOnly.tutorialDismissed)
     }
 }

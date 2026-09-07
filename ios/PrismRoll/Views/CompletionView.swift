@@ -21,34 +21,13 @@ struct CompletionView: View {
                 Text(duel.didWin == nil ? "Waiting for the match result…" : duel.didWin == true ? "You painted the maze first." : "A new opponent. A fresh chance.")
                     .font(.subheadline).foregroundStyle(Palette.cyan)
                 primary("Back to play") { duel.cancel(); store.endSpecialSession() }
-            } else if store.run.isComplete {
-                if store.earnedPoints > 0 {
-                    CoinBadge(amount: store.earnedPoints * (store.bonusClaimed && !store.isDaily ? 2 : 1))
-                } else {
-                    Text(store.bonusClaimed && !store.isDaily ? "Completion and bonus coins already collected" : "Completion coins already collected")
-                        .font(.footnote).foregroundStyle(Palette.secondary)
-                }
-                primary(store.isDaily ? "Back to play" : "Keep rolling") {
-                    if store.isDaily { store.nextLevel() }
-                    else { ads.presentInterstitial { store.nextLevel() } }
-                }.accessibilityIdentifier("nextLevel")
-                if store.canClaimAdBonus {
-                    Button {
-                        guard ads.canShowRewarded else { ads.prepare(); store.notice = "No bonus video is available right now."; return }
-                        let level = store.run.level
-                        store.beginReward()
-                        ads.presentRewarded(onReward: { store.claimAdBonus(for: level) }, onDismiss: { store.finishReward() })
-                    } label: {
-                        Label("Double coins · watch ad", systemImage: "play.rectangle.fill")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.gold)
-                    }.buttonStyle(.bordered).disabled(ads.isPresenting || store.isRewardPending)
-                }
             } else {
                 RewardButton(kind: store.timeExpired ? .extraTime : .extraMoves,
                              title: store.timeExpired ? "Continue with +30 seconds" : "Continue with +3 moves",
                              icon: store.timeExpired ? "timer" : "scope")
-                primary("Try again", action: store.replay).accessibilityIdentifier("retryLevel")
-                Text("Retrying is always free.").font(.footnote).foregroundStyle(Palette.secondary)
+                primary(store.isTimeRush ? "Restart round" : "Try again", action: store.replay).accessibilityIdentifier("retryLevel")
+                Text(store.isTimeRush ? "Restart all \(store.timeRushMazeCount) mazes with a fresh clock, free." : "Retrying is always free.")
+                    .font(.footnote).foregroundStyle(Palette.secondary).multilineTextAlignment(.center)
             }
         }
         .padding(24)
@@ -63,6 +42,9 @@ struct CompletionView: View {
     private var subtitle: String {
         if store.isDuel { return "HEAD TO HEAD" }
         if store.isDaily { return store.run.isComplete ? "Today’s challenge is in the books." : "A different route could be the one." }
+        if store.isTimeRush {
+            return "\(store.timeRushMazesCompleted) of \(store.timeRushMazeCount) mazes painted. Add time to keep your place in the round."
+        }
         return store.run.isComplete ? "Every path painted. On to the next." : "Keep your painted paths with a bonus video."
     }
     private func primary(_ title: String, action: @escaping () -> Void) -> some View {

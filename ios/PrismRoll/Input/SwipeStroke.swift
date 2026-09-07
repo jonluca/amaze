@@ -4,7 +4,7 @@ import Foundation
 struct SwipeStroke {
     private let origin: CGPoint
     private(set) var hasEmitted = false
-    static let threshold: CGFloat = 12
+    static let threshold: CGFloat = 8
 
     init(origin: CGPoint) {
         self.origin = origin

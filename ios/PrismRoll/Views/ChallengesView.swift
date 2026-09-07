@@ -46,7 +46,7 @@ struct ChallengesView: View {
                 LabeledContent(store.dailyChallenge.date.formatted(date: .abbreviated, time: .omitted)) {
                     CoinBadge(amount: store.dailyChallenge.reward)
                 }
-                Button { store.openDaily(); onPlay() } label: {
+                Button { store.openDaily(replayCompleted: true); onPlay() } label: {
                     Label(store.progress.hasCompletedDailyChallenge(store.dailyChallenge) ? "Replay daily maze" : "Play today's challenge",
                           systemImage: "calendar")
                 }

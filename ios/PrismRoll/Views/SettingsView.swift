@@ -15,11 +15,20 @@ struct SettingsView: View {
                     Toggle("Gentle haptics", isOn: Binding(get: { store.progress.hapticsEnabled }, set: store.setHaptics))
                     Toggle("Move sounds", isOn: Binding(get: { store.progress.soundEnabled }, set: store.setSound))
                 }
+                Section("Controls") {
+                    Toggle("Direction buttons", isOn: Binding(
+                        get: { store.progress.directionButtonsEnabled },
+                        set: store.setDirectionButtons
+                    ))
+                    .accessibilityIdentifier("directionButtonsToggle")
+                    Text("Tap a direction instead of swiping. Each tap rolls to a wall. Named buttons support Voice Control and Switch Control; arrow keys work while the controls are shown during play.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
                 Section("How to play") {
                     Label("Swipe in any direction. The ball rolls until a wall stops it.", systemImage: "hand.draw")
                     Label("Cover every open tile in color to complete the maze.", systemImage: "drop")
                     Label("Classic has no clock or move limit. Play at your own pace.", systemImage: "infinity")
-                    Label("Time Rush starts on your first move. Paint the maze before the countdown ends.", systemImage: "timer")
+                    Label("Time Rush: paint every maze in a round before one shared countdown ends. Your first valid swipe starts the clock. Each completed maze leads straight to the next.", systemImage: "timer")
                     Label("Limited Moves gives you a swipe budget. Blocked swipes never count.", systemImage: "scope")
                     Label("Earn coins from new levels, bonus boards, and challenges. Unlock balls in Collection.", systemImage: "circle.fill")
                     Label("Claim your daily reward and return tomorrow to grow your streak.", systemImage: "flame")

@@ -1,6 +1,6 @@
 # More demanding maze progression
 
-September 6, 2026. Local source work; release build 3 is separate.
+September 6, 2026. Included in **TestFlight 1.0.0 (4)**; the App Store submission remains on build 3. See [release verification](VALIDATION.md).
 
 ## Why the previous levels felt easy
 
@@ -55,7 +55,7 @@ All **eight selected UI flows** passed: repeated ten-point flicks outside the bo
 
 A separate playthrough loaded a generated Classic 30 save into the QA simulator: **9×9, 46 playable tiles, 11 branching stops, and a 28-swipe verified route**. Twenty-eight 36-point, 50 ms touch gestures completed it. At the midpoint, the displayed position and painted count exactly matched the independently calculated state (row 1, column 6; 25/46 tiles). Completion collected all three coins and advanced automatically to level 31 with zero moves and 615 coins (550 starting balance + 15 collectibles + 50 completion). Screenshots were inspected before play, halfway through, and after advancement; the board and controls remained readable.
 
-Evidence: `artifacts/Difficulty/NativeAndUI-Final.xcresult`, `CameraRerun.xcresult`, `ui-attachments/`, `manual-playthrough.json`, and `classic-30-before.png`, `classic-30-midpoint.png`, `classic-31-after.png`. Touch duration describes the injected gesture, not a measured physical-device latency. Live ads were disabled during UI playtesting. This local pass was not uploaded to TestFlight or App Store Connect.
+Evidence: `artifacts/Difficulty/NativeAndUI-Final.xcresult`, `CameraRerun.xcresult`, `ui-attachments/`, `manual-playthrough.json`, and `classic-30-before.png`, `classic-30-midpoint.png`, `classic-31-after.png`. Touch duration describes the injected gesture, not a measured physical-device latency. Live ads were disabled during UI playtesting. These changes were subsequently uploaded in TestFlight build 4; the simulator checks above used the local development build.
 
 ## Compatibility
 

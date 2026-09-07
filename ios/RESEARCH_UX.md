@@ -1,6 +1,6 @@
 # Research-informed UX pass
 
-Reviewed 6 September 2026. These changes are local; they have not been uploaded to App Store Connect.
+Reviewed 6 September 2026. These changes are included in **TestFlight 1.0.0 (4)**; see [release verification](VALIDATION.md).
 
 ## Guidance applied
 

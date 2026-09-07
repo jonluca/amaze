@@ -30,4 +30,4 @@ The fresh simulator build and **iPhone SE UI playthrough passed**. Actual short 
 
 The broader automatic-advance regression passed 17 distinct UI flows across its initial run and focused follow-up. One initial Daily replay was killed by the simulator's Metal graphics service; two focused repeats passed without an app-code workaround. The Time Rush restart test's old button selector was updated to “Restart round” and passed twice.
 
-This redesign is a local source change and is not in the previously uploaded build 3.
+This redesign is included in **TestFlight 1.0.0 (4)**. The App Store submission remains on build 3; see [release verification](VALIDATION.md).

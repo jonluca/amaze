@@ -1,6 +1,6 @@
 # UX playtest — September 6, 2026
 
-This is an unreleased source improvement pass following production build 3. The existing App Review submission and TestFlight builds were not replaced during this pass.
+This improvement pass followed production build 3 and is now included in **TestFlight 1.0.0 (4)**. The existing App Review submission remains on build 3, and earlier TestFlight builds remain available. See [release verification](VALIDATION.md).
 
 ## Changes verified in the app
 

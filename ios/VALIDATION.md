@@ -1,5 +1,17 @@
 # Validation — September 6, 2026
 
+## Build 4 TestFlight release
+
+Verified **September 6, 2026 at 8:21 PM Pacific**: **1.0.0 (4)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. Its only audience is the existing owner tester; there are no individual or external tester assignments. Automatic notifications are enabled, the en-US testing notes match exactly, and the processed icon was downloaded from Apple and visually verified. Email inbox delivery and installation of this build are not independently verified.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34078878803) compiled source [f53fc933](https://github.com/jonluca/amaze/commit/f53fc933121e34295e835355595ba47767966568) with **Xcode 26.6 (17F113)** and **iphoneos26.5**. The unsigned arm64 archive was checked against its SHA-256 and source provenance, then signed and exported locally using the existing App Store profile. The exported IPA retained the original compiler/SDK metadata, all five distribution entitlements including Game Center and `get-task-allow=false`, the app and both Google SDK privacy manifests, production ad identifiers, and its AppIcon association. Strict deep signature, ZIP integrity, and executable/dSYM UUID checks passed; test artifacts and Debug bypass flags were absent.
+
+Build 4 IPA SHA-256: `f26176d4d3021245e5ea93f6587022761261fd307cec199d7e78c05b22a124df`. Size: **6,852,911 bytes**. Build ID: `5e1b8d47-8431-42b8-9497-245f2c8c8a04`. Private evidence: `release/build4/release-result.json`, `production-verification.json`, upload/export responses, audience/readback files, and `artifacts/ProductionBuild4/`.
+
+A clean `git archive` of the exact pushed source commit built successfully and passed **58 engine tests**, confirming the source symlink layout survives checkout. The release also includes the [difficulty validation](DIFFICULTY.md): all 161 distinct native cases passed across the main run and isolated camera repeats, eight selected UI flows passed, and a 28-swipe 9×9 playthrough verified paint, coin collection, and automatic advancement. The [Time Rush playthrough](TIME_RUSH.md) separately verified shared-clock maze progression and restart on iPhone SE.
+
+Builds 2 and 3 remain available to the existing group. **The App Store version remains attached to build 3 and Waiting for Review**; its state and attachment matched before and after this TestFlight release. No review submission was replaced. Unrelated Python/image files and their staged state were preserved.
+
 ## Build 3 production and TestFlight
 
 The [build 3 production archive workflow](https://github.com/jonluca/amaze/actions/runs/34070976937) succeeded for source commit `2489ab30ce86dc651961413fa667bb6dc6c3a4f0`, using **Xcode 26.6 (17F113)** and **iphoneos26.5 (23F81a)**. The unsigned arm64 archive was signed and exported locally; SDK metadata was not altered. The final IPA passed signature and ZIP-integrity checks, retained Game Center and distribution entitlements with `get-task-allow=false`, included the app and both Google SDK privacy manifests, excluded test artifacts, and matched its executable to the dSYM UUID. The packaged launch background and forced dark interface were also verified.

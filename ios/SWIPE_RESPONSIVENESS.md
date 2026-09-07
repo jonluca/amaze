@@ -1,6 +1,6 @@
 # Automatic progression and faster swipes
 
-September 6, 2026. Local source changes; the previously uploaded build is separate.
+September 6, 2026. Included in **TestFlight 1.0.0 (4)**; see [release verification](VALIDATION.md). The measurements below describe the local validation checkpoint.
 
 ## Changes
 

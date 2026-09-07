@@ -1,8 +1,8 @@
-import CoreHaptics
 import Foundation
+import OSLog
 
-/// Every engine/player property belongs to `queue`, including native callbacks.
-/// The main-thread facade only submits commands and never waits for the engine.
+/// Every hardware property belongs to `queue`, including normalized callbacks.
+/// Each foreground session and hardware instance rejects stale native events.
 final class MazeHapticEngineWorker: @unchecked Sendable {
     private enum Intent {
         case idle
@@ -10,177 +10,190 @@ final class MazeHapticEngineWorker: @unchecked Sendable {
         case completion(requestedAt: TimeInterval)
     }
 
-    private let queue = DispatchQueue(label: "com.jonluca.prismroll.haptics", qos: .userInteractive)
-    private var engine: CHHapticEngine?
-    private var rollingPlayer: (any CHHapticAdvancedPatternPlayer)?
-    private var completionPlayer: (any CHHapticPatternPlayer)?
+    private let queue: DispatchQueue
+    private let makeHardware: @Sendable () throws -> any MazeHapticHardware
+    private let uptime: @Sendable () -> TimeInterval
+    private let logger = Logger(subsystem: "com.jonluca.prismroll", category: "Haptics")
+    private var hardware: (any MazeHapticHardware)?
+    private var hardwareID: UUID?
+    private var startID: UUID?
+    private var sessionID: UUID?
     private var intent = Intent.idle
-    private var generation = 0
-    private var starting = false
     private var ready = false
     private var rolling = false
-    private var onInterruption: (@Sendable () -> Void)?
+    private var onAvailability: (@Sendable (UUID, MazeHapticAvailability) -> Void)?
+    private var onInterruption: (@Sendable (UUID) -> Void)?
 
-    func setInterruptionHandler(_ handler: @escaping @Sendable () -> Void) {
-        queue.async { self.onInterruption = handler }
+    init(queue: DispatchQueue = DispatchQueue(label: "com.jonluca.prismroll.haptics", qos: .userInteractive),
+         makeHardware: @escaping @Sendable () throws -> any MazeHapticHardware = { try CoreMazeHapticHardware() },
+         uptime: @escaping @Sendable () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
+        self.queue = queue
+        self.makeHardware = makeHardware
+        self.uptime = uptime
     }
 
-    func prepare() {
-        queue.async { self.ensureStarted() }
-    }
-
-    func setRolling(_ rolling: Bool) {
+    func setHandlers(availability: @escaping @Sendable (UUID, MazeHapticAvailability) -> Void,
+                     interruption: @escaping @Sendable (UUID) -> Void) {
         queue.async {
-            self.intent = rolling ? .rolling : .idle
+            self.onAvailability = availability
+            self.onInterruption = interruption
+        }
+    }
+
+    func prepare(sessionID: UUID) {
+        queue.async {
+            if self.sessionID != sessionID {
+                self.releaseHardware()
+                self.intent = .idle
+                self.sessionID = sessionID
+            }
+            self.ensureStarted()
+        }
+    }
+
+    func setRolling(_ rolling: Bool, sessionID: UUID) {
+        queue.async {
+            guard self.sessionID == sessionID else { return }
             if rolling {
+                // A failed request may be retried on the next rolling interval,
+                // never on every display frame of this same interval.
+                if case .rolling = self.intent { return }
+                self.intent = .rolling
                 self.ensureStarted()
             } else {
+                self.intent = .idle
                 self.stopRolling()
             }
         }
     }
 
-    func playCompletion() {
-        let requestedAt = ProcessInfo.processInfo.systemUptime
+    func playCompletion(sessionID: UUID) {
+        let requestedAt = uptime()
         queue.async {
+            guard self.sessionID == sessionID else { return }
             self.stopRolling()
             self.intent = .completion(requestedAt: requestedAt)
             self.ensureStarted()
         }
     }
 
-    func stop() {
+    func stop(sessionID: UUID) {
         queue.async {
+            guard self.sessionID == sessionID else { return }
             self.intent = .idle
-            self.stopPlayers()
-            // Reuse the engine between runs; auto-shutdown releases idle hardware.
-            // Any in-flight start reads the new idle intent before playing.
+            do {
+                try self.hardware?.stopPlayers()
+                self.rolling = false
+            } catch { self.fail(error, operation: "stop players") }
+        }
+    }
+
+    func suspend(sessionID: UUID) {
+        queue.async {
+            guard self.sessionID == sessionID else { return }
+            self.sessionID = nil
+            self.intent = .idle
+            self.releaseHardware()
         }
     }
 
     func shutdown() {
         queue.async {
+            self.sessionID = nil
             self.intent = .idle
-            self.stopPlayers()
-            self.generation += 1
-            self.engine?.stoppedHandler = { _ in }
-            self.engine?.resetHandler = {}
-            self.engine?.stop(completionHandler: nil)
-            self.engine = nil
-            self.rollingPlayer = nil
-            self.completionPlayer = nil
-            self.ready = false
-            self.starting = false
+            self.releaseHardware()
         }
     }
 
     private func ensureStarted() {
+        guard let sessionID else { return }
         if ready {
             playCurrentIntent()
             return
         }
-        guard !starting else { return }
+        guard startID == nil else { return }
         do {
-            if engine == nil { try makeEngine() }
-            guard let engine else { return }
-            starting = true
-            let requestedGeneration = generation
-            engine.start { [weak self] error in
+            if hardware == nil {
+                let hardware = try makeHardware()
+                let hardwareID = UUID()
+                hardware.setInterruptionHandler { [weak self] in
+                    self?.queue.async { [weak self] in self?.interrupted(hardwareID: hardwareID) }
+                }
+                self.hardware = hardware
+                self.hardwareID = hardwareID
+            }
+            guard let hardware, let hardwareID else { return }
+            let startID = UUID()
+            self.startID = startID
+            onAvailability?(sessionID, .preparing)
+            hardware.start { [weak self] error in
                 self?.queue.async { [weak self] in
-                    guard let self, self.generation == requestedGeneration else { return }
-                    self.starting = false
-                    guard error == nil else {
-                        self.invalidatePlayback()
+                    guard let self, self.sessionID == sessionID,
+                          self.hardwareID == hardwareID, self.startID == startID else { return }
+                    self.startID = nil
+                    if let error {
+                        self.fail(error, operation: "start engine")
                         return
                     }
                     do {
-                        try self.makePlayers(on: engine)
+                        try hardware.preparePlayers()
                         self.ready = true
+                        self.onAvailability?(sessionID, .ready)
                         self.playCurrentIntent()
-                    } catch {
-                        self.invalidatePlayback()
-                    }
+                    } catch { self.fail(error, operation: "prepare players") }
                 }
             }
-        } catch {
-            invalidatePlayback()
-        }
-    }
-
-    private func makeEngine() throws {
-        let engine = try CHHapticEngine()
-        engine.playsHapticsOnly = true
-        engine.isAutoShutdownEnabled = true
-        // A stop/reset only invalidates playback. The next live command prepares
-        // again; an interruption must not replay a queued completion or old roll.
-        engine.stoppedHandler = { [weak self] _ in
-            self?.queue.async { [weak self] in
-                self?.invalidatePlayback()
-                self?.onInterruption?()
-            }
-        }
-        engine.resetHandler = { [weak self] in
-            self?.queue.async { [weak self] in
-                self?.invalidatePlayback()
-                self?.onInterruption?()
-            }
-        }
-        self.engine = engine
-    }
-
-    private func makePlayers(on engine: CHHapticEngine) throws {
-        if rollingPlayer == nil {
-            let player = try engine.makeAdvancedPlayer(with: MazeHapticPatterns.rolling())
-            player.loopEnabled = true
-            player.loopEnd = MazeHapticPatterns.rollingDuration
-            rollingPlayer = player
-        }
-        if completionPlayer == nil {
-            completionPlayer = try engine.makePlayer(with: MazeHapticPatterns.completion())
-        }
+        } catch { fail(error, operation: "create engine") }
     }
 
     private func playCurrentIntent() {
+        guard let hardware else { return }
         do {
             switch intent {
             case .idle:
                 break
             case .rolling:
                 guard !rolling else { return }
-                try rollingPlayer?.start(atTime: CHHapticTimeImmediate)
+                try hardware.startRolling()
                 rolling = true
             case .completion(let requestedAt):
                 intent = .idle
-                // Late engine recovery must not turn into a detached celebration.
-                guard ProcessInfo.processInfo.systemUptime - requestedAt < 0.15 else { return }
-                try completionPlayer?.start(atTime: CHHapticTimeImmediate)
+                guard uptime() - requestedAt < 0.15 else { return }
+                try hardware.playCompletion()
             }
-        } catch {
-            stopPlayers()
-            invalidatePlayback()
-        }
+        } catch { fail(error, operation: "play pattern") }
     }
 
     private func stopRolling() {
-        if rolling { try? rollingPlayer?.stop(atTime: CHHapticTimeImmediate) }
-        rolling = false
+        guard rolling else { return }
+        do {
+            try hardware?.stopRolling()
+            rolling = false
+        } catch { fail(error, operation: "stop rolling") }
     }
 
-    private func stopPlayers() {
-        stopRolling()
-        try? completionPlayer?.stop(atTime: CHHapticTimeImmediate)
-    }
-
-    private func invalidatePlayback() {
-        // A delayed native callback may arrive after a new start. Retain and
-        // stop the known players before invalidating them so no loop is orphaned.
-        stopPlayers()
-        generation += 1
+    private func interrupted(hardwareID: UUID) {
+        guard self.hardwareID == hardwareID, let sessionID else { return }
         intent = .idle
+        releaseHardware()
+        onAvailability?(sessionID, .unavailable)
+        onInterruption?(sessionID)
+    }
+
+    private func fail(_ error: Error, operation: String) {
+        logger.error("Haptic \(operation, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        if case .completion = intent { intent = .idle }
+        releaseHardware()
+        if let sessionID { onAvailability?(sessionID, .unavailable) }
+    }
+
+    private func releaseHardware() {
+        let previous = hardware
+        hardware = nil
+        hardwareID = nil
+        startID = nil
         ready = false
-        starting = false
         rolling = false
-        rollingPlayer = nil
-        completionPlayer = nil
+        previous?.shutdown()
     }
 }

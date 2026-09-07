@@ -18,29 +18,54 @@ final class ResearchUXUITests: XCTestCase {
         swipe(app.otherElements["mazeBoard"], direction)
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         XCTAssertFalse(app.alerts.firstMatch.exists)
-        app.buttons["reward_skip"].tap()
-        XCTAssertFalse(app.alerts.firstMatch.exists, "Unavailable ads retry inline without a modal")
+        XCTAssertFalse(app.buttons["reward_skip"].exists)
+        XCTAssertFalse(app.buttons["reward_hint"].label.lowercased().contains("no ad"))
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         capture(app, "free-first-maze-hint")
+        for mode in ["Time Rush", "Limited Moves"] {
+            app.segmentedControls["modePicker"].buttons[mode].tap()
+            XCTAssertFalse(app.buttons["reward_hint"].exists)
+            XCTAssertFalse(app.buttons["reward_extraTime"].exists)
+            XCTAssertFalse(app.buttons["reward_extraMoves"].exists)
+        }
+        capture(app, "unavailable-rewards-hidden")
     }
 
     @MainActor
-    func testPauseFreezesTimerAndResumesTheSameRun() {
+    func testSettingsFreezesTimerAndResumesTheSameRun() {
         let app = launch()
         app.segmentedControls["modePicker"].buttons["Time Rush"].tap()
         app.buttons["reward_hint"].tap()
-        swipe(app.otherElements["mazeBoard"], hintDirection(app))
-        app.buttons["pauseGame"].tap()
-        XCTAssertTrue(app.buttons["resumeGame"].waitForExistence(timeout: 3))
-        let remaining = app.staticTexts["timeRemaining"].label
-        let changes = NSPredicate { _, _ in app.staticTexts["timeRemaining"].label != remaining }
-        let paused = XCTNSPredicateExpectation(predicate: changes, object: nil)
-        paused.isInverted = true
-        XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 2), .completed)
-        capture(app, "native-pause-guide")
-        app.buttons["resumeGame"].tap()
+        let board = app.otherElements["mazeBoard"]
+        swipe(board, hintDirection(app))
+        let paintedBoard = board.value as? String
+        let stage = app.staticTexts["timeRushStage"].label
+        let beforeSettings = remainingSeconds(app)
+        app.buttons["Settings"].tap()
+        let done = app.navigationBars["Settings"].buttons["Done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 3))
+        // The underlying clock can be hidden from accessibility while a native
+        // sheet is open. Observe that the sheet stays open, then compare budgets.
+        let unexpectedlyDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in !done.exists }, object: nil
+        )
+        unexpectedlyDismissed.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [unexpectedlyDismissed], timeout: 2), .completed)
+        capture(app, "settings-freezes-time-rush")
+        done.tap()
+        let afterSettings = remainingSeconds(app)
+        XCTAssertGreaterThanOrEqual(afterSettings, beforeSettings - 1,
+                                    "Settings must freeze the budget; allow one second for opening and closing gestures")
+        XCTAssertLessThanOrEqual(afterSettings, beforeSettings)
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
-        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: changes, object: nil)], timeout: 3), .completed)
+        XCTAssertEqual(app.staticTexts["timeRushStage"].label, stage)
+        XCTAssertEqual(board.value as? String, paintedBoard)
+        let afterSettingsText = String(format: "%02d:%02d", afterSettings / 60, afterSettings % 60)
+        let resumes = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", afterSettingsText),
+            object: app.staticTexts["timeRemaining"]
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [resumes], timeout: 3), .completed)
     }
 
     @MainActor
@@ -63,11 +88,10 @@ final class ResearchUXUITests: XCTestCase {
         button.tap()
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         XCTAssertEqual(app.staticTexts["playInstructions"].label, "Wall ahead. Try another direction.")
-        let controls = visibleControls(app)
-        for _ in 0..<4 where !app.buttons["pauseGame"].isHittable { controls?.swipeDown() }
-        app.buttons["pauseGame"].tap()
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].buttons["Done"].waitForExistence(timeout: 3))
         app.swipeUp()
-        app.navigationBars.buttons["Resume"].tap()
+        app.navigationBars["Settings"].buttons["Done"].tap()
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         app.terminate()
         app.launchArguments = ["--no-ads"]
@@ -83,7 +107,20 @@ final class ResearchUXUITests: XCTestCase {
         app.launchArguments = ["--uitesting"]
         app.launch()
         XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["pauseGame"].exists)
+        XCTAssertFalse(app.progressIndicators["Maze painted"].exists)
         return app
+    }
+
+    @MainActor
+    private func remainingSeconds(_ app: XCUIApplication) -> Int {
+        let text = app.staticTexts["timeRemaining"].label
+        let parts = text.split(separator: ":")
+        guard parts.count == 2, let minutes = Int(parts[0]), let seconds = Int(parts[1]) else {
+            XCTFail("Unexpected timer text: \(text)")
+            return 0
+        }
+        return minutes * 60 + seconds
     }
 
     @MainActor

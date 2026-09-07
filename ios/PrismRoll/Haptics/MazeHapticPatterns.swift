@@ -8,24 +8,13 @@ enum MazeHapticPatterns {
         let vibration = CHHapticEvent(
             eventType: .hapticContinuous,
             parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.28),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.22)
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.75),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.45)
             ],
             relativeTime: 0,
             duration: rollingDuration
         )
-        // A seamless texture, rather than a series of heavy collision impacts.
-        let texture = CHHapticParameterCurve(
-            parameterID: .hapticIntensityControl,
-            controlPoints: stride(from: 0, through: 8, by: 1).map { index in
-                CHHapticParameterCurve.ControlPoint(
-                    relativeTime: Double(index) * rollingDuration / 8,
-                    value: index.isMultiple(of: 2) ? 0.68 : 1
-                )
-            },
-            relativeTime: 0
-        )
-        return try CHHapticPattern(events: [vibration], parameterCurves: [texture])
+        return try CHHapticPattern(events: [vibration], parameters: [])
     }
 
     static func completion() throws -> CHHapticPattern {

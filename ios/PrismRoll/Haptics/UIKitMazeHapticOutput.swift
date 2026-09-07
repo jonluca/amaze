@@ -4,7 +4,7 @@ import UIKit
 @MainActor
 final class UIKitMazeHapticOutput: MazeHapticOutput {
     var onInterruption: (() -> Void)?
-    private let impact = UIImpactFeedbackGenerator(style: .soft)
+    private let impact = UIImpactFeedbackGenerator(style: .medium)
     private let completion = UINotificationFeedbackGenerator()
 
     func prepare() {
@@ -13,12 +13,15 @@ final class UIKitMazeHapticOutput: MazeHapticOutput {
     }
 
     func setRolling(_ rolling: Bool) {
-        if rolling { impact.impactOccurred(intensity: 0.35) }
+        if rolling { impact.impactOccurred(intensity: 0.75) }
     }
+
+    func playStep() { impact.impactOccurred(intensity: 0.75) }
 
     func playCompletion() {
         completion.notificationOccurred(.success)
     }
 
     func stop() {}
+    func suspend() {}
 }

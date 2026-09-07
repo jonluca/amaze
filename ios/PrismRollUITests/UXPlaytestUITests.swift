@@ -91,7 +91,7 @@ final class UXPlaytestUITests: XCTestCase {
     }
 
     @MainActor
-    func testLargeTextKeepsAllModesPlayableAndAdsDisclosed() {
+    func testLargeTextKeepsAllModesPlayableAndUnavailableRewardsHidden() {
         let app = launch(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"])
         let board = app.otherElements["mazeBoard"]
         XCTAssertGreaterThan(board.frame.height, 100)
@@ -106,9 +106,9 @@ final class UXPlaytestUITests: XCTestCase {
                 for _ in 0..<4 where !hint.isHittable { controls.swipeUp() }
             }
             XCTAssertTrue(hint.isHittable)
-            XCTAssertTrue(hint.label.lowercased().contains(mode == "Classic" ? "no ad" : "watch ad"))
+            XCTAssertTrue(hint.label.lowercased().contains(mode == "Classic" ? "free hint" : "watch ad"))
             let secondID = mode == "Classic" ? "reward_skip" : mode == "Time Rush" ? "reward_extraTime" : "reward_extraMoves"
-            XCTAssertTrue(app.buttons[secondID].label.lowercased().contains("no ad"))
+            XCTAssertFalse(app.buttons[secondID].exists)
             moveWithHint(app)
             XCTAssertTrue(board.isHittable)
         }

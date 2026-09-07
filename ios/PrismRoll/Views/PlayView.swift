@@ -9,7 +9,6 @@ struct PlayView: View {
     @State private var tutorialRunID: UUID?
     let isActive: Bool
     let onRestart: () -> Void
-    let onPause: () -> Void
     let onCompletionReady: (UUID) -> Void
     let onReady: (Bool, UUID) -> Void
 
@@ -27,7 +26,6 @@ struct PlayView: View {
                             VStack(spacing: 20) {
                                 modeControls
                                 headline(compact: true)
-                                progressBar
                                 directionControls
                                 rewardControls
                                 instructions
@@ -41,7 +39,6 @@ struct PlayView: View {
                     VStack(spacing: compact ? 10 : 16) {
                         modeControls.padding(.horizontal, 20)
                         headline(compact: compact).padding(.horizontal, 20)
-                        progressBar.padding(.horizontal, 20)
                         board(runID: renderRunID, inputID: renderInputID)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .frame(minHeight: 130)
@@ -196,6 +193,7 @@ struct PlayView: View {
                     .font(compact ? .title2.bold() : .title.bold())
                     .lineLimit(1).minimumScaleFactor(0.8)
                     .accessibilityIdentifier("levelTitle")
+                runSummary
             }
             Spacer(minLength: 0)
             if store.clock != nil {
@@ -218,42 +216,29 @@ struct PlayView: View {
                 .accessibilityIdentifier("movesRemaining")
             }
             if !store.isDuel {
-                HStack(spacing: 8) {
-                    Button(action: onPause) {
-                        Label("Pause game", systemImage: "pause")
-                            .frame(minWidth: 24, minHeight: 32)
-                    }
-                    .accessibilityIdentifier("pauseGame")
-                    Button(action: onRestart) {
-                        Label(store.isTimeRush ? "Restart round" : "Restart level", systemImage: "arrow.counterclockwise")
-                            .frame(minWidth: 24, minHeight: 32)
-                    }
-                    .accessibilityLabel(store.isTimeRush ? "Restart round" : "Restart level")
+                Button(action: onRestart) {
+                    Label(store.isTimeRush ? "Restart round" : "Restart level", systemImage: "arrow.counterclockwise")
+                        .frame(minWidth: 24, minHeight: 32)
                 }
+                .accessibilityLabel(store.isTimeRush ? "Restart round" : "Restart level")
                 .labelStyle(.iconOnly)
                 .buttonStyle(.bordered)
             }
         }
     }
 
-    private var progressBar: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Spacer()
-                if !store.run.level.coinCells.isEmpty && !store.isDuel {
-                    Label("\(store.run.collectedCoinCells.count)/\(store.run.level.coinCells.count)", systemImage: "circle.inset.filled")
-                        .foregroundStyle(Palette.gold)
-                } else {
-                    Text(store.run.moves == 1 ? "1 move" : "\(store.run.moves) moves")
-                        .accessibilityIdentifier("moveCount")
-                }
+    private var runSummary: some View {
+        Group {
+            if !store.run.level.coinCells.isEmpty && !store.isDuel {
+                Label("\(store.run.collectedCoinCells.count)/\(store.run.level.coinCells.count)", systemImage: "circle.inset.filled")
+                    .foregroundStyle(Palette.gold)
+            } else {
+                Text(store.run.moves == 1 ? "1 move" : "\(store.run.moves) moves")
+                    .accessibilityIdentifier("moveCount")
             }
-            ProgressView(value: store.fraction)
-                .tint(Color(hex: MazePaintPalette.hex(for: store.skin, levelNumber: store.run.level.number)))
-                .accessibilityLabel("Maze painted")
-                .accessibilityValue("\(Int(store.fraction * 100)) percent")
         }
         .font(.caption)
+        .foregroundStyle(.secondary)
     }
 
     private var opponentBar: some View {

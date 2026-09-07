@@ -99,13 +99,13 @@ final class SwipeReliabilityUITests: XCTestCase {
         XCTAssertEqual(title.label, "Level 001")
 
         let boardState = board.value as? String
-        app.buttons["pauseGame"].tap()
-        let resume = app.buttons["resumeGame"]
-        XCTAssertTrue(resume.waitForExistence(timeout: 3))
-        resume.tap()
-        XCTAssertTrue(app.buttons["pauseGame"].waitForExistence(timeout: 3))
+        app.buttons["Settings"].tap()
+        let done = app.navigationBars["Settings"].buttons["Done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 3))
+        done.tap()
+        XCTAssertTrue(app.buttons["Settings"].waitForExistence(timeout: 3))
         XCTAssertEqual(app.staticTexts["moveCount"].label, "20 moves", "Native control taps must not add a move")
-        XCTAssertEqual(board.value as? String, boardState, "Pause and resume must preserve the run")
+        XCTAssertEqual(board.value as? String, boardState, "Opening and closing Settings must preserve the run")
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "twenty-short-diagonal-flicks"

@@ -9,6 +9,8 @@ final class TimeRushUITests: XCTestCase {
         app.launch()
         let board = app.otherElements["mazeBoard"]
         XCTAssertTrue(board.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["pauseGame"].exists)
+        XCTAssertFalse(app.progressIndicators["Maze painted"].exists)
         app.segmentedControls["modePicker"].buttons["Time Rush"].tap()
         assertStage(app, "Maze 1 of 5")
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
@@ -43,26 +45,30 @@ final class TimeRushUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         let paintedBoard = board.value as? String
         XCTAssertNotNil(paintedBoard)
-        app.buttons["pauseGame"].tap()
-        let resume = app.buttons["resumeGame"]
-        XCTAssertTrue(resume.waitForExistence(timeout: 3))
-        let pausedStage = app.descendants(matching: .any)
-            .matching(identifier: "pausedTimeRushStage").firstMatch
-        XCTAssertTrue(pausedStage.exists)
-        XCTAssertTrue(accessibleText(pausedStage).contains("Maze 2 of 5"))
-        let pausedClock = app.descendants(matching: .any)
-            .matching(identifier: "pausedTimeRemaining").firstMatch
-        XCTAssertTrue(pausedClock.exists)
-        let frozenTime = accessibleText(pausedClock)
-        XCTAssertNotNil(frozenTime.range(of: #"\d{2}:\d{2}"#, options: .regularExpression), "Read the visible native pause clock")
-        let tickingWhilePaused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            ([pausedClock.label, pausedClock.value as? String ?? ""]
-                + pausedClock.staticTexts.allElementsBoundByIndex.map(\.label)).joined(separator: " ") != frozenTime
-        }, object: nil)
-        tickingWhilePaused.isInverted = true
-        XCTAssertEqual(XCTWaiter.wait(for: [tickingWhilePaused], timeout: 2), .completed)
-        capture(app, "time-rush-paused-mid-round")
-        resume.tap()
+        let beforeSettings = remainingSeconds(app)
+        app.buttons["Settings"].tap()
+        let done = app.navigationBars["Settings"].buttons["Done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 3))
+        let unexpectedlyDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in !done.exists }, object: nil
+        )
+        unexpectedlyDismissed.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [unexpectedlyDismissed], timeout: 2), .completed)
+        capture(app, "time-rush-settings-mid-round")
+        done.tap()
+        let afterSettings = remainingSeconds(app)
+        XCTAssertGreaterThanOrEqual(afterSettings, beforeSettings - 1,
+                                    "The two-second Settings visit must preserve the budget, allowing one second for modal gestures")
+        XCTAssertLessThanOrEqual(afterSettings, beforeSettings)
+        assertStage(app, "Maze 2 of 5")
+        XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
+        XCTAssertEqual(board.value as? String, paintedBoard)
+        let afterSettingsText = String(format: "%02d:%02d", afterSettings / 60, afterSettings % 60)
+        let resumedAfterSettings = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", afterSettingsText),
+            object: app.staticTexts["timeRemaining"]
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [resumedAfterSettings], timeout: 3), .completed)
 
         let secondsBeforeJourney = remainingSeconds(app)
         app.tabBars.buttons["Journey"].tap()
@@ -114,12 +120,6 @@ final class TimeRushUITests: XCTestCase {
             return 0
         }
         return minutes * 60 + seconds
-    }
-
-    @MainActor
-    private func accessibleText(_ element: XCUIElement) -> String {
-        ([element.label, element.value as? String ?? ""]
-            + element.staticTexts.allElementsBoundByIndex.map(\.label)).joined(separator: " ")
     }
 
     @MainActor

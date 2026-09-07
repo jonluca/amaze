@@ -7,6 +7,8 @@ final class AutoAdvanceUITests: XCTestCase {
         app.launchArguments = ["--uitesting"]
         app.launch()
         XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["pauseGame"].exists)
+        XCTAssertFalse(app.progressIndicators["Maze painted"].exists)
         for level in 1...3 {
             let title = String(format: "Level %03d", level)
             XCTAssertEqual(app.staticTexts["levelTitle"].label, title)
@@ -33,9 +35,7 @@ final class AutoAdvanceUITests: XCTestCase {
         }
         XCTAssertFalse(app.buttons["nextLevel"].exists)
         app.tabBars.buttons["Journey"].tap()
-        XCTAssertTrue(app.buttons["completionBonus_endless_1"].exists)
-        XCTAssertTrue(app.buttons["completionBonus_endless_1"].label.contains("50 coins"))
-        app.buttons["completionBonus_endless_1"].tap()
+        XCTAssertFalse(app.buttons["completionBonus_endless_1"].exists)
         XCTAssertFalse(app.alerts.firstMatch.exists)
         app.tabBars.buttons["Play"].tap()
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 004")

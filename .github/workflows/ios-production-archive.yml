@@ -98,7 +98,7 @@ jobs:
           expected = {
               "CFBundleIdentifier": "com.jonluca.prismroll",
               "CFBundleShortVersionString": "1.0.0",
-              "CFBundleVersion": "7",
+              "CFBundleVersion": "8",
               "CADisableMinimumFrameDurationOnPhone": True,
               "DTXcodeBuild": "17F113",
               "DTSDKName": "iphoneos26.5",
@@ -146,7 +146,7 @@ jobs:
       - name: Upload the unsigned archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: PrismRoll-1.0.0-7-xcode26.6-unsigned-${{ github.run_id }}
+          name: PrismRoll-1.0.0-8-xcode26.6-unsigned-${{ github.run_id }}
           path: build/deliverables/
           if-no-files-found: error
           retention-days: 7

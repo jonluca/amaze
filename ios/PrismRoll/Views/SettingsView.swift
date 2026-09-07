@@ -12,7 +12,8 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("Feel every move") {
-                    Toggle("Gentle haptics", isOn: Binding(get: { store.progress.hapticsEnabled }, set: store.setHaptics))
+                    Toggle("Haptics", isOn: Binding(get: { store.progress.hapticsEnabled }, set: store.setHaptics))
+                        .accessibilityIdentifier("hapticsToggle")
                     Toggle("Move sounds", isOn: Binding(get: { store.progress.soundEnabled }, set: store.setSound))
                 }
                 Section("Controls") {

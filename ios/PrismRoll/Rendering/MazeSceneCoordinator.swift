@@ -26,12 +26,15 @@ final class MazeSceneCoordinator: NSObject {
     private var resultRunID: UUID?
     private var resultRevision: Int?
     private var resultMoveCount: Int?
-    private let haptics = MazeHapticPlayer()
+    private let haptics: MazeHapticPlayer
     private var completionBeat = MazeCompletionBeat()
     private var receivedMove = false
     private var reduceMotion = false
 
-    init(onSwipe: @escaping (MoveDirection) -> Void) { self.onSwipe = onSwipe }
+    init(onSwipe: @escaping (MoveDirection) -> Void, haptics: MazeHapticPlayer? = nil) {
+        self.onSwipe = onSwipe
+        self.haptics = haptics ?? MazeHapticPlayer()
+    }
 
     func configure(_ view: MazeCanvasView) {
         canvasView = view
@@ -114,8 +117,12 @@ final class MazeSceneCoordinator: NSObject {
             guard let self else { return }
             let before = self.renderer.acceptedMoveCount
             self.renderer.receive(event)
-            if self.renderer.acceptedMoveCount > before { self.receivedMove = true }
+            let acceptedMove = self.renderer.acceptedMoveCount > before
+            if acceptedMove { self.receivedMove = true }
             self.syncHaptics()
+            // Reduce Motion snaps the ball without a rolling interval. Preserve
+            // move feedback independently of that visual accessibility setting.
+            if acceptedMove && self.reduceMotion { self.haptics.playStep() }
             self.publishResultIfReady()
         }
     }
@@ -272,9 +279,11 @@ final class MazeSceneCoordinator: NSObject {
     }
 
     private func syncHaptics() {
-        let active = !isStopped && isActive && isReady && canvasView?.window != nil
+        // Warm the engine while the scene prepares, before its first swipe can
+        // arrive. Only a ready board with actual motion is allowed to vibrate.
+        let active = !isStopped && isActive && canvasView?.window != nil
         haptics.setActive(active)
-        haptics.setRolling(active && renderer.pendingMoveCount > 0)
+        haptics.setRolling(active && isReady && renderer.pendingMoveCount > 0)
     }
 
     private func roll(_ direction: MoveDirection) -> Bool {

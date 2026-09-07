@@ -32,13 +32,15 @@ enum MazeBoardBuilder {
         root.addChildNode(walls)
 
         var tiles: [GridCell: SCNNode] = [:]
-        let paintMaterial = BallMaterialFactory.paint(tint)
+        let paintGeometry = SCNPlane(width: 0.92, height: 0.92)
+        paintGeometry.cornerRadius = 0.06
+        paintGeometry.cornerSegmentCount = 6
+        paintGeometry.materials = [BallMaterialFactory.paintTile(tint)]
         for cell in level.openCells {
             let center = position(of: cell, in: level)
-            // Paint remains continuous; the static grid is drawn just above it.
-            let geometry = SCNPlane(width: 1, height: 1)
-            geometry.materials = [paintMaterial]
-            let paint = SCNNode(geometry: geometry)
+            // A narrow gutter separates the soft paint edges. Every tile shares
+            // the prepared surface; painting only reveals its existing node.
+            let paint = SCNNode(geometry: paintGeometry)
             paint.eulerAngles.x = -.pi / 2
             paint.position = SCNVector3(center.x, 0.018, center.z)
             paint.opacity = 0
@@ -48,7 +50,7 @@ enum MazeBoardBuilder {
         }
         let gridMaterial = SCNMaterial()
         gridMaterial.lightingModel = .constant
-        gridMaterial.diffuse.contents = BallMaterialFactory.color(hex: theme.gridHex).withAlphaComponent(0.7)
+        gridMaterial.diffuse.contents = BallMaterialFactory.color(hex: theme.gridHex).withAlphaComponent(0.3)
         gridMaterial.writesToDepthBuffer = false
         let gridGeometry = MazePathGeometry.makeGrid(level: level)
         gridGeometry.materials = [gridMaterial]

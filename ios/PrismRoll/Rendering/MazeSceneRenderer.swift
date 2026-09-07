@@ -15,7 +15,8 @@ final class MazeSceneRenderer {
     private let ballRoot = SCNNode()
     private let ball = SCNNode(geometry: SCNSphere(radius: 0.405))
     private let paintEffects = MazePaintEffects()
-    var preparationResources: [Any] { [scene] + paintEffects.preparationResources }
+    private let ballTrail = MazeBallTrailEffects()
+    var preparationResources: [Any] { [scene] + paintEffects.preparationResources + ballTrail.preparationResources }
     private var paintTiles: [GridCell: SCNNode] = [:]
     private var pathMarkers: [GridCell: SCNNode] = [:]
     private var coins: [GridCell: SCNNode] = [:]
@@ -107,8 +108,9 @@ final class MazeSceneRenderer {
         }
         if changedSkin || changedLevel {
             skinID = skin.id
+            ballTrail.setSkin(skin)
             paintEffects.setTint(paintTint)
-            let material = BallMaterialFactory.paint(paintTint)
+            let material = BallMaterialFactory.paintTile(paintTint)
             for tile in paintTiles.values { tile.geometry?.materials = [material] }
         }
         if changedLevel || reset {
@@ -147,10 +149,16 @@ final class MazeSceneRenderer {
     }
 
     func advance(by interval: TimeInterval) {
-        guard resourcesReady, let level = currentLevel, motion.isMoving else { return }
-        let frame = motion.advance(by: interval)
+        guard resourcesReady, let level = currentLevel, interval.isFinite, interval > 0,
+              motion.isMoving || ballTrail.hasParticles else { return }
         SCNTransaction.begin()
         SCNTransaction.disableActions = true
+        ballTrail.advance(by: interval)
+        let origin = motion.position
+        let frame = motion.advance(by: interval)
+        if !reduceMotion {
+            ballTrail.emit(from: origin, segments: frame.rotations, level: level, root: boardRoot, interval: interval)
+        }
         ballRoot.position = SCNVector3(motion.position.x - Float(level.width - 1) / 2, 0,
                                       motion.position.y - Float(level.height - 1) / 2)
         for delta in frame.rotations {
@@ -195,6 +203,7 @@ final class MazeSceneRenderer {
     private func snap(to position: GridCell, painted: Set<GridCell>, level: MazeLevel) {
         motion.reset(position: position, painted: painted)
         paintEffects.reset()
+        ballTrail.reset()
         ballRoot.removeAllActions()
         ball.removeAllActions()
         boardRoot.enumerateChildNodes { node, _ in node.removeAllActions() }
@@ -246,6 +255,7 @@ final class MazeSceneRenderer {
 
     private func configureScene() {
         MazeStudioLighting.configure(scene: scene, cameraNode: cameraNode)
+        ballTrail.setCameraOrientation(cameraNode.simdOrientation)
         shadowMaterial.lightingModel = .constant
         shadowMaterial.diffuse.contents = UIColor.clear
         shadowMaterial.writesToDepthBuffer = false

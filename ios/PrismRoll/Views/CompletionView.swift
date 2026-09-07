@@ -43,9 +43,11 @@ struct CompletionView: View {
         if store.isDuel { return "HEAD TO HEAD" }
         if store.isDaily { return store.run.isComplete ? "Today’s challenge is in the books." : "A different route could be the one." }
         if store.isTimeRush {
-            return "\(store.timeRushMazesCompleted) of \(store.timeRushMazeCount) mazes painted. Add time to keep your place in the round."
+            let progress = "\(store.timeRushMazesCompleted) of \(store.timeRushMazeCount) mazes painted."
+            return ads.canShowRewarded ? "\(progress) Add time to keep your place in the round." : progress
         }
-        return store.run.isComplete ? "Every path painted. On to the next." : "Keep your painted paths with a bonus video."
+        if store.run.isComplete { return "Every path painted. On to the next." }
+        return ads.canShowRewarded ? "Keep your painted paths with a bonus video." : "A different route could be the one."
     }
     private func primary(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {

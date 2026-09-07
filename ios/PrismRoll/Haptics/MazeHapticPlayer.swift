@@ -27,13 +27,13 @@ final class MazeHapticPlayer {
     func setEnabled(_ enabled: Bool) {
         guard self.enabled != enabled else { return }
         self.enabled = enabled
-        if enabled { prepare() } else { silence() }
+        if enabled { prepare() } else { suspend() }
     }
 
     func setActive(_ active: Bool) {
         guard self.active != active else { return }
         self.active = active
-        if active { prepare() } else { silence() }
+        if active { prepare() } else { suspend() }
     }
 
     func prepare() {
@@ -57,6 +57,12 @@ final class MazeHapticPlayer {
         output.playCompletion()
     }
 
+    /// Reduce Motion presents accepted moves instantly rather than rolling.
+    func playStep() {
+        guard enabled, active, !completionPlayed else { return }
+        output.playStep()
+    }
+
     /// Starts a new visual run without replaying the previous run's feedback.
     func reset() {
         completionPlayed = false
@@ -65,11 +71,16 @@ final class MazeHapticPlayer {
 
     func stop() {
         active = false
-        silence()
+        suspend()
     }
 
     private func silence() {
         rolling = false
         output.stop()
+    }
+
+    private func suspend() {
+        rolling = false
+        output.suspend()
     }
 }

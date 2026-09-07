@@ -10,7 +10,6 @@ struct RootView: View {
     @State private var tab = "play"
     @State private var settingsOpen = false
     @State private var restartPromptOpen = false
-    @State private var pauseOpen = false
     @State private var restartRunID: UUID?
     @State private var readyRunID: UUID?
     @State private var completedRunID: UUID?
@@ -21,14 +20,13 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             navigationPage("Prism Roll") {
-                PlayView(isActive: playSceneActive, onRestart: requestRestart, onPause: requestPause,
+                PlayView(isActive: playSceneActive, onRestart: requestRestart,
                          onCompletionReady: completedLevel) { ready, runID in
                     guard runID == store.runID else { return }
                     store.setPresentationReady(ready, for: runID)
                     if ready { readyRunID = runID }
                     else if readyRunID == runID { readyRunID = nil }
                 }
-                .sheet(isPresented: $pauseOpen) { PauseView() }
                 .alert(store.isTimeRush ? "Restart this round?" : "Restart this level?", isPresented: $restartPromptOpen) {
                     Button(store.isTimeRush ? "Restart round" : "Restart level", role: .destructive) {
                         guard restartRunID == store.runID else { return }
@@ -58,7 +56,7 @@ struct RootView: View {
         .tint(Palette.violet)
         .gameplaySwipes(
             enabled: tab == "play" && readyRunID == store.runID && store.acceptsGameplayInput
-                && scenePhase == .active && !settingsOpen && !restartPromptOpen && !pauseOpen && !duel.isMatching
+                && scenePhase == .active && !settingsOpen && !restartPromptOpen && !duel.isMatching
                 && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
                 && !store.hasEnded && !store.isRewardPending && !(store.isDuel && duel.didWin != nil),
             sessionID: store.inputID,
@@ -110,14 +108,12 @@ struct RootView: View {
         .onChange(of: duel.isMatching) { _, _ in syncModalState() }
         .onChange(of: settingsOpen) { _, _ in syncModalState() }
         .onChange(of: restartPromptOpen) { _, _ in syncModalState() }
-        .onChange(of: pauseOpen) { _, _ in syncModalState() }
         .onChange(of: playSceneActive) { _, active in
             if active { advanceCompletedLevelIfReady() }
         }
         .onChange(of: readyRunID) { _, _ in advanceCompletedLevelIfReady() }
         .onChange(of: store.runID) { _, _ in
             restartPromptOpen = false
-            pauseOpen = false
             restartRunID = nil
             completedRunID = nil
             advancingRunID = nil
@@ -136,7 +132,7 @@ struct RootView: View {
     }
 
     private var playSceneActive: Bool {
-        tab == "play" && scenePhase == .active && !settingsOpen && !restartPromptOpen && !pauseOpen && !duel.isMatching
+        tab == "play" && scenePhase == .active && !settingsOpen && !restartPromptOpen && !duel.isMatching
             && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
     }
 
@@ -149,15 +145,6 @@ struct RootView: View {
         } else {
             store.replay()
         }
-    }
-
-    private func requestPause() {
-        let runID = store.runID
-        store.tick()
-        guard runID == store.runID, !store.isDuel, !store.hasEnded else { return }
-        pauseOpen = true
-        syncModalState()
-        if store.hasEnded { pauseOpen = false; syncModalState() }
     }
 
     private func completedLevel(_ runID: UUID) {
@@ -188,7 +175,7 @@ struct RootView: View {
         }
     }
 
-    private func syncModalState() { store.setActivity(modal: settingsOpen || restartPromptOpen || pauseOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
+    private func syncModalState() { store.setActivity(modal: settingsOpen || restartPromptOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
     private func prepareAds() {
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()

@@ -58,7 +58,7 @@ final class PrismRollUITests: XCTestCase {
         }
         XCTAssertEqual(app.staticTexts["moveCount"].label, "10 moves", "Short flicks on the heading must register once each")
         app.buttons["Settings"].tap()
-        XCTAssertTrue(app.switches["Gentle haptics"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.switches["hapticsToggle"].waitForExistence(timeout: 3))
         app.swipeUp()
         app.buttons["Done"].tap()
         XCTAssertEqual(app.staticTexts["moveCount"].label, "10 moves", "Settings scrolling must not move the ball")
@@ -121,8 +121,8 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Keep rolling"].exists)
         capture(app, name: "06-challenge-complete")
         app.buttons["Settings"].tap()
-        XCTAssertTrue(app.switches["Gentle haptics"].exists)
-        app.switches["Gentle haptics"].tap()
+        XCTAssertTrue(app.switches["hapticsToggle"].exists)
+        app.switches["hapticsToggle"].tap()
         app.buttons["Done"].tap()
     }
 
@@ -194,7 +194,7 @@ final class PrismRollUITests: XCTestCase {
         default: XCTFail("Missing hint"); return
         }
         XCTAssertTrue(app.staticTexts["Out of time."].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.buttons["reward_extraTime"].exists)
+        XCTAssertFalse(app.buttons["reward_extraTime"].exists)
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
         capture(app, name: "08-time-expired")
         app.buttons["retryLevel"].tap()

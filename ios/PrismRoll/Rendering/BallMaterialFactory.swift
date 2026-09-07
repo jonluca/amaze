@@ -38,4 +38,34 @@ enum BallMaterialFactory {
         material.shininess = 0.65
         return material
     }
+
+    static func paintTile(_ tint: UIColor) -> SCNMaterial {
+        let material = paint(tint)
+        material.specular.intensity = 0.18
+        material.shininess = 0.48
+        // Shade in tile coordinates so every palette gets the same satin finish.
+        // The rounded bevel is purely shading: no extra geometry, transparency,
+        // textures, or per-frame work on the CPU.
+        material.shaderModifiers = [.surface: """
+        #pragma body
+        float2 uv = _surface.diffuseTexcoord;
+        float slope = smoothstep(0.0, 1.0, uv.x * 0.35 + uv.y * 0.65);
+        float3 tint = _surface.diffuse.rgb;
+        float3 highlight = mix(tint, float3(1.0), 0.20);
+        float3 shade = tint * 0.78;
+        float3 finish = mix(highlight, shade, slope);
+
+        // Match the plane's 0.06-unit corner radius within its 0.92-unit face.
+        float radius = 0.06 / 0.92;
+        float2 corner = abs(uv - 0.5) - (0.5 - radius);
+        float edgeDistance = length(max(corner, float2(0.0)))
+            + min(max(corner.x, corner.y), 0.0) - radius;
+        float bevel = 1.0 - smoothstep(0.004, 0.026, -edgeDistance);
+        float edgeLight = (0.5 - uv.x) * 0.65 + (0.5 - uv.y);
+        finish += bevel * edgeLight * 0.14;
+        _surface.diffuse.rgb = clamp(finish, float3(0.0), float3(1.0));
+        _surface.emission.rgb *= mix(float3(1.0), float3(0.78), slope);
+        """]
+        return material
+    }
 }

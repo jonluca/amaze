@@ -23,8 +23,8 @@ enum MazeStudioLighting {
         key.shadowMode = .forward
         key.shadowColor = UIColor.black.withAlphaComponent(0.65)
         key.shadowRadius = 4
-        key.shadowSampleCount = 16
-        key.shadowMapSize = CGSize(width: 2048, height: 2048)
+        key.shadowSampleCount = 8
+        key.shadowMapSize = CGSize(width: 1024, height: 1024)
         key.automaticallyAdjustsShadowProjection = false
         key.orthographicScale = 12
         key.zNear = 1

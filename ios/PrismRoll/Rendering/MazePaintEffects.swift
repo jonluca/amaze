@@ -8,7 +8,9 @@ enum MazePaintEffects {
         let material = BallMaterialFactory.paint(tint)
         for index in 0..<4 {
             let radius = CGFloat(0.035 + Double(index % 3) * 0.014)
-            let droplet = SCNNode(geometry: SCNSphere(radius: radius))
+            let geometry = SCNSphere(radius: radius)
+            geometry.segmentCount = 8
+            let droplet = SCNNode(geometry: geometry)
             droplet.geometry?.materials = [material]
             droplet.name = "paint-effect"
             let angle = Float(index) * 1.9 + Float(cell.row + cell.column)
@@ -22,6 +24,8 @@ enum MazePaintEffects {
             root.addChildNode(droplet)
         }
         let rippleGeometry = SCNTorus(ringRadius: 0.15, pipeRadius: 0.008)
+        rippleGeometry.ringSegmentCount = 24
+        rippleGeometry.pipeSegmentCount = 4
         rippleGeometry.materials = [material]
         let ripple = SCNNode(geometry: rippleGeometry)
         ripple.name = "paint-effect"

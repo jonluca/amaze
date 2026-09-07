@@ -2,6 +2,7 @@ import SceneKit
 
 @MainActor
 final class MazeCanvasView: SCNView {
+    var onVisibilityChange: ((Bool) -> Void)?
     var onLayout: ((CGSize) -> Void)?
     private(set) var isPreparing = false
     private var loadingOverlay: UIStackView?
@@ -9,6 +10,11 @@ final class MazeCanvasView: SCNView {
     override func layoutSubviews() {
         super.layoutSubviews()
         onLayout?(bounds.size)
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        onVisibilityChange?(window != nil)
     }
 
     func setPreparing(_ preparing: Bool) {

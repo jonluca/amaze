@@ -9,15 +9,17 @@ enum BallMaterialFactory {
                        blue: CGFloat(value & 0xFF) / 255, alpha: 1)
     }
 
-    static func make(for skin: BallSkin) -> SCNMaterial {
+    static func make(for skin: BallSkin) async -> SCNMaterial {
+        let texture = await ProceduralTextures.shared.ball(for: skin)
+        let reflection = await ProceduralTextures.shared.studioReflection()
         let material = SCNMaterial()
         material.lightingModel = .blinn
-        material.diffuse.contents = ProceduralTextures.ball(for: skin)
+        material.diffuse.contents = texture
         material.locksAmbientWithDiffuse = true
         material.specular.contents = UIColor.white
         material.specular.intensity = 0.85
         material.shininess = 0.86
-        material.reflective.contents = ProceduralTextures.studioReflection()
+        material.reflective.contents = reflection
         material.reflective.intensity = skin.pattern == "rings" ? 0.4 : 0.18
         material.emission.contents = material.diffuse.contents
         material.emission.intensity = 0.075

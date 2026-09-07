@@ -1,3 +1,4 @@
+import Combine
 import SceneKit
 import SwiftUI
 
@@ -11,6 +12,9 @@ struct MazeSceneView: UIViewRepresentable {
     let isComplete: Bool
     var theme: BoardTheme = .aurora
     var resetID: UUID? = nil
+    var isActive = true
+    var moveEvents: AnyPublisher<GameMoveEvent, Never>? = nil
+    var onReady: (Bool) -> Void = { _ in }
     let onSwipe: (MoveDirection) -> Void
 
     func makeCoordinator() -> MazeSceneCoordinator {
@@ -26,6 +30,9 @@ struct MazeSceneView: UIViewRepresentable {
 
     func updateUIView(_ view: MazeCanvasView, context: Context) {
         context.coordinator.onSwipe = onSwipe
+        context.coordinator.onReady = onReady
+        context.coordinator.bind(moveEvents, runID: resetID)
+        context.coordinator.setActive(isActive)
         context.coordinator.renderer.update(
             level: level,
             position: position,
@@ -35,7 +42,7 @@ struct MazeSceneView: UIViewRepresentable {
             theme: theme,
             resetID: resetID
         )
-        context.coordinator.observeFirstFrame()
+        context.coordinator.publishReadiness()
         view.accessibilityValue = "Row \(position.row + 1), column \(position.column + 1). \(painted.count) of \(level.openCells.count) squares painted."
         view.accessibilityHint = isComplete
             ? "Level complete."
@@ -43,9 +50,10 @@ struct MazeSceneView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ view: MazeCanvasView, coordinator: MazeSceneCoordinator) {
-        coordinator.renderer.stop()
+        coordinator.stop()
         coordinator.onSwipe = { _ in }
         view.onLayout = nil
+        view.onVisibilityChange = nil
         view.delegate = nil
         view.setPreparing(false)
         view.isPlaying = false

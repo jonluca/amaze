@@ -1,3 +1,4 @@
+import Combine
 import SceneKit
 import UIKit
 
@@ -5,32 +6,52 @@ import UIKit
 final class MazeSceneCoordinator: NSObject {
     let renderer = MazeSceneRenderer()
     var onSwipe: (MoveDirection) -> Void
+    var onReady: (Bool) -> Void = { _ in }
+    private(set) var isReady = false
     private weak var canvasView: MazeCanvasView?
+    private var moveSubscription: AnyCancellable?
+    private var subscribedRunID: UUID?
+    private var preparationRevision: Int?
+    private var firstFrameObserver: MazeFirstFrameObserver?
+    private var displayLink: CADisplayLink?
+    private var lastFrameTimestamp: CFTimeInterval?
+    private var isStopped = false
+    private var isActive = true
+    private var publishedReady: Bool?
+    private var publishedRunID: UUID?
+    private var publishedRevision: Int?
 
-    init(onSwipe: @escaping (MoveDirection) -> Void) {
-        self.onSwipe = onSwipe
-    }
+    init(onSwipe: @escaping (MoveDirection) -> Void) { self.onSwipe = onSwipe }
 
     func configure(_ view: MazeCanvasView) {
         canvasView = view
         view.setPreparing(true)
-        view.scene = renderer.scene
-        view.pointOfView = renderer.cameraNode
         view.backgroundColor = .clear
         view.isOpaque = false
         view.antialiasingMode = .multisampling4X
         view.preferredFramesPerSecond = 60
         view.autoenablesDefaultLighting = false
         view.allowsCameraControl = false
-        view.isPlaying = true
+        view.isPlaying = false
         view.onLayout = { [weak self] size in
             self?.renderer.resize(to: size)
+            self?.prepareSceneIfReady()
         }
-        for direction: UISwipeGestureRecognizer.Direction in [.up, .down, .left, .right] {
-            let gesture = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:)))
-            gesture.direction = direction
-            view.addGestureRecognizer(gesture)
+        view.onVisibilityChange = { [weak self] visible in
+            guard let self else { return }
+            self.lastFrameTimestamp = nil
+            self.displayLink?.isPaused = !visible || !self.isReady || !self.isActive
+            self.canvasView?.isPlaying = visible && self.isReady && self.isActive
         }
+        renderer.onPreparationNeeded = { [weak self] in self?.beginPreparation() }
+        renderer.onResourcesReady = { [weak self] in self?.prepareSceneIfReady() }
+        let link = CADisplayLink(target: self, selector: #selector(advanceFrame(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.isPaused = true
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+        // Gestures belong to the full gameplay window. The board retains its
+        // VoiceOver actions and uses the same readiness gate as that bridge.
         view.isAccessibilityElement = true
         view.accessibilityLabel = "3D painting maze"
         view.accessibilityTraits = [.allowsDirectInteraction]
@@ -42,28 +63,114 @@ final class MazeSceneCoordinator: NSObject {
         ]
     }
 
-    func observeFirstFrame() {
-        guard let canvasView, canvasView.isPreparing else { return }
-        canvasView.delegate = self
+    func bind(_ events: AnyPublisher<GameMoveEvent, Never>?, runID: UUID?) {
+        renderer.consumesMoveEvents = events != nil
+        guard subscribedRunID != runID || (moveSubscription == nil) != (events == nil) else { return }
+        moveSubscription?.cancel()
+        subscribedRunID = runID
+        moveSubscription = events?.sink { [weak self] event in self?.renderer.receive(event) }
     }
 
-    func receivedFirstFrame() {
-        canvasView?.setPreparing(false)
-        canvasView?.delegate = nil
+    func setActive(_ active: Bool) {
+        guard active != isActive else { return }
+        isActive = active
+        lastFrameTimestamp = nil
+        displayLink?.isPaused = !active || !isReady || canvasView?.window == nil
+        canvasView?.isPlaying = active && canvasView?.scene != nil
     }
 
-    @objc private func swiped(_ gesture: UISwipeGestureRecognizer) {
-        switch gesture.direction {
-        case .up: onSwipe(.up)
-        case .down: onSwipe(.down)
-        case .left: onSwipe(.left)
-        case .right: onSwipe(.right)
-        default: break
+    func publishReadiness() {
+        guard publishedReady != isReady || publishedRunID != subscribedRunID || publishedRevision != renderer.contentRevision else { return }
+        let ready = isReady
+        let runID = subscribedRunID
+        let revision = renderer.contentRevision
+        let callback = onReady
+        publishedReady = ready
+        publishedRunID = runID
+        publishedRevision = revision
+        // UIViewRepresentable updates may be inside a SwiftUI transaction.
+        // Deliver this UIKit lifecycle event after that transaction completes.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.isStopped, self.renderer.contentRevision == revision,
+                  self.subscribedRunID == runID, self.isReady == ready else { return }
+            callback(ready)
         }
     }
 
-    @objc private func rollUp() -> Bool { onSwipe(.up); return true }
-    @objc private func rollDown() -> Bool { onSwipe(.down); return true }
-    @objc private func rollLeft() -> Bool { onSwipe(.left); return true }
-    @objc private func rollRight() -> Bool { onSwipe(.right); return true }
+    func stop() {
+        isStopped = true
+        isReady = false
+        let callback = onReady
+        DispatchQueue.main.async { callback(false) }
+        moveSubscription?.cancel()
+        displayLink?.invalidate()
+        displayLink = nil
+        firstFrameObserver = nil
+        renderer.onPreparationNeeded = nil
+        renderer.onResourcesReady = nil
+        renderer.stop()
+    }
+
+    private func beginPreparation() {
+        isReady = false
+        publishReadiness()
+        preparationRevision = nil
+        firstFrameObserver = nil
+        lastFrameTimestamp = nil
+        displayLink?.isPaused = true
+        canvasView?.delegate = nil
+        canvasView?.isPlaying = false
+        canvasView?.scene = nil
+        canvasView?.setPreparing(true)
+    }
+
+    private func prepareSceneIfReady() {
+        guard !isStopped, renderer.resourcesReady, let view = canvasView,
+              view.bounds.width > 0, view.bounds.height > 0,
+              preparationRevision != renderer.contentRevision else { return }
+        let revision = renderer.contentRevision
+        preparationRevision = revision
+        // SceneKit uploads resources and compiles its pipelines on its own
+        // background preparation thread, before the scene becomes visible.
+        view.prepare([renderer.scene]) { [weak self, weak view] _ in
+            DispatchQueue.main.async {
+                guard let self, let view, !self.isStopped,
+                      self.renderer.contentRevision == revision else { return }
+                let observer = MazeFirstFrameObserver { [weak self] in self?.receivedFirstFrame(revision: revision) }
+                self.firstFrameObserver = observer
+                view.delegate = observer
+                view.pointOfView = self.renderer.cameraNode
+                view.scene = self.renderer.scene
+                view.isPlaying = self.isActive
+            }
+        }
+    }
+
+    private func receivedFirstFrame(revision: Int) {
+        guard !isStopped, preparationRevision == revision, renderer.contentRevision == revision, !isReady else { return }
+        isReady = true
+        canvasView?.setPreparing(false)
+        canvasView?.delegate = nil
+        firstFrameObserver = nil
+        lastFrameTimestamp = nil
+        displayLink?.isPaused = !isActive || canvasView?.window == nil
+        publishReadiness()
+    }
+
+    @objc private func advanceFrame(_ link: CADisplayLink) {
+        guard isReady else { return }
+        let interval = lastFrameTimestamp.map { link.timestamp - $0 } ?? link.duration
+        lastFrameTimestamp = link.timestamp
+        renderer.advance(by: interval)
+    }
+
+    private func roll(_ direction: MoveDirection) -> Bool {
+        guard isReady, isActive else { return false }
+        onSwipe(direction)
+        return true
+    }
+    @objc private func rollUp() -> Bool { roll(.up) }
+    @objc private func rollDown() -> Bool { roll(.down) }
+    @objc private func rollLeft() -> Bool { roll(.left) }
+    @objc private func rollRight() -> Bool { roll(.right) }
 }

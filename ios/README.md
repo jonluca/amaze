@@ -4,7 +4,9 @@ A native SwiftUI + SceneKit maze-painting game inspired by the swipe-to-paint me
 
 ## Play
 
-Swipe up, down, left, or right anywhere on the board. The ball rolls until a wall stops it, painting every tile it crosses. Paint all open tiles to finish. Blocked swipes do not count as moves.
+Swipe up, down, left, or right anywhere in the gameplay area, including the heading and empty space around the board. The native touch recognizer acts once a stroke crosses 12 points with a clear direction, before the finger lifts. Buttons, tabs, pickers, scrolling controls, and presented sheets keep their normal interactions. The ball rolls until a wall stops it, painting every tile it crosses. Paint all open tiles to finish. Blocked swipes do not count as moves.
+
+Build **1.0.0 (3)** is the current local polish checkpoint and is being prepared for release. It adds native `TabView` navigation, `NavigationStack` toolbars, a segmented mode `Picker`, and `List`/`Form` screens. Accessibility text sizes keep the board visible while the controls scroll. The camera uses a smaller fit with a 68% width and 78% height budget inside the 3D canvas. Texture generation runs away from the UI actor, the scene waits for prepared resources and its first rendered frame, and the launch screen uses the app's dark background. Ordered move events preserve rapid turns through display updates; old touches and callbacks cannot affect a reset run. The replacement [generated icon and its prompt](Design/README.md) are included. The App Store and TestFlight status below refers to **build 2**, not build 3.
 
 - **Classic:** unlimited swipes and deterministic levels growing from 4×4 to 9×9, with validated covering solutions.
 - **Time Rush:** independent progression, a visible countdown that begins on the first valid swipe, timeout and free retry. Background time, menus, and reward videos pause the clock.
@@ -67,6 +69,8 @@ xcodebuild -project PrismRoll.xcodeproj -scheme PrismRoll \
 
 Use iOS **26.1** for the shared scheme's local StoreKit tests; the same fixture encountered a StoreKit runtime failure on iOS 26.5. Use a destination UDID if several simulators match. The local fixture uses simulated pricing and does not exercise App Store Connect purchases. The current pure package compiles and discovers 31 tests after the platform-guard correction; its last complete 31-test pass predates that correction.
 
+The build 3 polish checkpoint passed 69 unit/state tests in `PolishTests-2`, then five renderer regressions and seven UI flows in `PolishTests-3`; these counts overlap. A final short-flick smoke test passed after the final edits. Coverage includes 600 synchronous moves, stale-snapshot rejection, reset/modal suppression, native controls, and accessibility text layout. See [VALIDATION.md](VALIDATION.md) for the exact runs, earlier UI-selector failures, and measured processing times.
+
 `--uitesting` resets the app’s local save and disables ads in Debug. `--no-ads` preserves the save while disabling ads in Debug. `--ui-hints` allows deterministic hints for UI tests without resetting a save, and `--short-timer` uses two-second fresh timers in Debug. These flags do not bypass production behavior in Release.
 
 ## Advertising setup
@@ -81,11 +85,12 @@ The app does not request tracking authorization. That release policy requires th
 | --- | --- |
 | `PrismRoll/Core` | Seeded levels, slide solver, run state, reward ledger, skin catalog |
 | `PrismRoll/App` | Observable state, save/resume, app lifecycle |
-| `PrismRoll/Rendering` | 3D board, lighting, ball materials, queued roll/paint animations |
-| `PrismRoll/Views` | Play, collection, journey, completion, and settings screens |
+| `PrismRoll/Input` | Full gameplay swipe observer, touch filtering, ordered move events |
+| `PrismRoll/Rendering` | 3D board, asynchronous textures, frame readiness, continuous roll/paint timeline |
+| `PrismRoll/Views` | Native navigation, play, collection, journey, completion, and settings screens |
 | `PrismRoll/Services` | StoreKit entitlements and Game Center Duel |
 | `PrismRoll/Ads` | Consent, inventory, presentation, verified reward callbacks |
 | `PrismRollTests` | Engine and state regression tests |
 | `PrismRollUITests` | Real simulator interaction tests and screenshot attachments |
 
-App icon artwork is generated locally with `swift scripts/generate_icon.swift PrismRoll/Assets.xcassets/AppIcon.appiconset/AppIcon.png`.
+The replacement app icon and its generation prompt are documented in [Design/README.md](Design/README.md). The 1024-pixel opaque asset is in the AppIcon asset catalog.

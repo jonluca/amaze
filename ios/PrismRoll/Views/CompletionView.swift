@@ -14,19 +14,19 @@ struct CompletionView: View {
                     .shadow(color: Palette.gold.opacity(0.20), radius: 15)
             }
             VStack(spacing: 7) {
-                Text(title).font(.system(size: 27, weight: .bold, design: .rounded)).accessibilityIdentifier("completionTitle")
-                Text(subtitle).font(.system(size: 12)).foregroundStyle(Palette.secondary).multilineTextAlignment(.center)
+                Text(title).font(.title2.bold()).accessibilityIdentifier("completionTitle")
+                Text(subtitle).font(.subheadline).foregroundStyle(Palette.secondary).multilineTextAlignment(.center)
             }
             if store.isDuel {
                 Text(duel.didWin == nil ? "Waiting for the match result…" : duel.didWin == true ? "You painted the maze first." : "A new opponent. A fresh chance.")
-                    .font(.system(size: 13)).foregroundStyle(Palette.cyan)
+                    .font(.subheadline).foregroundStyle(Palette.cyan)
                 primary("Back to play") { duel.cancel(); store.endSpecialSession() }
             } else if store.run.isComplete {
                 if store.earnedPoints > 0 {
                     CoinBadge(amount: store.earnedPoints * (store.bonusClaimed && !store.isDaily ? 2 : 1))
                 } else {
                     Text(store.bonusClaimed && !store.isDaily ? "Completion and bonus coins already collected" : "Completion coins already collected")
-                        .font(.system(size: 11)).foregroundStyle(Palette.secondary)
+                        .font(.footnote).foregroundStyle(Palette.secondary)
                 }
                 primary(store.isDaily ? "Back to play" : "Keep rolling") {
                     if store.isDaily { store.nextLevel() }
@@ -40,21 +40,21 @@ struct CompletionView: View {
                         ads.presentRewarded(onReward: { store.claimAdBonus(for: level) }, onDismiss: { store.finishReward() })
                     } label: {
                         Label("Double coins · watch ad", systemImage: "play.rectangle.fill")
-                            .font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.gold)
-                    }.disabled(ads.isPresenting)
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.gold)
+                    }.buttonStyle(.bordered).disabled(ads.isPresenting || store.isRewardPending)
                 }
             } else {
                 RewardButton(kind: store.timeExpired ? .extraTime : .extraMoves,
                              title: store.timeExpired ? "Continue with +30 seconds" : "Continue with +3 moves",
                              icon: store.timeExpired ? "timer" : "scope")
                 primary("Try again", action: store.replay).accessibilityIdentifier("retryLevel")
-                Text("Retrying is always free.").font(.system(size: 10)).foregroundStyle(Palette.secondary)
+                Text("Retrying is always free.").font(.footnote).foregroundStyle(Palette.secondary)
             }
         }
-        .padding(26)
-        .background(LinearGradient(colors: [Color(hex: "202C48"), Palette.paper], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 29))
-        .overlay(RoundedRectangle(cornerRadius: 29).stroke(LinearGradient(colors: [Palette.violet.opacity(0.55), Palette.line], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-        .shadow(color: .black.opacity(0.4), radius: 35, y: 14).frame(maxWidth: 350)
+        .padding(24)
+        .frame(maxWidth: 360)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+
     }
     private var title: String {
         if store.isDuel { return duel.didWin == nil ? "Maze painted!" : duel.didWin == true ? "You won!" : "Good race." }
@@ -67,9 +67,10 @@ struct CompletionView: View {
     }
     private func primary(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack { Text(title); Spacer(); Image(systemName: "arrow.right") }
-                .font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                .padding(17).background(Palette.button, in: RoundedRectangle(cornerRadius: 17))
-        }.disabled(ads.isPresenting)
+            Text(title).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(ads.isPresenting || store.isRewardPending)
     }
 }

@@ -7,12 +7,12 @@ enum MazeCoinBuilder {
         let root = SCNNode()
         let gold = BallMaterialFactory.paint(BallMaterialFactory.color(hex: "FFD46B"))
         gold.specular.intensity = 0.9
-        gold.reflective.contents = ProceduralTextures.studioReflection()
         gold.reflective.intensity = 0.2
         let cylinder = SCNCylinder(radius: 0.23, height: 0.075)
         cylinder.radialSegmentCount = 36
         cylinder.materials = [gold]
         let face = SCNNode(geometry: cylinder)
+        face.name = "coin-gold"
         face.eulerAngles.x = .pi / 2
         root.addChildNode(face)
         let ring = SCNTorus(ringRadius: 0.18, pipeRadius: 0.012)

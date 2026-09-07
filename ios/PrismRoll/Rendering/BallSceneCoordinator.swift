@@ -7,6 +7,7 @@ final class BallSceneCoordinator {
     let cameraNode = SCNNode()
     private let sphere = SCNNode(geometry: SCNSphere(radius: 0.72))
     private var skinID: String?
+    private var materialTask: Task<Void, Never>?
 
     init() {
         MazeStudioLighting.configure(scene: scene, cameraNode: cameraNode, shadows: false)
@@ -21,7 +22,12 @@ final class BallSceneCoordinator {
     func update(skin: BallSkin, isAnimated: Bool) {
         if skinID != skin.id {
             skinID = skin.id
-            sphere.geometry?.materials = [BallMaterialFactory.make(for: skin)]
+            materialTask?.cancel()
+            materialTask = Task { [weak self] in
+                let material = await BallMaterialFactory.make(for: skin)
+                guard !Task.isCancelled, let self, self.skinID == skin.id else { return }
+                self.sphere.geometry?.materials = [material]
+            }
         }
         let animate = isAnimated && !UIAccessibility.isReduceMotionEnabled
         if animate, sphere.action(forKey: "turntable") == nil {
@@ -29,5 +35,5 @@ final class BallSceneCoordinator {
         } else if !animate { sphere.removeAction(forKey: "turntable") }
     }
 
-    func stop() { sphere.removeAllActions() }
+    func stop() { materialTask?.cancel(); sphere.removeAllActions() }
 }

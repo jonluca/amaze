@@ -11,7 +11,6 @@ enum MazeBoardBuilder {
         topMaterial.specular.contents = UIColor.white
         topMaterial.specular.intensity = theme == .midnight ? 0.5 : 0.18
         topMaterial.shininess = 0.65
-        if theme == .timber { topMaterial.diffuse.contents = ProceduralTextures.timber() }
         let sideMaterial = matte(BallMaterialFactory.color(hex: theme.sideHex))
         let rim = matte(BallMaterialFactory.color(hex: theme == .timber ? "3B2419" : "162039"))
         let base = box(width: CGFloat(level.width) + 0.58, height: 0.28,

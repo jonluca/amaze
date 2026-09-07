@@ -21,8 +21,8 @@ struct PrivacyPolicyView: View {
                 policyLink("Game Center & Privacy", url: "https://www.apple.com/legal/privacy/data/en/game-center/")
                 policyLink("App Store & Privacy", url: "https://www.apple.com/legal/privacy/data/en/app-store/")
                 Text("Apple and Google describe retention, deletion, and account controls in these policies. Removing Prism Roll does not delete records those services maintain. Requests concerning their services can be directed through those resources. These links require an internet connection.")
-                    .font(.footnote).foregroundStyle(Palette.secondary)
-            }.listRowBackground(Palette.paper)
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
 
             Section("Support and privacy questions") {
                 Text("If you email info@thoughtahead.com or privacy@thoughtahead.com, your address, message, and any attachments are shared with the recipient to address your request. Include only the details you want to share. You can use the privacy address to ask about a support conversation or request its deletion.\n\nOur support and privacy webpages contain no analytics scripts, advertising code, or contact forms. Provider links take you to websites governed by their own privacy policies.")
@@ -30,11 +30,8 @@ struct PrivacyPolicyView: View {
                 policyLink("Contact support", url: "https://thoughtahead.com/prism-roll/support.html")
                 policyLink("Online privacy policy", url: "https://thoughtahead.com/prism-roll/privacy.html")
                 policyLink("Email privacy support", url: "mailto:privacy@thoughtahead.com")
-            }.listRowBackground(Palette.paper)
+            }
         }
-        .scrollContentBackground(.hidden)
-        .background(Palette.background)
-        .foregroundStyle(Palette.ink)
         .tint(Palette.violet)
         .navigationTitle("Privacy policy")
         .navigationBarTitleDisplayMode(.inline)
@@ -44,7 +41,7 @@ struct PrivacyPolicyView: View {
     private func policySection(_ title: String, text: String) -> some View {
         Section(title) {
             Text(text).textSelection(.enabled)
-        }.listRowBackground(Palette.paper)
+        }
     }
 
     @ViewBuilder

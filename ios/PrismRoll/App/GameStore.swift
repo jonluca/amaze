@@ -1,5 +1,6 @@
 import SwiftUI
 import AudioToolbox
+import Combine
 
 @MainActor
 final class GameStore: ObservableObject {
@@ -7,6 +8,9 @@ final class GameStore: ObservableObject {
     @Published private(set) var run: MazeRun
     @Published private(set) var mode: GameMode
     @Published private(set) var runID = UUID()
+    @Published private(set) var inputID = UUID()
+    /// Direct delivery preserves every accepted turn between SwiftUI display updates.
+    let moveEvents = PassthroughSubject<GameMoveEvent, Never>()
     @Published private(set) var clock: TimedRunState?
     @Published private(set) var dailyChallenge: DailyChallenge
     @Published private(set) var isDaily = false
@@ -94,6 +98,7 @@ final class GameStore: ObservableObject {
     var canClaimDaily: Bool { progress.canClaimDailyReward(at: dateProvider()) }
     var dailyReward: Int { progress.dailyRewardAmount(at: dateProvider()) }
     var clockRunning: Bool { appActive && playVisible && !modalOpen && !isRewardPending && !hasEnded && clock?.hasStarted == true }
+    var acceptsGameplayInput: Bool { appActive && playVisible && !modalOpen && notice == nil && !hasEnded && !isRewardPending }
 
     func tick() {
         if appActive { refreshDaily() }
@@ -108,9 +113,11 @@ final class GameStore: ObservableObject {
 
     func setActivity(active: Bool? = nil, visible: Bool? = nil, modal: Bool? = nil) {
         tick()
+        let changed = active.map { $0 != appActive } == true || visible.map { $0 != playVisible } == true || modal.map { $0 != modalOpen } == true
         if let active { appActive = active }
         if let visible { playVisible = visible }
         if let modal { modalOpen = modal }
+        if changed { inputID = UUID() }
         lastTick = uptimeProvider()
         save()
     }
@@ -127,11 +134,19 @@ final class GameStore: ObservableObject {
     }
 
     func move(_ direction: MoveDirection) {
+        move(direction, for: inputID)
+    }
+
+    func move(_ direction: MoveDirection, for inputID: UUID) {
+        guard inputID == self.inputID else { return }
         let originalRun = runID
         tick()
-        guard originalRun == runID, appActive, playVisible, !modalOpen, !hasEnded, !isRewardPending else { return }
+        guard inputID == self.inputID, originalRun == runID, acceptsGameplayInput else { return }
+        let start = run.position
         let path = run.move(direction)
         guard !path.isEmpty else { return }
+        moveEvents.send(GameMoveEvent(runID: runID, start: start, path: path, position: run.position,
+                                     painted: run.painted, isComplete: run.isComplete, moves: run.moves))
         clock?.hasStarted = true
         lastTick = uptimeProvider()
         hint = nil
@@ -218,8 +233,8 @@ final class GameStore: ObservableObject {
         return GameplayRewardRequest(id: UUID(), runID: runID, kind: kind, position: run.position, moves: run.moves)
     }
 
-    func beginReward() { tick(); isRewardPending = true; save() }
-    func finishReward() { isRewardPending = false; lastTick = uptimeProvider() }
+    func beginReward() { tick(); isRewardPending = true; inputID = UUID(); save() }
+    func finishReward() { isRewardPending = false; inputID = UUID(); lastTick = uptimeProvider() }
 
     func applyReward(_ request: GameplayRewardRequest) {
         guard request.runID == runID, rewardedRequestIDs.insert(request.id).inserted else { return }
@@ -264,7 +279,7 @@ final class GameStore: ObservableObject {
     func setSound(_ enabled: Bool) { progress.soundEnabled = enabled; save() }
 
     private func clearTransientState() {
-        runID = UUID(); earnedPoints = 0; hint = nil; notice = nil
+        runID = UUID(); inputID = UUID(); earnedPoints = 0; hint = nil; notice = nil
         isRewardPending = false; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--short-timer"), clock != nil { clock = TimedRunState(remainingSeconds: 2) }

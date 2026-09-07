@@ -1,11 +1,13 @@
 import UIKit
 
-@MainActor
-enum ProceduralTextures {
-    private static var cache: [String: UIImage] = [:]
+/// Texture rasterization and its cache live off the UI actor.
+actor ProceduralTextures {
+    static let shared = ProceduralTextures()
+    private var cache: [String: UIImage] = [:]
 
-    static func ball(for skin: BallSkin) -> UIImage {
-        if let image = cache[skin.id] { return image }
+    func ball(for skin: BallSkin) -> UIImage {
+        let key = "ball:\(skin.id):\(skin.hex):\(skin.accentHex):\(skin.pattern)"
+        if let image = cache[key] { return image }
         let base = components(skin.hex)
         let accent = components(skin.accentHex)
         let image = raster(width: 512, height: 256) { u, v in
@@ -36,11 +38,11 @@ enum ProceduralTextures {
                     base.1 + (accent.1 - base.1) * blend,
                     base.2 + (accent.2 - base.2) * blend, 1)
         }
-        cache[skin.id] = image
+        cache[key] = image
         return image
     }
 
-    static func timber() -> UIImage {
+    func timber() -> UIImage {
         if let image = cache["wood"] { return image }
         let image = raster(width: 512, height: 512) { u, v in
             let bend = sin(v * 11) * 0.009 + sin(v * 29 + u * 8) * 0.003
@@ -56,7 +58,7 @@ enum ProceduralTextures {
         return image
     }
 
-    static func contactShadow() -> UIImage {
+    func contactShadow() -> UIImage {
         if let image = cache["contact-shadow"] { return image }
         let image = raster(width: 128, height: 128) { u, v in
             let radius = hypot((u - 0.5) * 2, (v - 0.5) * 2)
@@ -67,7 +69,7 @@ enum ProceduralTextures {
         return image
     }
 
-    static func studioReflection() -> UIImage {
+    func studioReflection() -> UIImage {
         if let image = cache["studio"] { return image }
         let image = raster(width: 512, height: 256) { u, v in
             let key = exp(-pow(abs((u - 0.22) / 0.14), 6) - pow(abs((v - 0.30) / 0.11), 6))
@@ -81,12 +83,12 @@ enum ProceduralTextures {
         return image
     }
 
-    private static func components(_ hex: String) -> (Double, Double, Double) {
+    private func components(_ hex: String) -> (Double, Double, Double) {
         let value = UInt32(hex.trimmingCharacters(in: CharacterSet(charactersIn: "#")), radix: 16) ?? 0
         return (Double((value >> 16) & 0xFF) / 255, Double((value >> 8) & 0xFF) / 255, Double(value & 0xFF) / 255)
     }
 
-    private static func raster(width: Int, height: Int, pixel: (Double, Double) -> (Double, Double, Double, Double)) -> UIImage {
+    private func raster(width: Int, height: Int, pixel: (Double, Double) -> (Double, Double, Double, Double)) -> UIImage {
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         for row in 0..<height {
             for column in 0..<width {

@@ -9,25 +9,39 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab = "play"
     @State private var settingsOpen = false
+    @State private var readyRunID: UUID?
     private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header.padding(.horizontal, 24).padding(.top, 9).padding(.bottom, 16)
-            Group {
-                switch tab {
-                case "collection": CollectionView()
-                case "challenges": ChallengesView { tab = "play" }
-                case "journey": JourneyView { tab = "play" }
-                default: PlayView()
+        TabView(selection: $tab) {
+            navigationPage("Prism Roll") {
+                PlayView(isActive: playSceneActive) { ready, runID in
+                    guard runID == store.runID else { return }
+                    if ready { readyRunID = runID }
+                    else if readyRunID == runID { readyRunID = nil }
                 }
-            }.frame(maxWidth: 720, maxHeight: .infinity)
-            navigation
+            }
+                .tabItem { Label("Play", systemImage: "square.grid.3x3.fill").accessibilityIdentifier("tab_play") }
+                .tag("play")
+            navigationPage("Challenges") { ChallengesView { tab = "play" } }
+                .tabItem { Label("Challenges", systemImage: "trophy.fill").accessibilityIdentifier("tab_challenges") }
+                .tag("challenges")
+            navigationPage("Collection") { CollectionView() }
+                .tabItem { Label("Collection", systemImage: "circle.hexagongrid.fill").accessibilityIdentifier("tab_collection") }
+                .tag("collection")
+            navigationPage("Journey") { JourneyView { tab = "play" } }
+                .tabItem { Label("Journey", systemImage: "point.topleft.down.to.point.bottomright.curvepath").accessibilityIdentifier("tab_journey") }
+                .tag("journey")
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(GameBackdrop())
-        .foregroundStyle(Palette.ink)
-        .buttonStyle(PressStyle())
+        .tint(Palette.violet)
+        .gameplaySwipes(
+            enabled: tab == "play" && readyRunID == store.runID && store.acceptsGameplayInput
+                && scenePhase == .active && !settingsOpen && !duel.isMatching
+                && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
+                && !store.hasEnded && !store.isRewardPending && !(store.isDuel && duel.didWin != nil),
+            sessionID: store.inputID,
+            onSwipe: { direction, inputID in store.move(direction, for: inputID) }
+        )
         .sheet(isPresented: $settingsOpen) { SettingsView() }
         .alert("Prism Roll", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
             Button("Got it", role: .cancel) { store.notice = nil }
@@ -83,55 +97,47 @@ struct RootView: View {
         }
     }
 
+    private var playSceneActive: Bool {
+        tab == "play" && scenePhase == .active && !settingsOpen && !duel.isMatching
+            && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
+    }
+
     private func syncModalState() { store.setActivity(modal: settingsOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
     private func prepareAds() {
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()
     }
-    private var header: some View {
-        HStack(spacing: 9) {
-            Image(systemName: "cube.transparent.fill")
-                .font(.system(size: 29, weight: .bold)).foregroundStyle(Palette.violet)
-                .shadow(color: Palette.violet.opacity(0.4), radius: 10).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: -1) {
-                Text("PRISM").font(.system(size: 14, weight: .black, design: .rounded)).tracking(2.3)
-                Text("ROLL").font(.system(size: 9, weight: .bold, design: .rounded)).tracking(5.1).foregroundStyle(Palette.secondary)
-            }
-            Spacer(minLength: 8)
-            Button { tab = "challenges" } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill").foregroundStyle(Palette.accent)
-                    Text("\(store.currentStreak)").font(.system(size: 13, weight: .bold, design: .rounded))
-                }.padding(10).background(Palette.paper, in: Capsule())
-            }.accessibilityLabel("Daily streak, \(store.currentStreak) days")
-            CoinBadge(amount: store.progress.points)
-                .accessibilityElement(children: .ignore).accessibilityLabel("\(store.progress.points) coins")
-                .accessibilityIdentifier("pointsBalance")
-            Button { settingsOpen = true } label: {
-                Image(systemName: "gearshape").font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Palette.secondary).frame(width: 34, height: 42)
-            }.accessibilityLabel("Settings")
-        }.frame(maxWidth: 672)
-    }
-    private var navigation: some View {
-        HStack(spacing: 4) {
-            navItem("play", title: "Play", icon: "square.grid.3x3.fill")
-            navItem("challenges", title: "Challenges", icon: "trophy.fill")
-            navItem("collection", title: "Collection", icon: "circle.hexagongrid.fill")
-            navItem("journey", title: "Journey", icon: "point.topleft.down.to.point.bottomright.curvepath")
+    private func navigationPage<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        NavigationStack {
+            content()
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { tab = "challenges" } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "flame.fill")
+                                Text("\(store.currentStreak)").monospacedDigit()
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Daily streak, \(store.currentStreak) days")
+                        }
+                        .accessibilityLabel("Daily streak, \(store.currentStreak) days")
+                        .accessibilityIdentifier("dailyStreak")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        CoinBadge(amount: store.progress.points)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(store.progress.points) coins")
+                            .accessibilityIdentifier("pointsBalance")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { settingsOpen = true } label: {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                        .accessibilityLabel("Settings")
+                    }
+                }
         }
-        .padding(6).background(Palette.paper.opacity(0.96), in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Palette.line, lineWidth: 1))
-        .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 7).frame(maxWidth: 550)
-    }
-    private func navItem(_ id: String, title: String, icon: String) -> some View {
-        Button { tab = id } label: {
-            VStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 18, weight: .semibold))
-                Text(title).font(.system(size: 9, weight: .bold, design: .rounded))
-            }.frame(maxWidth: .infinity).frame(height: 53)
-                .foregroundStyle(tab == id ? Palette.violet : Palette.secondary)
-                .background(tab == id ? Palette.violet.opacity(0.13) : .clear, in: RoundedRectangle(cornerRadius: 18))
-        }.accessibilityIdentifier("tab_\(id)").accessibilityAddTraits(tab == id ? .isSelected : [])
     }
 }

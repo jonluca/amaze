@@ -5,8 +5,14 @@ import UIKit
 final class MazeSceneRenderer {
     let scene = SCNScene()
     let cameraNode = SCNNode()
+    var onPreparationNeeded: (() -> Void)?
+    var onResourcesReady: (() -> Void)?
+    private(set) var resourcesReady = false
+    private(set) var contentRevision = 0
+    var consumesMoveEvents = false
     private var boardRoot = SCNNode()
     private let boardShadow = SCNNode(geometry: SCNPlane(width: 8, height: 8))
+    private let shadowMaterial = SCNMaterial()
     private let ballRoot = SCNNode()
     private let ball = SCNNode(geometry: SCNSphere(radius: 0.405))
     private var paintTiles: [GridCell: SCNNode] = [:]
@@ -15,31 +21,45 @@ final class MazeSceneRenderer {
     private var currentTheme: BoardTheme?
     private var lastPosition: GridCell?
     private var lastPainted: Set<GridCell> = []
-    private var displayedPosition: GridCell?
-    private var displayedPainted: Set<GridCell> = []
-    private var pendingMoves: [MazeSceneMove] = []
-    private var isAnimating = false
-    private var animationRevision = 0
     private var lastResetID: UUID?
+    private(set) var acceptedMoveCount = 0
+    var pendingMoveCount: Int { motion.pendingMoveCount }
+    var renderedCellPosition: SIMD2<Float> { motion.position }
+    var renderedPainted: Set<GridCell> { motion.painted }
     private var skinID: String?
     private var paintTint = UIColor.systemPink
     private var wasComplete = false
     private var viewportSize = CGSize(width: 360, height: 390)
+    private var materialTask: Task<Void, Never>?
+    private var motion = MazeMotionTimeline()
 
     init() { configureScene() }
 
     func resize(to size: CGSize) {
-        guard size.width > 0, size.height > 0 else { return }
+        guard size.width > 0, size.height > 0, size != viewportSize else { return }
         viewportSize = size
         frameBoard()
     }
 
-    func update(level: MazeLevel, position: GridCell, painted: Set<GridCell>, skin: BallSkin,
-                isComplete: Bool, theme: BoardTheme = .aurora, resetID: UUID? = nil) {
-        let changedLevel = currentLevel?.number != level.number || currentLevel?.mode != level.mode
+    func update(level: MazeLevel, position proposedPosition: GridCell, painted proposedPainted: Set<GridCell>, skin: BallSkin,
+                isComplete proposedCompletion: Bool, theme: BoardTheme = .aurora, resetID: UUID? = nil) {
+        let changedLayout = currentLevel?.number != level.number || currentLevel?.mode != level.mode
             || currentLevel?.openCells != level.openCells || currentLevel?.coinCells != level.coinCells
-            || currentLevel?.width != level.width || currentLevel?.height != level.height || currentTheme != theme
-        let reset = lastResetID != resetID || !lastPainted.isSubset(of: painted)
+            || currentLevel?.width != level.width || currentLevel?.height != level.height
+        let changedLevel = changedLayout || currentTheme != theme
+        let changedRun = lastResetID != resetID
+        let eventStateIsNewer = consumesMoveEvents && !changedRun && !changedLayout && acceptedMoveCount > 0
+        let position = eventStateIsNewer ? lastPosition ?? proposedPosition : proposedPosition
+        let painted = eventStateIsNewer ? lastPainted : proposedPainted
+        let isComplete = eventStateIsNewer ? wasComplete : proposedCompletion
+        let reset = changedRun || !lastPainted.isSubset(of: painted)
+        let changedSkin = skinID != skin.id
+        let needsPreparation = changedLevel || changedSkin || reset
+        if needsPreparation {
+            resourcesReady = false
+            contentRevision += 1
+            onPreparationNeeded?()
+        }
         paintTint = BallMaterialFactory.color(hex: skin.hex)
         if changedLevel {
             boardRoot.removeFromParentNode()
@@ -50,63 +70,135 @@ final class MazeSceneRenderer {
             scene.rootNode.addChildNode(boardRoot)
             currentLevel = level
             currentTheme = theme
-            lastPosition = nil
-            lastPainted = []
-            wasComplete = false
             frameBoard()
         }
-        if skinID != skin.id || changedLevel {
+        if changedSkin || changedLevel {
             skinID = skin.id
-            ball.geometry?.materials = [BallMaterialFactory.make(for: skin)]
             let material = BallMaterialFactory.paint(paintTint)
             for tile in paintTiles.values { tile.geometry?.materials = [material] }
-            if theme != .timber, let material = boardRoot.childNode(withName: "board-accent", recursively: false)?.geometry?.firstMaterial {
-                material.diffuse.contents = paintTint
-                material.emission.contents = paintTint
+            if theme != .timber, let accent = boardRoot.childNode(withName: "board-accent", recursively: false)?.geometry?.firstMaterial {
+                accent.diffuse.contents = paintTint
+                accent.emission.contents = paintTint
             }
         }
         if changedLevel || reset || UIAccessibility.isReduceMotionEnabled {
-            stop()
-            ballRoot.position = MazeBoardBuilder.position(of: position, in: level)
-            ball.position.y = 0.423
-            ball.eulerAngles = SCNVector3(0.1, 0.4, -0.2)
-            updatePaint(painted, from: nil, duration: 0, reset: true)
-            for (cell, coin) in coins {
-                let center = MazeBoardBuilder.position(of: cell, in: level)
-                coin.position = SCNVector3(center.x, 0.39, center.z)
-                coin.scale = SCNVector3(1, 1, 1)
-                coin.opacity = painted.contains(cell) ? 0 : 1
-                if !painted.contains(cell) { MazeCoinBuilder.animate(coin) }
-            }
-            displayedPosition = position
-            displayedPainted = painted
-            for child in boardRoot.childNodes where child.name == "celebration" || child.name == "paint-effect" {
-                child.removeFromParentNode()
-            }
-        } else if lastPosition != position || lastPainted != painted || isComplete != wasComplete {
-            pendingMoves.append(MazeSceneMove(position: position, painted: painted, isComplete: isComplete))
-            animateNextMove()
+            if changedRun || changedLayout { acceptedMoveCount = 0 }
+            snap(to: position, painted: painted, level: level)
+        } else if !consumesMoveEvents, lastPosition != position || lastPainted != painted || isComplete != wasComplete {
+            // Snapshot-only callers retain safe interruption semantics: only a
+            // legal straight slide animates; a skipped turn snaps to its state.
+            if let origin = lastPosition, let path = slide(from: origin, to: position, level: level) {
+                motion.enqueue(MazeSceneMove(origin: origin, path: path, position: position, painted: painted, isComplete: isComplete))
+            } else { snap(to: position, painted: painted, level: level) }
         }
         lastPosition = position
         lastPainted = painted
         lastResetID = resetID
         wasComplete = isComplete
+        if needsPreparation { prepareMaterials(skin: skin, theme: theme) }
+    }
+
+    func receive(_ event: GameMoveEvent) {
+        guard event.runID == lastResetID, event.moves > acceptedMoveCount, let level = currentLevel else { return }
+        // Preserve every accepted event, rather than reconstructing turns from
+        // SwiftUI's potentially coalesced final snapshot.
+        guard event.start == lastPosition, event.path == slide(from: event.start, to: event.position, level: level) else {
+            snap(to: event.position, painted: event.painted, level: level)
+            record(event)
+            return
+        }
+        if UIAccessibility.isReduceMotionEnabled { snap(to: event.position, painted: event.painted, level: level) }
+        else {
+            motion.enqueue(MazeSceneMove(origin: event.start, path: event.path, position: event.position,
+                                        painted: event.painted, isComplete: event.isComplete))
+        }
+        record(event)
+    }
+
+    func advance(by interval: TimeInterval) {
+        guard resourcesReady, let level = currentLevel, motion.isMoving else { return }
+        let frame = motion.advance(by: interval)
+        SCNTransaction.begin()
+        SCNTransaction.disableActions = true
+        ballRoot.position = SCNVector3(motion.position.x - Float(level.width - 1) / 2, 0,
+                                      motion.position.y - Float(level.height - 1) / 2)
+        for delta in frame.rotations {
+            let distance = simd_length(delta)
+            if distance > 0.00001 {
+                let turn = simd_quatf(angle: distance / 0.405, axis: SIMD3(delta.y / distance, 0, -delta.x / distance))
+                ball.simdOrientation = turn * ball.simdOrientation
+            }
+        }
+        for cell in frame.paintedCells {
+            paintTiles[cell]?.opacity = 1
+            if let coin = coins[cell], coin.opacity > 0 {
+                coin.removeAllActions()
+                coin.runAction(.group([.moveBy(x: 0, y: 0.35, z: 0, duration: 0.18), .fadeOut(duration: 0.18)]))
+            }
+        }
+        SCNTransaction.commit()
+        // A fast frame may cross several cells; one small splash retains the
+        // wet trail without allocating dozens of overlapping particle meshes.
+        if let cell = frame.paintedCells.last { MazePaintEffects.splash(at: cell, level: level, root: boardRoot, tint: paintTint, delay: 0) }
+        if let cell = frame.completedAt { MazePaintEffects.celebrate(at: cell, level: level, root: boardRoot, ball: ball, tint: paintTint, delay: 0) }
     }
 
     func stop() {
-        animationRevision += 1
-        pendingMoves.removeAll()
-        isAnimating = false
+        materialTask?.cancel()
+        contentRevision += 1
+        resourcesReady = false
+        if let position = lastPosition, let level = currentLevel { snap(to: position, painted: lastPainted, level: level) }
+    }
+
+    private func record(_ event: GameMoveEvent) {
+        acceptedMoveCount = event.moves
+        lastPosition = event.position
+        lastPainted = event.painted
+        wasComplete = event.isComplete
+    }
+
+    private func snap(to position: GridCell, painted: Set<GridCell>, level: MazeLevel) {
+        motion.reset(position: position, painted: painted)
         ballRoot.removeAllActions()
         ball.removeAllActions()
         boardRoot.enumerateChildNodes { node, _ in node.removeAllActions() }
+        ballRoot.position = MazeBoardBuilder.position(of: position, in: level)
+        ball.position.y = 0.423
+        ball.eulerAngles = SCNVector3(0.1, 0.4, -0.2)
+        for (cell, tile) in paintTiles { tile.opacity = painted.contains(cell) ? 1 : 0 }
+        for (cell, coin) in coins {
+            let center = MazeBoardBuilder.position(of: cell, in: level)
+            coin.position = SCNVector3(center.x, 0.39, center.z)
+            coin.scale = SCNVector3(1, 1, 1)
+            coin.opacity = painted.contains(cell) ? 0 : 1
+            if !painted.contains(cell) { MazeCoinBuilder.animate(coin) }
+        }
+        for child in boardRoot.childNodes where child.name == "celebration" || child.name == "paint-effect" { child.removeFromParentNode() }
+    }
+
+    private func prepareMaterials(skin: BallSkin, theme: BoardTheme) {
+        materialTask?.cancel()
+        let revision = contentRevision
+        materialTask = Task { [weak self] in
+            let material = await BallMaterialFactory.make(for: skin)
+            let shadow = await ProceduralTextures.shared.contactShadow()
+            let timber = theme == .timber ? await ProceduralTextures.shared.timber() : nil
+            guard !Task.isCancelled, let self, self.contentRevision == revision else { return }
+            self.ball.geometry?.materials = [material]
+            self.shadowMaterial.diffuse.contents = shadow
+            for coin in self.coins.values {
+                coin.childNode(withName: "coin-gold", recursively: false)?.geometry?.firstMaterial?.reflective.contents = material.reflective.contents
+            }
+            if let timber { self.boardRoot.childNode(withName: "sculpted-walls", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = timber }
+            self.resourcesReady = true
+            self.onResourcesReady?()
+        }
     }
 
     private func configureScene() {
         MazeStudioLighting.configure(scene: scene, cameraNode: cameraNode)
-        let shadowMaterial = SCNMaterial()
         shadowMaterial.lightingModel = .constant
-        shadowMaterial.diffuse.contents = ProceduralTextures.contactShadow()
+        shadowMaterial.diffuse.contents = UIColor.clear
         shadowMaterial.writesToDepthBuffer = false
         boardShadow.geometry?.materials = [shadowMaterial]
         boardShadow.eulerAngles.x = -.pi / 2
@@ -119,7 +211,7 @@ final class MazeSceneRenderer {
         contact.position = SCNVector3(0.03, 0.03, 0.06)
         contact.castsShadow = false
         ballRoot.addChildNode(contact)
-        (ball.geometry as? SCNSphere)?.segmentCount = 80
+        (ball.geometry as? SCNSphere)?.segmentCount = 48
         ball.position.y = 0.423
         ball.castsShadow = true
         ballRoot.addChildNode(ball)
@@ -128,91 +220,18 @@ final class MazeSceneRenderer {
 
     private func frameBoard() {
         guard let level = currentLevel else { return }
-        let aspect = viewportSize.width / viewportSize.height
-        let vertical = CGFloat(level.height) * 0.89 + 1.05
-        let horizontal = CGFloat(level.width) + 1.05
-        cameraNode.camera?.orthographicScale = Double(max(vertical / 2, horizontal / (2 * aspect)))
+        cameraNode.camera?.orthographicScale = MazeCameraFraming.scale(width: level.width, height: level.height, viewport: viewportSize)
         (boardShadow.geometry as? SCNPlane)?.width = CGFloat(level.width) + 1.7
         (boardShadow.geometry as? SCNPlane)?.height = CGFloat(level.height) + 1.7
     }
 
-    private func animateNextMove() {
-        guard !isAnimating, !pendingMoves.isEmpty, let level = currentLevel else { return }
-        let move = pendingMoves.removeFirst()
-        isAnimating = true
-        let duration = animateBall(to: move.position, in: level)
-        updatePaint(move.painted, from: displayedPosition, duration: duration, reset: false)
-        displayedPosition = move.position
-        displayedPainted = move.painted
-        if move.isComplete {
-            MazePaintEffects.celebrate(at: move.position, level: level, root: boardRoot, ball: ball, tint: paintTint, delay: duration)
-        }
-        if duration == 0 { isAnimating = false; animateNextMove() }
-    }
-
-    private func animateBall(to position: GridCell, in level: MazeLevel) -> TimeInterval {
-        guard displayedPosition != position else { return 0 }
-        let target = MazeBoardBuilder.position(of: position, in: level)
-        guard let from = displayedPosition, canAnimateSlide(from: from, to: position, in: level) else {
-            ballRoot.position = target
-            return 0
-        }
-        let deltaX = target.x - ballRoot.position.x
-        let deltaZ = target.z - ballRoot.position.z
-        let distance = sqrt(deltaX * deltaX + deltaZ * deltaZ)
-        let duration = min(0.44, max(0.14, Double(distance) * 0.075))
-        let movement = SCNAction.move(to: target, duration: duration)
-        movement.timingMode = .easeInEaseOut
-        let revision = animationRevision
-        ballRoot.runAction(movement, forKey: "move") { [weak self] in
-            // SceneKit completes actions on its rendering thread.
-            DispatchQueue.main.async {
-                guard let self, self.animationRevision == revision else { return }
-                self.isAnimating = false
-                self.animateNextMove()
-            }
-        }
-        if distance > 0.001 {
-            let rotation = SCNAction.rotate(by: CGFloat(distance / 0.405),
-                                             around: SCNVector3(deltaZ / distance, 0, -deltaX / distance), duration: duration)
-            rotation.timingMode = .easeInEaseOut
-            ball.runAction(rotation, forKey: "roll")
-        }
-        return duration
-    }
-
-    private func canAnimateSlide(from origin: GridCell, to target: GridCell, in level: MazeLevel) -> Bool {
+    private func slide(from origin: GridCell, to target: GridCell, level: MazeLevel) -> [GridCell]? {
         let direction: MoveDirection
+        if origin == target { return nil }
         if origin.row == target.row { direction = target.column > origin.column ? .right : .left }
         else if origin.column == target.column { direction = target.row > origin.row ? .down : .up }
-        else { return false }
-        return MazeSolver.path(from: origin, direction: direction, in: level.openCells).last == target
-    }
-
-    private func updatePaint(_ painted: Set<GridCell>, from origin: GridCell?, duration: TimeInterval, reset: Bool) {
-        if reset {
-            for (cell, tile) in paintTiles { tile.removeAllActions(); tile.opacity = painted.contains(cell) ? 1 : 0 }
-            return
-        }
-        let sorted = painted.subtracting(displayedPainted).sorted { first, second in
-            guard let origin else { return first.row * 100 + first.column < second.row * 100 + second.column }
-            return abs(first.row - origin.row) + abs(first.column - origin.column)
-                < abs(second.row - origin.row) + abs(second.column - origin.column)
-        }
-        for (index, cell) in sorted.enumerated() {
-            guard let tile = paintTiles[cell] else { continue }
-            let delay = duration * Double(index) / Double(max(1, sorted.count))
-            tile.removeAllActions()
-            if duration == 0 { tile.opacity = 1 }
-            else {
-                tile.runAction(.sequence([.wait(duration: delay), .fadeIn(duration: 0.055)]))
-                if let level = currentLevel { MazePaintEffects.splash(at: cell, level: level, root: boardRoot, tint: paintTint, delay: delay) }
-            }
-            if let coin = coins[cell] {
-                coin.removeAllActions()
-                coin.runAction(.sequence([.wait(duration: delay), .group([.moveBy(x: 0, y: 0.35, z: 0, duration: 0.22),
-                                                                         .scale(to: 1.35, duration: 0.22), .fadeOut(duration: 0.22)])]))
-            }
-        }
+        else { return nil }
+        let path = MazeSolver.path(from: origin, direction: direction, in: level.openCells)
+        return path.last == target ? path : nil
     }
 }

@@ -12,17 +12,18 @@ final class TimeRushUITests: XCTestCase {
         app.segmentedControls["modePicker"].buttons["Time Rush"].tap()
         assertStage(app, "Maze 1 of 5")
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
-        XCTAssertEqual(remainingSeconds(app), 60)
+        let initialBudget = remainingSeconds(app)
+        XCTAssertGreaterThan(initialBudget, 60)
 
         // Executable route from TimeRushCourse.generate(number: 1).levels[0].
         // Real touch input exercises the transition without debug completion or ads.
-        let openingRoute = ["right", "down", "right", "down", "left", "up",
-                            "down", "right", "left", "up", "right"]
+        let openingRoute = ["left", "down", "right", "left", "down", "right", "up", "down",
+                            "left", "up", "right", "down", "right", "down"]
         for direction in openingRoute.dropLast() { flick(board, direction) }
-        XCTAssertEqual(app.staticTexts["moveCount"].label, "10 moves")
+        XCTAssertEqual(app.staticTexts["moveCount"].label, "\(openingRoute.count - 1) moves")
         let secondsBeforeFinalSlide = remainingSeconds(app)
         XCTAssertGreaterThan(secondsBeforeFinalSlide, 0)
-        XCTAssertLessThan(secondsBeforeFinalSlide, 60)
+        XCTAssertLessThan(secondsBeforeFinalSlide, initialBudget)
         flick(board, openingRoute.last!)
 
         assertStage(app, "Maze 2 of 5")
@@ -36,9 +37,9 @@ final class TimeRushUITests: XCTestCase {
         XCTAssertFalse(app.buttons["retryLevel"].exists)
         capture(app, "time-rush-second-maze-shared-clock")
 
-        // The next deterministic maze begins with a downward slide. Leave real paint
+        // The next deterministic maze begins with a rightward slide. Leave real paint
         // behind so navigation must preserve both the stage and its current board.
-        flick(board, "down")
+        flick(board, "right")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         let paintedBoard = board.value as? String
         XCTAssertNotNil(paintedBoard)
@@ -53,7 +54,7 @@ final class TimeRushUITests: XCTestCase {
             .matching(identifier: "pausedTimeRemaining").firstMatch
         XCTAssertTrue(pausedClock.exists)
         let frozenTime = accessibleText(pausedClock)
-        XCTAssertTrue(frozenTime.contains("00:"), "Read the visible native pause clock")
+        XCTAssertNotNil(frozenTime.range(of: #"\d{2}:\d{2}"#, options: .regularExpression), "Read the visible native pause clock")
         let tickingWhilePaused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             ([pausedClock.label, pausedClock.value as? String ?? ""]
                 + pausedClock.staticTexts.allElementsBoundByIndex.map(\.label)).joined(separator: " ") != frozenTime
@@ -89,7 +90,7 @@ final class TimeRushUITests: XCTestCase {
         assertStage(app, "Maze 1 of 5")
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
-        XCTAssertEqual(remainingSeconds(app), 60)
+        XCTAssertEqual(remainingSeconds(app), initialBudget)
         XCTAssertFalse(app.buttons["retryLevel"].exists)
         capture(app, "time-rush-restart-resets-entire-round")
     }

@@ -81,11 +81,11 @@ final class SwipeSequenceTests: XCTestCase {
         XCTAssertNil(sequence.end(1, at: CGPoint(x: 11, y: 12)))
     }
 
-    func testShortAngledFlickUsesTravelDistanceRatherThanAnAxisAlignedSquare() {
+    func testShortAngledFlickWaitsForLiftOffWithoutLosingTravelSensitivity() {
         var sequence = SwipeSequence<Int>()
         sequence.begin(1, at: .zero)
-        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 7, y: 4)), .right)
-        XCTAssertNil(sequence.end(1, at: CGPoint(x: 7, y: 4)))
+        XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 7, y: 4)))
+        XCTAssertEqual(sequence.end(1, at: CGPoint(x: 7, y: 4)), .right)
     }
 
     func testUnrecognizedHeldContactAndCancelledContactDoNotBlockFreshFlicks() {
@@ -116,13 +116,15 @@ final class SwipeSequenceTests: XCTestCase {
     }
 
     func testCoalescedHistoryPreservesEarlyClearDirectionBeforeLatestSampleTurnsDiagonal() {
-        let points = [CGPoint(x: 3, y: 0), CGPoint(x: 8, y: 1), CGPoint(x: 20, y: 20)]
+        let points = [CGPoint(x: 3, y: 0), CGPoint(x: 9, y: 1), CGPoint(x: 20, y: 20)]
         var latestOnly = SwipeStroke(origin: .zero)
         XCTAssertNil(latestOnly.direction(at: points.last!))
 
         var sequence = SwipeSequence<Int>()
         sequence.begin(1, at: .zero)
-        let directions = points.compactMap { sequence.direction(for: 1, at: $0) }
+        let directions = sequence.consume(points.enumerated().map {
+            SwipeSample(contact: 1, point: $0.element, timestamp: Double($0.offset))
+        })
         XCTAssertEqual(directions, [.right])
         XCTAssertNil(sequence.end(1, at: points.last!))
     }

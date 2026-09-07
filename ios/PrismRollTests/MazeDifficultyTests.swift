@@ -8,12 +8,12 @@ final class MazeDifficultyTests: XCTestCase {
     }
 
     func testTutorialAndEarlyClassicUseExactMeaningfulRoutes() throws {
-        for number in 1...5 {
+        for number in 1...3 {
             let level = MazeLevel.generate(number: number, mode: .endless)
             let minimum = try XCTUnwrap(exactMinimum(level))
             XCTAssertEqual(level.solution.count, minimum.moves, "Small Classic boards use actual shortest routes")
-            XCTAssertGreaterThanOrEqual(minimum.moves, number == 1 ? 7 : number <= 3 ? 10 : 12)
-            XCTAssertLessThanOrEqual(minimum.moves, number == 1 ? 8 : number <= 3 ? 14 : 16)
+            XCTAssertGreaterThanOrEqual(minimum.moves, number == 1 ? 7 : 12)
+            XCTAssertLessThanOrEqual(minimum.moves, number == 1 ? 8 : 22)
         }
     }
 
@@ -36,7 +36,7 @@ final class MazeDifficultyTests: XCTestCase {
                 XCTAssertTrue(difficulty.accepts(layout), "\(mode) \(number) violates the difficulty gate")
                 XCTAssertTrue(MazeSolver.isFullyPlayable(openCells: level.openCells, start: level.start))
                 XCTAssertEqual(level, MazeLevel.generate(number: number, mode: mode))
-                XCTAssertLessThanOrEqual(level.width, 10)
+                XCTAssertLessThanOrEqual(level.width, 16)
                 var run = MazeRun(level: level)
                 for (index, direction) in level.solution.enumerated() {
                     XCTAssertFalse(run.isComplete, "Stored routes must not pad the win with extra moves")
@@ -53,7 +53,7 @@ final class MazeDifficultyTests: XCTestCase {
 
     func testEveryFallbackOrientationHasRealDecisionsAndExecutableRoutes() {
         for mode in [GameMode.endless, .challenge] {
-            for number in [1, 2, 4, 6, 11, 21, 80] {
+            for number in [1, 2, 4, 7, 10, 15, 22, 30, 42, 56, 75, 100, 200] {
                 let difficulty = MazeDifficulty(number: number, mode: mode)
                 for orientation in 0..<8 {
                     let layout = MazeFallbackLayouts.make(size: difficulty.size, orientation: orientation)

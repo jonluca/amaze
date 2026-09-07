@@ -17,7 +17,9 @@ struct DailyChallenge: Identifiable, Codable, Equatable, Sendable {
         // FNV-1a avoids Swift Hasher's per-process randomization.
         let seed = day.utf8.reduce(UInt64(0xCBF29CE484222325)) { ($0 ^ UInt64($1)) &* 0x100000001B3 }
         let number = max(1, Int(seed & UInt64(Int.max)))
-        let level = MazeLevel.generate(number: number, mode: .challenge)
+        // A date hash identifies the board; it is not a player progression level.
+        // Keep the daily at a substantial 12×12 without jumping to the final tier.
+        let level = MazeLevel.generate(number: number, mode: .challenge, difficultyNumber: 22)
         return DailyChallenge(
             id: day, date: DailyCalendar.normalized(calendar).startOfDay(for: date), level: level
         )

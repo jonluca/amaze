@@ -42,10 +42,7 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         guard touches.contains(where: { sequence.contains(ObjectIdentifier($0)) }) else { return }
-        consumeSamples(from: touches, event: event)
-        for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
-            emit(sequence.end(ObjectIdentifier(touch), at: touch.location(in: view)))
-        }
+        consumeSamples(from: touches, event: event, ending: true)
         guard isEnabled, strokeSessionID == sessionID, !sequence.hasActiveContacts else { return }
         state = sequence.hasEmitted ? .ended : .failed
     }
@@ -73,22 +70,22 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool { true }
 
-    private func consumeSamples(from touches: Set<UITouch>, event: UIEvent) {
+    private func consumeSamples(from touches: Set<UITouch>, event: UIEvent, ending: Bool = false) {
         let expectedSessionID = strokeSessionID
-        var samples: [(contact: ObjectIdentifier, point: CGPoint, timestamp: TimeInterval)] = []
+        var samples: [SwipeSample<ObjectIdentifier>] = []
         for touch in touches {
             let contact = ObjectIdentifier(touch)
-            guard sequence.needsDirection(for: contact) else { continue }
+            guard ending ? sequence.contains(contact) : sequence.needsDirection(for: contact) else { continue }
             // Use real recorded samples, never predicted positions that may reverse.
             for sample in event.coalescedTouches(for: touch) ?? [] {
-                samples.append((contact, sample.location(in: view), sample.timestamp))
+                samples.append(SwipeSample(contact: contact, point: sample.location(in: view), timestamp: sample.timestamp))
             }
             // Include lift-off even if UIKit omitted it from the coalesced samples.
-            samples.append((contact, touch.location(in: view), touch.timestamp))
+            samples.append(SwipeSample(contact: contact, point: touch.location(in: view), timestamp: touch.timestamp))
         }
-        for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
+        for direction in sequence.consume(samples, ending: ending) {
             guard isEnabled, strokeSessionID == expectedSessionID, strokeSessionID == sessionID else { return }
-            emit(sequence.direction(for: sample.contact, at: sample.point))
+            emit(direction)
         }
     }
 

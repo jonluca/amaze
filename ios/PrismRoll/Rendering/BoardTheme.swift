@@ -15,7 +15,7 @@ enum BoardTheme: String, CaseIterable, Codable, Identifiable {
     }
     var subtitle: String {
         switch self {
-        case .aurora: return "Electric color. Sculpted ivory."
+        case .aurora: return "Violet skies. Neon paths."
         case .timber: return "Warm grain. Classic arcade."
         case .porcelain: return "Cool ceramic. Pure focus."
         case .midnight: return "Dark chrome. Neon after hours."
@@ -31,7 +31,7 @@ enum BoardTheme: String, CaseIterable, Codable, Identifiable {
     }
     var topHex: String {
         switch self {
-        case .aurora: return "E5EAF7"
+        case .aurora: return "E6BBFF"
         case .timber: return "CA945A"
         case .porcelain: return "F5FCFF"
         case .midnight: return "435370"
@@ -39,7 +39,7 @@ enum BoardTheme: String, CaseIterable, Codable, Identifiable {
     }
     var sideHex: String {
         switch self {
-        case .aurora: return "62769C"
+        case .aurora: return "710BB5"
         case .timber: return "73401F"
         case .porcelain: return "91B5C4"
         case .midnight: return "1C2841"
@@ -47,10 +47,28 @@ enum BoardTheme: String, CaseIterable, Codable, Identifiable {
     }
     var pathHex: String {
         switch self {
-        case .aurora: return "202F4C"
+        case .aurora: return "171831"
         case .timber: return "63391F"
         case .porcelain: return "B9CFD8"
         case .midnight: return "0E1526"
+        }
+    }
+
+    var edgeHex: String {
+        switch self {
+        case .aurora: return "F256DB"
+        case .timber: return "E7BA7E"
+        case .porcelain: return "D8F8FF"
+        case .midnight: return "8D80FF"
+        }
+    }
+
+    var gridHex: String {
+        switch self {
+        case .aurora: return "545078"
+        case .timber: return "A57950"
+        case .porcelain: return "7A9DAC"
+        case .midnight: return "404E77"
         }
     }
 }

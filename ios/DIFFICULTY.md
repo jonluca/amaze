@@ -1,5 +1,7 @@
 # More demanding maze progression
 
+The September 7 [maze growth update](MAZE_GROWTH.md) supersedes the size and timing curve below. The following records the earlier build 4 implementation and its validation.
+
 September 6, 2026. Included in **TestFlight 1.0.0 (4)**; the App Store submission remains on build 3. See [release verification](VALIDATION.md).
 
 ## Why the previous levels felt easy

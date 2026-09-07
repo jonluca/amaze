@@ -272,7 +272,7 @@ final class MazeRenderingTests: XCTestCase {
         for viewport in [CGSize(width: 393, height: 460), CGSize(width: 375, height: 220), CGSize(width: 720, height: 750)] {
             let renderer = MazeSceneRenderer()
             let view = SCNView(frame: CGRect(origin: .zero, size: viewport))
-            let level = MazeLevel.generate(number: 18, mode: .endless)
+            let level = renderingMaze(width: 8, height: 8)
             renderer.update(level: level, position: level.start, painted: [level.start], skin: BallSkin.catalog[0], isComplete: false)
             renderer.resize(to: viewport)
             view.scene = renderer.scene
@@ -287,11 +287,154 @@ final class MazeRenderingTests: XCTestCase {
             let width = projected.map(\.x).max()! - projected.map(\.x).min()!
             let height = projected.map(\.y).max()! - projected.map(\.y).min()!
             XCTAssertGreaterThan(width, 0)
-            XCTAssertLessThanOrEqual(width / Float(viewport.width), 0.69)
-            XCTAssertLessThanOrEqual(height / Float(viewport.height), 0.79)
+            XCTAssertLessThanOrEqual(width / Float(viewport.width), 0.85)
+            XCTAssertLessThanOrEqual(height / Float(viewport.height), 0.85)
+            if viewport.height > 400 {
+                XCTAssertGreaterThan(width / Float(viewport.width), 0.80,
+                                     "The freeform board should use the width of a portrait game canvas")
+            }
             renderer.stop()
             view.scene = nil
         }
+    }
+
+    func testLargeSquareAndRectangularBoardsFitIncludingTheBallAtEveryEdge() {
+        for viewport in [CGSize(width: 393, height: 460), CGSize(width: 375, height: 220),
+                         CGSize(width: 375, height: 160), CGSize(width: 720, height: 750)] {
+            for (width, height) in [(11, 11), (12, 12), (16, 16), (13, 16), (16, 13)] {
+                let level = renderingMaze(width: width, height: height)
+                let scene = SCNScene()
+                let camera = SCNNode()
+                MazeStudioLighting.configure(scene: scene, cameraNode: camera, shadows: false)
+                let scale = MazeCameraFraming.scale(width: width, height: height, viewport: viewport)
+                camera.camera?.orthographicScale = scale
+                let board = MazeBoardBuilder.build(level: level, tint: .systemPink, theme: .aurora).root
+                scene.rootNode.addChildNode(board)
+                let bounds = board.boundingBox
+                // Include the sphere above edge cells, not just the low board rim.
+                let top = max(bounds.max.y, Float(0.423 + 0.405))
+                let aspect = Float(viewport.width / viewport.height)
+                for x in [bounds.min.x, bounds.max.x] {
+                    for y in [bounds.min.y, top] {
+                        for z in [bounds.min.z, bounds.max.z] {
+                            let point = camera.convertPosition(SCNVector3(x, y, z), from: board)
+                            XCTAssertLessThan(abs(point.x) / (Float(scale) * aspect), 0.97,
+                                              "\(width)×\(height) clipped horizontally in \(viewport)")
+                            XCTAssertLessThan(abs(point.y) / Float(scale), 0.97,
+                                              "\(width)×\(height) clipped vertically in \(viewport)")
+                            XCTAssertLessThan(point.z, -0.1)
+                            XCTAssertGreaterThan(point.z, -100)
+                        }
+                    }
+                }
+                let columnSpacing = Double(viewport.height) / (2 * scale)
+                if viewport == CGSize(width: 375, height: 220) {
+                    XCTAssertGreaterThanOrEqual(columnSpacing, 13,
+                                                "Large mazes should use spare canvas for legible paths")
+                } else if viewport == CGSize(width: 393, height: 460) {
+                    XCTAssertGreaterThanOrEqual(columnSpacing, 20)
+                }
+            }
+        }
+    }
+
+    func testReturningFromLargeMazeRestoresSmallBoardFraming() throws {
+        let renderer = MazeSceneRenderer()
+        defer { renderer.stop() }
+        renderer.resize(to: CGSize(width: 393, height: 460))
+        var firstScale: Double?
+        for size in [10, 16, 5, 13, 10] {
+            let level = renderingMaze(width: size, height: size)
+            renderer.update(level: level, position: level.start, painted: [level.start],
+                            skin: BallSkin.catalog[0], isComplete: false, resetID: UUID())
+            let scale = try XCTUnwrap(renderer.cameraNode.camera?.orthographicScale)
+            if size == 10 {
+                if let firstScale { XCTAssertEqual(scale, firstScale, accuracy: 0.000001) }
+                else { firstScale = scale }
+            }
+            XCTAssertEqual(renderer.renderedPainted, [level.start])
+            XCTAssertEqual(renderer.scene.rootNode.childNodes.filter { $0.name == "maze-board" }.count, 1)
+        }
+        XCTAssertLessThan(MazeCameraFraming.scale(width: 5, height: 5, viewport: CGSize(width: 375, height: 220)),
+                          MazeCameraFraming.scale(width: 16, height: 16, viewport: CGSize(width: 375, height: 220)))
+    }
+
+    func testLargeBoardBatchesStaticShadingWithoutRemovingChannelEdges() throws {
+        let level = renderingMaze(width: 16, height: 16)
+        let board = MazeBoardBuilder.build(level: level, tint: .systemPink, theme: .aurora)
+        let shading = try XCTUnwrap(board.root.childNode(withName: "channel-occlusion", recursively: false))
+        let geometry = try XCTUnwrap(shading.geometry)
+        let boundaryEdges = level.openCells.reduce(0) { count, cell in
+            count + MoveDirection.allCases.filter {
+                !level.openCells.contains(GridCell(row: cell.row + $0.rowDelta, column: cell.column + $0.columnDelta))
+            }.count
+        }
+        XCTAssertGreaterThan(boundaryEdges, 200, "Exercise the static geometry budget of a dense large board")
+        XCTAssertEqual(geometry.elements.count, 1)
+        XCTAssertEqual(geometry.elements.first?.primitiveCount, boundaryEdges * 2)
+        XCTAssertEqual(geometry.sources(for: .vertex).first?.vectorCount, boundaryEdges * 4)
+        XCTAssertEqual(geometry.materials.count, 1)
+        XCTAssertFalse(shading.castsShadow)
+        XCTAssertFalse(geometry.materials[0].writesToDepthBuffer)
+        XCTAssertEqual(board.paintTiles.count, level.openCells.count)
+        XCTAssertEqual(board.root.childNodes.count, level.openCells.count + 4,
+                       "Static edge shading must not add one scene node and material per boundary")
+        XCTAssertNotNil(board.root.childNode(withName: "path-floor", recursively: false))
+        XCTAssertNotNil(board.root.childNode(withName: "path-grid", recursively: false))
+        XCTAssertNil(board.root.childNode(withName: "board-accent", recursively: false),
+                     "A rectangular backing plate would fill the open cutouts again")
+    }
+
+    func testLargeMazeBurstKeepsStaticGeometryAndSettlesAllAcceptedPaint() async throws {
+        let renderer = MazeSceneRenderer()
+        defer { renderer.stop() }
+        renderer.consumesMoveEvents = true
+        renderer.setReduceMotion(false)
+        renderer.setDifferentiateWithoutColor(true)
+        let runID = UUID()
+        var run = MazeRun(level: renderingMaze(width: 16, height: 16))
+        let ready = expectation(description: "Large maze materials ready")
+        renderer.onResourcesReady = { ready.fulfill() }
+        renderer.update(level: run.level, position: run.position, painted: run.painted,
+                        skin: BallSkin.catalog[0], isComplete: false, resetID: runID)
+        await fulfillment(of: [ready], timeout: 10)
+        renderer.onResourcesReady = nil
+        let shading = try XCTUnwrap(renderer.scene.rootNode.childNode(withName: "channel-occlusion", recursively: true))
+        let geometry = try XCTUnwrap(shading.geometry)
+        for direction in run.level.solution {
+            let start = run.position
+            let path = run.move(direction)
+            XCTAssertFalse(path.isEmpty)
+            renderer.receive(GameMoveEvent(runID: runID, start: start, path: path, position: run.position,
+                                           painted: run.painted, isComplete: run.isComplete, moves: run.moves))
+        }
+        XCTAssertTrue(run.isComplete)
+        XCTAssertFalse(renderer.resultReady)
+        for _ in 0..<10 {
+            renderer.advance(by: 1.0 / 60)
+            XCTAssertTrue(shading.geometry === geometry, "Painting must reuse the prepared static geometry")
+            XCTAssertEqual(renderer.markedUnpaintedCells, run.level.openCells.subtracting(renderer.renderedPainted))
+        }
+        XCTAssertEqual(renderer.pendingMoveCount, 0)
+        XCTAssertEqual(renderer.renderedPainted, run.level.openCells)
+        XCTAssertEqual(renderer.renderedCellPosition, SIMD2(Float(run.position.column), Float(run.position.row)))
+        XCTAssertTrue(renderer.resultReady)
+    }
+
+    private func renderingMaze(width: Int, height: Int) -> MazeLevel {
+        var cells: Set<GridCell> = []
+        var route: [MoveDirection] = []
+        for row in 0..<height {
+            if row.isMultiple(of: 2) {
+                for column in 0..<width { cells.insert(GridCell(row: row, column: column)) }
+                route.append((row / 2).isMultiple(of: 2) ? .right : .left)
+                if row + 1 < height { route.append(.down) }
+            } else {
+                cells.insert(GridCell(row: row, column: (row / 2).isMultiple(of: 2) ? width - 1 : 0))
+            }
+        }
+        return MazeLevel(number: 1, mode: .endless, width: width, height: height,
+                         openCells: cells, start: GridCell(row: 0, column: 0), solution: route, moveLimit: nil)
     }
 
     func testPathMarkersFollowDisplayedPaintThroughRapidMovesAndLiveToggle() async {

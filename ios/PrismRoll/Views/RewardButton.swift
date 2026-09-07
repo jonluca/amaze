@@ -15,7 +15,7 @@ struct RewardButton: View {
                     if availability == .loading { ProgressView().controlSize(.mini) }
                     Text(isIntroductoryHint ? "First maze · no ad" : availability.caption)
                 }
-                .font(.caption).foregroundStyle(Palette.secondary)
+                .font(.caption).foregroundStyle(Palette.ink.opacity(0.8))
             }
             .frame(maxWidth: .infinity, minHeight: 36)
         }

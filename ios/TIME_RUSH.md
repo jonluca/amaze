@@ -1,5 +1,7 @@
 # Time Rush courses
 
+The September 7 [maze growth update](MAZE_GROWTH.md) supersedes the size and timing curve below. The following records the earlier build 4 implementation and its validation.
+
 Time Rush is now a series of **five distinct mazes sharing one countdown**. The first valid swipe starts the round. Each finished maze advances automatically after its final movement settles. The next maze resumes the remaining time as soon as its scene is ready, without waiting for another first swipe. Scene preparation, background time, menus, and reward videos do not consume time.
 
 The opening round uses five 5×5 to 7×7 mazes under 60 seconds. Every three rounds the generator raises difficulty; later rounds reach five 9×9 mazes under 90 seconds. Bounded generation checks playable geometry, an executable covering route, and distinct layouts, with validated asymmetric fallback boards. The other modes retain their existing generators.

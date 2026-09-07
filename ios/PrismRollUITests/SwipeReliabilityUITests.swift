@@ -2,6 +2,65 @@ import XCTest
 
 final class SwipeReliabilityUITests: XCTestCase {
     @MainActor
+    func testAngledFlicksKeepHorizontalAndVerticalBoardAxes() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        let board = app.otherElements["mazeBoard"]
+        XCTAssertTrue(board.waitForExistence(timeout: 15))
+        var verified = Set<String>()
+
+        for _ in 0..<32 {
+            let title = app.staticTexts["levelTitle"].label
+            app.buttons["reward_hint"].tap()
+            let direction = app.staticTexts["playInstructions"].label
+            let before = try position(of: board)
+            let vector: CGVector
+            switch direction {
+            case "Swipe right": vector = CGVector(dx: 32, dy: 8)
+            case "Swipe left": vector = CGVector(dx: -32, dy: -8)
+            case "Swipe down": vector = CGVector(dx: -8, dy: 32)
+            case "Swipe up": vector = CGVector(dx: 8, dy: -32)
+            default: XCTFail("Missing direction: \(direction)"); return
+            }
+            let origin = app.staticTexts["levelTitle"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            origin.press(forDuration: 0, thenDragTo: origin.withOffset(vector),
+                         withVelocity: XCUIGestureVelocity(rawValue: 2_500), thenHoldForDuration: 0)
+            if app.staticTexts["levelTitle"].label != title { continue }
+            let after = try position(of: board)
+            switch direction {
+            case "Swipe right":
+                XCTAssertEqual(after.row, before.row)
+                XCTAssertGreaterThan(after.column, before.column)
+            case "Swipe left":
+                XCTAssertEqual(after.row, before.row)
+                XCTAssertLessThan(after.column, before.column)
+            case "Swipe down":
+                XCTAssertEqual(after.column, before.column)
+                XCTAssertGreaterThan(after.row, before.row)
+            default:
+                XCTAssertEqual(after.column, before.column)
+                XCTAssertLessThan(after.row, before.row)
+            }
+            verified.insert(direction)
+            if verified.count == 4 { break }
+        }
+        XCTAssertEqual(verified, ["Swipe right", "Swipe left", "Swipe down", "Swipe up"])
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "angled-flicks-verified-on-both-board-axes"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    private func position(of board: XCUIElement) throws -> (row: Int, column: Int) {
+        let value = try XCTUnwrap(board.value as? String)
+        let numbers = value.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap(Int.init)
+        XCTAssertGreaterThanOrEqual(numbers.count, 2, value)
+        return (try XCTUnwrap(numbers.first), try XCTUnwrap(numbers.dropFirst().first))
+    }
+
+    @MainActor
     func testShortDiagonalFlicksOutsideBoardRegisterAndPreserveNativeControls() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]

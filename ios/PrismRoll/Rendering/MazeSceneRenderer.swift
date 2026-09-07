@@ -11,7 +11,6 @@ final class MazeSceneRenderer {
     private(set) var contentRevision = 0
     var consumesMoveEvents = false
     private var boardRoot = SCNNode()
-    private let boardShadow = SCNNode(geometry: SCNPlane(width: 8, height: 8))
     private let shadowMaterial = SCNMaterial()
     private let ballRoot = SCNNode()
     private let ball = SCNNode(geometry: SCNSphere(radius: 0.405))
@@ -108,10 +107,6 @@ final class MazeSceneRenderer {
             paintEffects.setTint(paintTint)
             let material = BallMaterialFactory.paint(paintTint)
             for tile in paintTiles.values { tile.geometry?.materials = [material] }
-            if theme != .timber, let accent = boardRoot.childNode(withName: "board-accent", recursively: false)?.geometry?.firstMaterial {
-                accent.diffuse.contents = paintTint
-                accent.emission.contents = paintTint
-            }
         }
         if changedLevel || reset {
             if changedRun || changedLayout { acceptedMoveCount = 0 }
@@ -251,11 +246,6 @@ final class MazeSceneRenderer {
         shadowMaterial.lightingModel = .constant
         shadowMaterial.diffuse.contents = UIColor.clear
         shadowMaterial.writesToDepthBuffer = false
-        boardShadow.geometry?.materials = [shadowMaterial]
-        boardShadow.eulerAngles.x = -.pi / 2
-        boardShadow.position = SCNVector3(0.12, -0.43, 0.17)
-        boardShadow.castsShadow = false
-        scene.rootNode.addChildNode(boardShadow)
         let contact = SCNNode(geometry: SCNPlane(width: 1.18, height: 1.18))
         contact.geometry?.materials = [shadowMaterial]
         contact.eulerAngles.x = -.pi / 2
@@ -272,8 +262,6 @@ final class MazeSceneRenderer {
     private func frameBoard() {
         guard let level = currentLevel else { return }
         cameraNode.camera?.orthographicScale = MazeCameraFraming.scale(width: level.width, height: level.height, viewport: viewportSize)
-        (boardShadow.geometry as? SCNPlane)?.width = CGFloat(level.width) + 1.7
-        (boardShadow.geometry as? SCNPlane)?.height = CGFloat(level.height) + 1.7
     }
 
     private func slide(from origin: GridCell, to target: GridCell, level: MazeLevel) -> [GridCell]? {

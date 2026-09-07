@@ -11,7 +11,7 @@ enum MazeStudioLighting {
         camera.zFar = 100
         camera.wantsHDR = false
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(0, 16, 8.6)
+        cameraNode.position = SCNVector3(0, Float(MazeCameraFraming.cameraHeight), Float(MazeCameraFraming.cameraDepth))
         cameraNode.look(at: SCNVector3Zero)
         scene.rootNode.addChildNode(cameraNode)
 

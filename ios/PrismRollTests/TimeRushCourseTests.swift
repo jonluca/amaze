@@ -13,7 +13,9 @@ final class TimeRushCourseTests: XCTestCase {
                     && $0.moveLimit == nil && $0.coinCells.isEmpty
             })
             XCTAssertGreaterThanOrEqual(course.timeLimit, 60)
-            XCTAssertLessThanOrEqual(course.timeLimit, 90)
+            XCTAssertLessThanOrEqual(course.timeLimit, 900)
+            let moves = Double(course.levels.reduce(0) { $0 + $1.solution.count })
+            XCTAssertGreaterThan(course.timeLimit, moves * 0.74, "Large courses must remain playable without extra time")
         }
     }
 
@@ -39,12 +41,11 @@ final class TimeRushCourseTests: XCTestCase {
 
     func testFirstCourseStartsPastTheTrivialBoardsAndHasSubstantialWork() {
         let first = TimeRushCourse.generate(number: 1)
-        XCTAssertEqual(first.timeLimit, 60)
-        XCTAssertEqual(first.levels.map(\.width), [5, 5, 6, 6, 7])
+        XCTAssertEqual(first.levels.map(\.width), [6, 7, 7, 8, 8])
         for (index, level) in first.levels.enumerated() {
-            XCTAssertGreaterThanOrEqual(level.solution.count, 8 + index * 2)
+            XCTAssertGreaterThanOrEqual(level.solution.count, 12 + index * 2)
         }
-        XCTAssertGreaterThanOrEqual(first.levels.reduce(0) { $0 + $1.solution.count }, 60)
+        XCTAssertGreaterThanOrEqual(first.levels.reduce(0) { $0 + $1.solution.count }, 90)
         XCTAssertGreaterThan(
             first.levels.reduce(0) { $0 + $1.openCells.count },
             MazeLevel.generate(number: 1, mode: .timed).openCells.count * 5
@@ -54,7 +55,7 @@ final class TimeRushCourseTests: XCTestCase {
     func testLaterCoursesIncreaseBoardSizeAndSharedClockPressure() {
         let first = TimeRushCourse.generate(number: 1)
         let later = TimeRushCourse.generate(number: 25)
-        XCTAssertTrue(later.levels.allSatisfy { $0.width == 9 && $0.solution.count >= 24 })
+        XCTAssertTrue(later.levels.allSatisfy { $0.width == 16 && $0.solution.count >= 80 })
         let firstMovesPerSecond = Double(first.levels.reduce(0) { $0 + $1.solution.count }) / first.timeLimit
         let laterMovesPerSecond = Double(later.levels.reduce(0) { $0 + $1.solution.count }) / later.timeLimit
         XCTAssertGreaterThan(laterMovesPerSecond, firstMovesPerSecond)
@@ -74,28 +75,6 @@ final class TimeRushCourseTests: XCTestCase {
         let original = TimeRushCourse.generate(number: 12)
         let data = try JSONEncoder().encode(original)
         XCTAssertEqual(try JSONDecoder().decode(TimeRushCourse.self, from: data), original)
-    }
-
-    func testBoundedFallbackHasEightDistinctExecutableOrientations() {
-        for size in 5...9 {
-            var previousCells: [Set<GridCell>] = []
-            for _ in 0..<8 {
-                let board = TimeRushCourse.fallbackBoard(size: size, firstOrientation: 0, excluding: previousCells)
-                XCTAssertFalse(previousCells.contains(board.cells))
-                XCTAssertTrue(MazeSolver.isFullyPlayable(openCells: board.cells, start: board.start))
-                XCTAssertGreaterThanOrEqual(board.route.count, size * 4 - 8)
-                var position = board.start
-                var painted: Set<GridCell> = [position]
-                for direction in board.route {
-                    let path = MazeSolver.path(from: position, direction: direction, in: board.cells)
-                    XCTAssertFalse(path.isEmpty)
-                    painted.formUnion(path)
-                    position = path.last ?? position
-                }
-                XCTAssertEqual(painted, board.cells)
-                previousCells.append(board.cells)
-            }
-        }
     }
 
     func testExtremeCourseNumbersRemainValidWithoutOverflow() {

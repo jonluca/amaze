@@ -1,6 +1,6 @@
 /// The matchmaking group and wire handshake identify the same maze generator.
 struct DuelHandshake {
-    static let version = 2
+    static let version = 3
 
     private enum State {
         case waiting, compatible, rejected

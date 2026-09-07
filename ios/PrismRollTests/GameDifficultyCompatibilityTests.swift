@@ -81,12 +81,49 @@ final class GameDifficultyCompatibilityTests: XCTestCase {
         XCTAssertTrue(store.progress.hasCompletedDailyChallenge(daily))
     }
 
+    func testExistingTimeRushCourseKeepsItsGeometryStageAndOriginalClock() throws {
+        let suite = "PrismRoll.CourseDifficultyCompatibility.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let oldLevel = legacyLevel(mode: .timed)
+        let oldCourse = TimeRushCourse(number: 5, levels: Array(repeating: oldLevel, count: 5), timeLimit: 60)
+        let session = TimeRushSession(course: oldCourse, stageIndex: 2)
+        var run = MazeRun(level: oldLevel)
+        run.move(.right)
+        let clock = TimedRunState(remainingSeconds: 13.25, hasStarted: true, rewardedExtensions: 2)
+        var progress = ProgressData()
+        progress.timedLevel = 5
+        progress.points = 375
+        progress.hapticsEnabled = false
+        progress.soundEnabled = false
+        let snapshot = GameSnapshot(progress: progress, runs: ["timed": run], clocks: ["timed": clock],
+            mode: .timed, dailyRun: nil, dailyID: nil, dailyActive: false, themeID: "aurora", timeRushSession: session)
+        defaults.set(try JSONEncoder().encode(snapshot), forKey: "prism.snapshot.v2")
+
+        let restored = GameStore(defaults: defaults, uptime: { 0 })
+        XCTAssertEqual(restored.run, run)
+        XCTAssertEqual(restored.timeRushSession, session)
+        XCTAssertEqual(restored.clock, clock)
+        XCTAssertEqual(restored.progress, progress)
+        restored.move(.down)
+        restored.move(.left)
+        XCTAssertTrue(restored.advanceTimeRushMaze(after: restored.runID))
+        XCTAssertEqual(restored.timeRushMazeNumber, 4)
+        XCTAssertEqual(restored.run.level, oldLevel)
+        XCTAssertEqual(restored.clock, clock)
+        restored.replay()
+        XCTAssertEqual(restored.timeRushMazeNumber, 1)
+        XCTAssertEqual(restored.run.level, oldLevel)
+        XCTAssertEqual(restored.clock?.remainingSeconds, 60)
+        XCTAssertEqual(restored.progress, progress)
+    }
+
     private func legacyLevel(mode: GameMode, number: Int = 5) -> MazeLevel {
         MazeLevel(number: number, mode: mode, width: 2, height: 2,
                   openCells: [GridCell(row: 0, column: 0), GridCell(row: 0, column: 1),
                               GridCell(row: 1, column: 0), GridCell(row: 1, column: 1)],
                   start: GridCell(row: 0, column: 0), solution: [.right, .down, .left],
-                  moveLimit: mode == .challenge ? 5 : nil)
+                  moveLimit: mode == .challenge ? 5 : nil, timeLimit: mode == .timed ? 60 : nil)
     }
 }
 #endif

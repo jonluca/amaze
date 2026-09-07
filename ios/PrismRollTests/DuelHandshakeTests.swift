@@ -5,7 +5,7 @@ import XCTest
 
 final class DuelHandshakeTests: XCTestCase {
     func testLegacyPeerCannotStartADifferentGeneratedMaze() throws {
-        let oldHello = Data(#"{"hello":{"version":1}}"#.utf8)
+        let oldHello = Data(#"{"hello":{"version":2}}"#.utf8)
         let message = try JSONDecoder().decode(DuelMessage.self, from: oldHello)
         var handshake = DuelHandshake()
         XCTAssertFalse(handshake.accepts(message))

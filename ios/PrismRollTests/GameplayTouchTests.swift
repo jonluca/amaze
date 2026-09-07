@@ -5,11 +5,11 @@ import XCTest
 
 @MainActor
 final class GameplayTouchTests: XCTestCase {
-    func testDirectionEmitsAtThresholdBeforeLiftAndOnlyOncePerStroke() {
-        for (point, expected) in [(CGPoint(x: 8, y: 1), MoveDirection.right),
-                                  (CGPoint(x: -8, y: 1), .left),
-                                  (CGPoint(x: 1, y: 8), .down),
-                                  (CGPoint(x: 1, y: -8), .up)] {
+    func testDirectionEmitsWithClearAxisLeadBeforeLiftAndOnlyOncePerStroke() {
+        for (point, expected) in [(CGPoint(x: 9, y: 1), MoveDirection.right),
+                                  (CGPoint(x: -9, y: 1), .left),
+                                  (CGPoint(x: 1, y: 9), .down),
+                                  (CGPoint(x: 1, y: -9), .up)] {
             var stroke = SwipeStroke(origin: .zero)
             XCTAssertEqual(stroke.direction(at: point), expected)
             XCTAssertTrue(stroke.hasEmitted)
@@ -25,7 +25,8 @@ final class GameplayTouchTests: XCTestCase {
         }
         XCTAssertNil(stroke.direction(at: CGPoint(x: 120, y: 220)))
         XCTAssertFalse(stroke.hasEmitted)
-        XCTAssertEqual(stroke.direction(at: CGPoint(x: 124, y: 220)), .right)
+        XCTAssertNil(stroke.direction(at: CGPoint(x: 124, y: 220)))
+        XCTAssertEqual(stroke.direction(at: CGPoint(x: 128, y: 220)), .right)
     }
 
     func testObserverDoesNotDelayCancelOrPreventNativeTapRecognizers() {

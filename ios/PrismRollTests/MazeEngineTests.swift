@@ -80,12 +80,15 @@ final class MazeEngineTests: XCTestCase {
         }.count, 45)
     }
 
-    func testBlockedMoveDoesNotConsumeMoveOrChangeState() {
+    func testBlockedMoveDoesNotConsumeMoveOrChangeState() throws {
         let level = MazeLevel.generate(number: 1, mode: .challenge)
         var run = MazeRun(level: level)
         let original = run
-        // The generated start is the uppermost stop in its connected region.
-        XCTAssertTrue(run.move(.up).isEmpty)
+        // Rotated layouts can begin at any edge; use an actual adjacent wall.
+        let blocked = try XCTUnwrap(MoveDirection.allCases.first {
+            !level.openCells.contains(level.start.neighbor(in: $0))
+        })
+        XCTAssertTrue(run.move(blocked).isEmpty)
         XCTAssertEqual(run, original)
     }
 

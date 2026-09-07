@@ -29,9 +29,12 @@ struct SwipeStroke {
         // Sensitivity follows actual finger travel in every direction, rather
         // than making angled flicks travel farther than horizontal ones.
         guard dx * dx + dy * dy >= Self.threshold * Self.threshold else { return nil }
-        // While the finger is down, wait for a clear axis so initial jitter
-        // cannot choose a turn too early. Lift-off resolves any remaining tie.
-        if requiresClearAxis && max(horizontal, vertical) < min(horizontal, vertical) * 1.15 { return nil }
+        // Distance alone is not direction confidence: an initial (5, 7)
+        // wobble must not lock a sideways flick vertically. Require one axis
+        // to lead by the touch slop before committing while the finger is down.
+        // Straight eight-point swipes still start immediately; short angled
+        // flicks resolve their overall direction at lift-off.
+        if requiresClearAxis && abs(horizontal - vertical) < Self.threshold { return nil }
         hasEmitted = true
         return horizontal > vertical ? (dx > 0 ? .right : .left) : (dy > 0 ? .down : .up)
     }

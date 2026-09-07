@@ -13,7 +13,7 @@ struct TutorialTipView: View {
                 Text(instruction ?? (hasMoved
                      ? "Fill every path to finish. Blocked swipes don’t use a move."
                      : "Swipe up, down, left or right. The ball stops at a wall."))
-                    .font(.caption).foregroundStyle(Palette.secondary)
+                    .font(.caption).foregroundStyle(Palette.ink.opacity(0.8))
                     .accessibilityIdentifier("playInstructions")
             }
             Spacer(minLength: 0)

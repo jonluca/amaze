@@ -31,7 +31,7 @@ final class MazeCanvasView: SCNView {
         let label = UILabel()
         label.text = "Loading your maze"
         label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = BallMaterialFactory.color(hex: "8F9FBE")
+        label.textColor = .white.withAlphaComponent(0.85)
         let stack = UIStackView(arrangedSubviews: [indicator, label])
         stack.axis = .vertical
         stack.alignment = .center

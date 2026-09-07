@@ -4,6 +4,8 @@ A native SwiftUI + SceneKit maze-painting game inspired by the swipe-to-paint me
 
 The latest [difficulty pass](DIFFICULTY.md) adds a stronger progression curve, branching layouts, required backtracking, and tighter move budgets. The [responsiveness pass](SWIPE_RESPONSIVENESS.md) adds automatic level progression, shorter flick recognition, overlapping-stroke handling, faster queued animation, and cheaper saves. These build on the [research-informed UX pass](RESEARCH_UX.md) and [earlier playtest fixes](UX_PLAYTEST.md). These changes, including [five-maze Time Rush rounds](TIME_RUSH.md), are available in **TestFlight 1.0.0 (4)**. The App Store submission remains attached to build 3. See [release verification](VALIDATION.md).
 
+The next local [maze progression update](MAZE_GROWTH.md) grows Classic from 5×5 to 16×16, raises branching and backtracking requirements, and applies the same progression across Time Rush courses. This update has not been uploaded to TestFlight.
+
 ## Play
 
 The [missed-swipe fix](SWIPE_RELIABILITY.md) and [smoother rendering pass](SMOOTHNESS.md) are available in **TestFlight 1.0.0 (5)**, verified September 7, 2026. They resolve quick diagonal flicks and overlapping contacts, enable ProMotion up to 120 FPS, soften ball stops without extending slides, and reuse prepared paint effects.

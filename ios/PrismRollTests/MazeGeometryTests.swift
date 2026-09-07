@@ -5,22 +5,21 @@ import XCTest
 
 @MainActor
 final class MazeGeometryTests: XCTestCase {
-    func testRenderedWallsLeaveEveryGeneratedChannelOpen() throws {
-        // Level 18 previously produced self-touching contours that SCNShape
-        // tessellated across playable channels, despite the level being valid.
+    func testRenderedRimLeavesAllTileInteriorsAndExteriorOpen() throws {
+        // Self-touching contours once tessellated across playable channels.
+        // The new rim must also leave blocked-cell centers as visible cutouts.
         for number in [1, 2, 5, 12, 18, 26, 100, 1_000_000] {
             for mode in GameMode.allCases {
                 let level = MazeLevel.generate(number: number, mode: mode)
                 let triangles = try renderedTriangles(MazeWallGeometry.make(level: level))
-                for row in 0..<level.height {
-                    for column in 0..<level.width {
+                for row in -1...level.height {
+                    for column in -1...level.width {
                         let cell = GridCell(row: row, column: column)
                         for offset in [Float(-0.35), 0, 0.35] {
-                            let x = Float(column) - Float(level.width) / 2 + 0.5 + offset
-                            let z = Float(row) - Float(level.height) / 2 + 0.5 - offset
-                            let hits = rayHits(triangles, from: SIMD3(x, 2, z), to: SIMD3(x, 0.1, z))
-                            XCTAssertEqual(hits, !level.openCells.contains(cell),
-                                "Rendered channel mismatch: \(mode), level \(number), \(cell), offset \(offset)")
+                            let center = position(of: cell, in: level)
+                            let point = SIMD3(center.x + offset, Float(2), center.z - offset)
+                            XCTAssertFalse(rayHits(triangles, from: point, to: SIMD3(point.x, -0.2, point.z)),
+                                "Rim filled a tile interior: \(mode), level \(number), \(cell), offset \(offset)")
                         }
                     }
                 }
@@ -28,21 +27,129 @@ final class MazeGeometryTests: XCTestCase {
         }
     }
 
-    func testChannelEdgesHavePhysicalRaisedWalls() throws {
-        for number in [1, 18, 100] {
-            let level = MazeLevel.generate(number: number, mode: .endless)
+    func testChannelEdgesHavePhysicalRaisedRimsWithoutBlockingNeighbors() throws {
+        let generated = [1, 18, 100].map { MazeLevel.generate(number: $0, mode: .endless) }
+        for level in generated + shapeFixtures {
             let triangles = try renderedTriangles(MazeWallGeometry.make(level: level))
             for cell in level.openCells {
-                let start = SIMD3(Float(cell.column) - Float(level.width) / 2 + 0.5,
-                    Float(0.25), Float(cell.row) - Float(level.height) / 2 + 0.5)
+                let center = position(of: cell, in: level)
                 for direction in MoveDirection.allCases {
                     let neighbor = cell.neighbor(in: direction)
-                    let end = SIMD3(start.x + Float(neighbor.column - cell.column) * 0.65,
-                        start.y, start.z + Float(neighbor.row - cell.row) * 0.65)
-                    XCTAssertEqual(rayHits(triangles, from: start, to: end), !level.openCells.contains(neighbor),
-                        "Missing or obstructing side wall: level \(number), \(cell), \(direction)")
+                    let dx = Float(neighbor.column - cell.column)
+                    let dz = Float(neighbor.row - cell.row)
+                    for offset in [Float(-0.42), 0, 0.42] {
+                        let start = SIMD3(center.x + dz * offset, Float(0.1), center.z + dx * offset)
+                        let end = SIMD3(start.x + dx * 0.65, start.y, start.z + dz * 0.65)
+                        XCTAssertEqual(rayHits(triangles, from: start, to: end), !level.openCells.contains(neighbor),
+                            "Missing or obstructing rim: level \(level.number), \(cell), \(direction), offset \(offset)")
+                    }
                 }
             }
+        }
+    }
+
+    func testFloorExactlyFollowsRaggedPathsAndLeavesHolesTransparent() throws {
+        for level in shapeFixtures {
+            let triangles = try renderedTriangles(MazePathGeometry.makeFloor(level: level))
+            for row in -1...level.height {
+                for column in -1...level.width {
+                    let cell = GridCell(row: row, column: column)
+                    let center = position(of: cell, in: level)
+                    for dx in [Float(-0.49), 0, 0.49] {
+                        for dz in [Float(-0.49), 0, 0.49] {
+                            let start = SIMD3(center.x + dx, Float(1), center.z + dz)
+                            XCTAssertEqual(rayHits(triangles, from: start, to: SIMD3(start.x, -0.2, start.z)),
+                                level.openCells.contains(cell),
+                                "Floor bridged a cutout or lost a path: fixture \(level.number), \(cell), offset \(dx), \(dz)")
+                        }
+                    }
+                }
+            }
+            XCTAssertEqual(projectedArea(of: triangles), Float(level.openCells.count), accuracy: 0.0001,
+                "The floor must cover exactly the playable squares, without a rectangular base")
+        }
+    }
+
+    func testLateBoardFloorAndGridPreserveAllOpenTilesAndCutouts() throws {
+        let level = MazeLevel.generate(number: 100, mode: .endless)
+        XCTAssertEqual(level.width, 16)
+        XCTAssertEqual(level.height, 16)
+        XCTAssertGreaterThan(level.openCells.count, 150)
+        let triangles = try renderedTriangles(MazePathGeometry.makeFloor(level: level))
+        for row in 0..<level.height {
+            for column in 0..<level.width {
+                let cell = GridCell(row: row, column: column)
+                let center = position(of: cell, in: level)
+                XCTAssertEqual(rayHits(triangles, from: center + SIMD3(0, 1, 0), to: center - SIMD3(0, 1, 0)),
+                    level.openCells.contains(cell), "Late-board floor coverage differs at \(cell)")
+            }
+        }
+        XCTAssertEqual(projectedArea(of: triangles), Float(level.openCells.count), accuracy: 0.001)
+        try assertGridStaysOnPaths(level)
+    }
+
+    func testGridLinesStayOnPathTilesAroundConcaveAndTouchingCorners() throws {
+        for level in shapeFixtures { try assertGridStaysOnPaths(level) }
+    }
+
+    func testCornerTouchingPathsCannotPassThroughRimJunctions() throws {
+        let level = fixture([".#", "#."], number: 90)
+        let triangles = try renderedTriangles(MazeWallGeometry.make(level: level))
+        let start = position(of: GridCell(row: 0, column: 0), in: level) + SIMD3(0, 0.1, 0)
+        let end = position(of: GridCell(row: 1, column: 1), in: level) + SIMD3(0, 0.1, 0)
+        XCTAssertTrue(rayHits(triangles, from: start, to: end), "Diagonal contact left a gap through two closed boundaries")
+    }
+
+    private var shapeFixtures: [MazeLevel] {
+        [
+            fixture(["...##", ".#.##", ".....", "##.#.", "##..."], number: 81),
+            fixture([".....", ".###.", ".###.", ".###.", "....."], number: 82),
+            fixture(["....", ".#..", "..#.", "...."], number: 83),
+            fixture([".#", "#."], number: 84),
+            fixture([".#..", "....", ".#.#", "...#"], number: 85)
+        ]
+    }
+
+    private func fixture(_ rows: [String], number: Int) -> MazeLevel {
+        var cells: Set<GridCell> = []
+        for (row, line) in rows.enumerated() {
+            for (column, value) in line.enumerated() where value == "." {
+                cells.insert(GridCell(row: row, column: column))
+            }
+        }
+        return MazeLevel(number: number, mode: .endless, width: rows[0].count, height: rows.count,
+            openCells: cells, start: cells.sorted()[0], solution: [], moveLimit: nil)
+    }
+
+    private func position(of cell: GridCell, in level: MazeLevel) -> SIMD3<Float> {
+        SIMD3(Float(cell.column) - Float(level.width - 1) / 2, 0,
+            Float(cell.row) - Float(level.height - 1) / 2)
+    }
+
+    private func projectedArea(of triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)]) -> Float {
+        triangles.reduce(0) { total, triangle in
+            let (a, b, c) = triangle
+            return total + abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x)) / 2
+        }
+    }
+
+    private func assertGridStaysOnPaths(_ level: MazeLevel, file: StaticString = #filePath, line: UInt = #line) throws {
+        let grid = try renderedTriangles(MazePathGeometry.makeGrid(level: level))
+        let floor = try renderedTriangles(MazePathGeometry.makeFloor(level: level))
+        XCTAssertGreaterThan(projectedArea(of: grid), 0, file: file, line: line)
+        XCTAssertLessThan(projectedArea(of: grid), Float(level.openCells.count) * 0.15,
+            "Grid obscures too much of the playable floor", file: file, line: line)
+        for (a, b, c) in grid {
+            for point in [a, b, c, (a + b + c) / 3] {
+                let liesOnPath = level.openCells.contains { cell in
+                    let center = position(of: cell, in: level)
+                    return abs(center.x - point.x) <= 0.50001 && abs(center.z - point.z) <= 0.50001
+                }
+                XCTAssertTrue(liesOnPath, "Grid spills into a hole or outside the board", file: file, line: line)
+            }
+            let center = (a + b + c) / 3
+            XCTAssertTrue(rayHits(floor, from: center + SIMD3(0, 1, 0), to: center - SIMD3(0, 1, 0)),
+                "Grid triangle crosses an empty cutout", file: file, line: line)
         }
     }
 

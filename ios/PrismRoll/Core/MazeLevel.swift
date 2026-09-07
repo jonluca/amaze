@@ -49,8 +49,14 @@ struct MazeLevel: Codable, Equatable, Sendable {
     }
 
     static func generate(number: Int, mode: GameMode) -> MazeLevel {
+        generate(number: number, mode: mode, difficultyNumber: number)
+    }
+
+    /// Separate the seeded identity from progression for multi-maze courses.
+    static func generate(number: Int, mode: GameMode, difficultyNumber: Int) -> MazeLevel {
         let number = max(1, number)
-        let difficulty = MazeDifficulty(number: number, mode: mode)
+        let difficultyNumber = max(1, difficultyNumber)
+        let difficulty = MazeDifficulty(number: difficultyNumber, mode: mode)
         let size = difficulty.size
         let salt: UInt64
         switch mode {
@@ -63,26 +69,45 @@ struct MazeLevel: Codable, Equatable, Sendable {
         let height = size
         var selected: MazeLayout?
         var qualifyingCandidates = 0
+        let baseline = size > 5 ? MazeFallbackLayouts.make(
+            size: size, orientation: random.integer(lessThan: 8),
+            variant: random.integer(lessThan: MazeFallbackLayouts.variantCount(size: size))
+        ) : nil
 
         // Score structure after improving routes. Raw greedy length does not
         // establish difficulty; distinct segment coverage and branches do.
-        for attempt in 0..<48 {
+        for attempt in 0..<(size == 5 ? 48 : 32) {
             var candidate: Set<GridCell> = []
-            let density = [66, 72, 78, 74][attempt % 4]
-            for row in 0..<height {
-                for column in 0..<width where random.integer(lessThan: 100) < density {
-                    candidate.insert(GridCell(row: row, column: column))
+            var preferredStart: GridCell?
+            if attempt >= 4, !attempt.isMultiple(of: 4), let baseline {
+                // Full-size, well-connected starting shapes make constrained large
+                // boards affordable. Every mutation still passes the complete gate.
+                candidate = baseline.cells
+                preferredStart = baseline.start
+                var changed: Set<GridCell> = []
+                for _ in 0..<(1 + random.integer(lessThan: 3)) {
+                    let cell = GridCell(row: random.integer(lessThan: height), column: random.integer(lessThan: width))
+                    guard cell != baseline.start, changed.insert(cell).inserted else { continue }
+                    if !candidate.insert(cell).inserted { candidate.remove(cell) }
+                }
+            } else {
+                let density = [66, 72, 78, 74][attempt % 4]
+                for row in 0..<height {
+                    for column in 0..<width where random.integer(lessThan: 100) < density {
+                        candidate.insert(GridCell(row: row, column: column))
+                    }
                 }
             }
-            guard let layout = MazeLayout.candidate(cells: candidate, difficulty: difficulty) else { continue }
+            guard let layout = MazeLayout.candidate(cells: candidate, difficulty: difficulty, preferredStart: preferredStart),
+                  baseline == nil || layout.cells != baseline?.cells else { continue }
             qualifyingCandidates += 1
             if selected == nil || difficulty.score(layout) > difficulty.score(selected!) {
                 selected = layout
             }
-            if attempt >= 11 && qualifyingCandidates >= 3 { break }
+            if attempt >= 11 && qualifyingCandidates >= (size == 5 ? 3 : 2) { break }
         }
-        let board = selected ?? MazeFallbackLayouts.make(size: size, orientation: random.integer(lessThan: 8))
-        let allowance = number <= 5 ? 3 : number <= 20 ? 2 : 1
+        let board = selected ?? baseline ?? MazeFallbackLayouts.make(size: size, orientation: random.integer(lessThan: 8))
+        let allowance = difficultyNumber <= 5 ? 3 : difficultyNumber <= 20 ? 2 : 1
         let moveLimit = mode == .challenge ? board.route.count + allowance : nil
         let timeLimit = mode == .timed ? Double(max(30, board.route.count * 2 + 15)) : nil
         var coinCells: Set<GridCell> = []

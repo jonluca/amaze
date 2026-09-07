@@ -34,16 +34,17 @@ struct PlayView: View {
                             }
                             .padding(20)
                         }
+                        .background(Palette.background)
                         .accessibilityIdentifier("accessiblePlayControls")
                     }
                 } else {
                     VStack(spacing: compact ? 10 : 16) {
                         modeControls.padding(.horizontal, 20)
                         headline(compact: compact).padding(.horizontal, 20)
+                        progressBar.padding(.horizontal, 20)
                         board(runID: renderRunID, inputID: renderInputID)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .frame(minHeight: 130)
-                        progressBar.padding(.horizontal, 20)
                         directionControls.padding(.horizontal, 20)
                         rewardControls.padding(.horizontal, 20)
                         instructions.padding(.horizontal, 20)
@@ -69,7 +70,8 @@ struct PlayView: View {
                 }
             }
         }
-        .background(Palette.background)
+        .background { MazeBackdrop(theme: store.theme).ignoresSafeArea() }
+        .tint(Palette.ink)
         .onAppear { tutorialRunID = store.showsTutorial ? store.runID : nil }
         .onChange(of: store.runID) { _, runID in
             tutorialRunID = store.showsTutorial ? runID : nil
@@ -140,7 +142,7 @@ struct PlayView: View {
         } else {
             Label(hintText, systemImage: store.hint != nil ? "sparkles" : store.blockedDirection != nil ? "arrow.triangle.turn.up.right.diamond" : "hand.draw")
             .font(.caption)
-            .foregroundStyle(store.hint == nil ? Palette.secondary : Palette.gold)
+            .foregroundStyle(store.hint == nil ? Palette.ink.opacity(0.8) : Palette.gold)
             .multilineTextAlignment(.center)
             .accessibilityIdentifier("playInstructions")
         }

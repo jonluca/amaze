@@ -1,6 +1,6 @@
 # Missed fast flicks
 
-September 6, 2026. Local fix after TestFlight build 4; not uploaded.
+Implemented September 6, 2026 and released in **TestFlight 1.0.0 (5)** on September 7. See [release verification](VALIDATION.md).
 
 ## Reproduction
 

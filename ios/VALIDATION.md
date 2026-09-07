@@ -1,4 +1,16 @@
-# Validation — September 6, 2026
+# Validation — September 7, 2026
+
+## Build 5 TestFlight release
+
+Verified **September 7, 2026 at 10:08 AM Pacific**: **1.0.0 (5)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. Its sole tester is the existing owner account; no individual or external audience was added. Automatic notifications are enabled, the 1,240-character en-US testing notes match exactly, and Apple's processed masked and unmasked icons were visually verified. Email inbox delivery and installation of build 5 are not independently verified.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34145768863) compiled source [27bf684e](https://github.com/jonluca/amaze/commit/27bf684e3948fbcc589311ec65ac83c8a1cc26f1) with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Its source provenance and archive checksum matched before local distribution signing and export. Strict deep signature, ZIP integrity, embedded profile/certificate, all five distribution entitlements including Game Center, production ads, three privacy manifests, AppIcon linkage, and executable/archive/dSYM UUID checks passed. The shipped plist enables iPhone high-refresh rendering; no Debug bypass flags or test fixtures were packaged. Original compiler and SDK metadata were retained.
+
+Build 5 contains the [missed-swipe fix](SWIPE_RELIABILITY.md) and [smoother motion/rendering pass](SMOOTHNESS.md). **178 native tests and five UI tests passed**, plus a recorded 28-swipe level 30 playthrough that verified paint, all three collectible coins, rewards, and automatic advancement. A clean export of the exact pushed commit separately passed **62 engine/input tests**, including its committed source symlinks. These test counts overlap. Sustained physical-device 120 FPS has not been measured.
+
+IPA SHA-256: `db943b7a871781a04fc1b15396c5c9550f8b1f5a3a90a52d86f03742ec872690`. Size: **6,173,342 bytes**. Build ID: `56c98577-fd83-4bc1-8a35-a1818f60fd53`. Private evidence: `release/build5/release-result.json`, `production-verification.json`, upload/export responses, exact audience and notes readbacks, processed icons, and `artifacts/ProductionBuild5/`.
+
+Builds 2, 3, and 4 remain in the owner group. **The App Store version remains attached to build 3 and Waiting for Review**, matching its pre-release snapshot. This TestFlight release did not replace the review submission. Unrelated Python/image files and their staged state were preserved.
 
 ## Build 4 TestFlight release
 

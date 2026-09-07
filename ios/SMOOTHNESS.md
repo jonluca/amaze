@@ -1,6 +1,6 @@
 # Smoother rendering and ProMotion
 
-September 6, 2026. Local changes after TestFlight build 4, including the pending [missed-swipe fix](SWIPE_RELIABILITY.md). This pass has not been uploaded.
+Implemented September 6, 2026 and released in **TestFlight 1.0.0 (5)** on September 7, including the [missed-swipe fix](SWIPE_RELIABILITY.md). See [release verification](VALIDATION.md).
 
 ## What caused the rough motion
 
@@ -37,4 +37,4 @@ The iOS 26.1 iPhone 17 Pro simulator passed 178 native tests and five gameplay U
 
 A separate recorded playthrough completed Classic level 30 using 28 short swipes. At move 14 the board correctly had 25 of 46 squares painted and 555 coins; completion collected all three coins, awarded the level reward, and automatically opened level 31 with 615 coins and zero moves. Before/mid/after screenshots, accessibility snapshots, the recording, and extracted motion frames were inspected for board, ball, and paint alignment. The recording is visual evidence, not a physical-device FPS benchmark.
 
-Evidence is in `artifacts/FrameSmoothness/`: `NativeAndUI-Verified.xcresult`, `native-ui-verified.log`, `level-30-playthrough.mp4`, and `playtest-*.png`. Sustained 120 FPS has not been measured on a physical iPhone. These changes remain local and have not been uploaded to TestFlight.
+Evidence is in `artifacts/FrameSmoothness/`: `NativeAndUI-Verified.xcresult`, `native-ui-verified.log`, `level-30-playthrough.mp4`, and `playtest-*.png`. Sustained 120 FPS has not been measured on a physical iPhone. The production build 5 IPA independently passed signature, capability, icon, and high-refresh configuration checks before Apple processed it and enabled private testing.

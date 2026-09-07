@@ -25,12 +25,12 @@ The patterns use Apple's [continuous haptic engine](https://developer.apple.com/
 
 The player's paint progress bar and pause button have been removed. Move counts and Coin Rush counts sit below the level title. Native Settings still suspends gameplay, and the existing background, navigation, and modal guards remain in place. The haptic preference is labeled "Haptics."
 
-## Validation of this local update
+## Validation of the build 8 update
 
 - `artifacts/RollingHaptics/Tests.xcresult`: 72 native tests and eight UI tests passed on the compact iPhone simulator. Coverage includes three consecutive Classic levels, short/diagonal swipes outside the board, native controls, accessibility text sizing, Settings suspension, and Time Rush progression, navigation, and restart.
 - `artifacts/RollingHaptics/FinalHapticTests.xcresult`: after the Reduce Motion fix, all 41 haptic and renderer tests passed on iPhone 17 Pro. This includes 15 facade/pattern tests, 10 actual-worker tests with delayed or failing injected hardware, and a coordinator integration test proving an accepted instant move reaches haptics exactly once while stale and inactive moves stay silent.
 - `artifacts/RollingHaptics/final-source-hashes.json` verifies the workspace haptic, coordinator, view, and affected test files match the final frozen source snapshot. The UI suite ran before the final Reduce Motion addition; the final native suite covers that addition. Screenshots `level-screen.png`, `after-first-swipe.png`, and `settings-screen.png` were visually inspected.
-- This update is local only; no new TestFlight upload was performed. Simulator checks cannot confirm physical vibration strength. The test results also retain SceneKit's existing internal QoS runtime warnings.
+- The stronger rolling feedback, Reduce Motion fix, and simplified controls are included in **TestFlight 1.0.0 (8)**, verified **September 7, 2026 at 2:57 PM Pacific**; see [release verification](VALIDATION.md). All 160 Swift files in the release matched the validated combined source snapshot, and a clean export of the committed source separately passed 26 native tests and one UI smoke test. Simulator checks cannot confirm physical vibration strength. The test results also retain SceneKit's existing internal QoS runtime warnings.
 
 ## Validation of the previous release
 
@@ -39,6 +39,6 @@ The change adds 13 haptic lifecycle/pattern tests, two completion-clock tests, n
 - `FinalTests.xcresult`: 78 native tests and five UI tests passed, including three consecutive Classic levels, fast short/diagonal swipes outside the board, native controls, and Time Rush progression, pause/resume, navigation, and restart.
 - `PolishedGeometryTests.xcresult`: all 12 geometry/layout tests and the three-level UI playthrough passed after the final snapshot anchoring adjustment.
 - `polished-level-entry.mp4`: the final iPhone 17 simulator recording was inspected frame by frame. The completed board stays visible, exits upward, and the incoming board settles without a blank frame or a downward jump. `level-transition-preview.mp4` is a short excerpt.
-- `validation-result.json` records these previous results and source hashes. The earlier softer haptics and level transitions shipped in **TestFlight 1.0.0 (7)**; see [release verification](VALIDATION.md). The stronger rolling feedback and simplified controls described above are a subsequent local change.
+- `validation-result.json` records these previous results and source hashes. The earlier softer haptics and level transitions shipped in **TestFlight 1.0.0 (7)**; see [release verification](VALIDATION.md). The stronger rolling feedback and simplified controls described above ship in **TestFlight 1.0.0 (8)**.
 
 Simulator checks validate timing and lifecycle, but cannot validate the physical sensation. Final intensity tuning requires play on an iPhone with Core Haptics.

@@ -1,5 +1,19 @@
 # Validation — September 7, 2026
 
+## Build 8 TestFlight release
+
+Verified **September 7, 2026 at 2:57 PM Pacific**: **1.0.0 (8)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The sole existing tester retains access, automatic notifications are enabled, and the 1,002-character en-US testing notes match exactly. Installation of build 8 and email inbox delivery were not independently verified.
+
+Build 8 adds slim gaps, rounded corners, satin gradients, and subtle beveled highlights to painted squares across all four themes. All 12 ball skins have distinct animated trails. [Rolling haptics](HAPTICS_TRANSITIONS.md) are stronger and continuous, with immediate native feedback for accepted moves under Reduce Motion. The separate paint progress bar and Pause button are removed; moves and coin counts sit below the level title, and Settings still suspends gameplay. Rewarded-ad buttons appear only when an ad is ready, while first-maze hints remain free.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34164068253) compiled source `5ebb815cefd66dfe8332028b30b3ddff1e9d7b82` with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Downloaded archive provenance, package lock, and requested entitlements matched before local distribution signing and export. The IPA passed strict deep signature, embedded profile/certificate, all five distribution entitlements including Game Center, arm64, production ads, three privacy manifests, AppIcon linkage, absence of Debug/test artifacts, ZIP integrity, and executable/archive/dSYM UUID checks. Original compiler and SDK metadata were retained.
+
+All **160 Swift files** matched the validated combined source snapshot. The existing runs passed **80 gameplay checks** (72 native and eight UI), **41 final haptic/renderer checks**, **27 ball-trail checks**, and **23 visited-tile checks**; these counts overlap. A clean export of the exact committed source separately passed **26 native tests and one UI smoke test**. The gameplay UI run preceded the final Reduce Motion addition; the final native haptic suite covers that addition. Visited-tile visual checks covered Aurora, Timber, Porcelain, and Midnight, including a dense 16×16 maze. Simulator checks do not establish physical vibration strength or sustained device ProMotion performance.
+
+IPA SHA-256: `3ac9cac81f4cdc8b9cefe6d4c386220e3c31ddc3ee6e71c6a2469d9de69dcbc6`. Size: **6,218,475 bytes**. Build ID: `7ce575ab-2e76-4af4-8d5e-39b1c68e992e`. Private evidence is in `release/build8/`, including `production-verification.json`, `validated-source-match.json`, `clean-source-provenance.json`, and final Apple readbacks. The signed archive and IPA are in `artifacts/ProductionBuild8/`; committed-source smoke evidence is in `artifacts/TestFlight8Verification/CleanSourceSmoke.xcresult`.
+
+The App Store version remains attached to **build 3 and Waiting for Review**, matching the pre-release snapshot. The TestFlight audience is unchanged. Unrelated Python solver, screenshot-import scratch changes, images, and their staged state were preserved.
+
 ## Build 7 TestFlight release
 
 Verified **September 7, 2026 at 1:36 PM Pacific**: **1.0.0 (7)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The sole existing tester retains access, automatic notifications are enabled, and the 1,055-character en-US testing notes match exactly. Installation of build 7 and email inbox delivery were not independently verified.

@@ -26,6 +26,7 @@ final class SwipeReliabilityUITests: XCTestCase {
             let origin = app.staticTexts["levelTitle"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
             origin.press(forDuration: 0, thenDragTo: origin.withOffset(vector),
                          withVelocity: XCUIGestureVelocity(rawValue: 2_500), thenHoldForDuration: 0)
+            if app.waitForMazeAdvanceAfterCompletion(from: title) { continue }
             if app.staticTexts["levelTitle"].label != title { continue }
             let after = try position(of: board)
             switch direction {

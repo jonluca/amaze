@@ -48,8 +48,17 @@ struct MazeLevel: Codable, Equatable, Sendable {
         coinCells = try values.decodeIfPresent(Set<GridCell>.self, forKey: .coinCells) ?? []
     }
 
+    /// Numbered boards are a shared catalog: a mode and number always identify
+    /// the same grid for every player. Keep the seed, ordering, difficulty curve,
+    /// and fallback layouts compatible with the frozen catalog regression tests.
     static func generate(number: Int, mode: GameMode) -> MazeLevel {
         generate(number: number, mode: mode, difficultyNumber: number)
+    }
+
+    /// Route and reward metadata can evolve without invalidating painted tiles.
+    func hasSameGrid(as other: MazeLevel) -> Bool {
+        width == other.width && height == other.height
+            && start == other.start && openCells == other.openCells
     }
 
     /// Separate the seeded identity from progression for multi-maze courses.

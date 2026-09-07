@@ -100,10 +100,10 @@ final class PrismRollUITests: XCTestCase {
         app.tabBars.buttons["Collection"].tap()
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'skin_' AND label CONTAINS 'equipped'")).count, 1)
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
-        app.tabBars.buttons["Journey"].tap()
+        app.tabBars.buttons["Levels"].tap()
         XCTAssertTrue(app.staticTexts["journeyHeading"].waitForExistence(timeout: 3))
         capture(app, name: "04-journey")
-        app.buttons["Level 1, unlocked"].tap()
+        app.buttons["journeyLevel_1"].tap()
         solve(app)
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"), "Replay must not farm points")
     }
@@ -131,8 +131,11 @@ final class PrismRollUITests: XCTestCase {
         let board = app.otherElements["mazeBoard"]
         let initialLevel = app.staticTexts["levelTitle"].label
         for _ in 0..<80 {
+            if app.waitForMazeAdvanceAfterCompletion(from: initialLevel) { return }
             if app.staticTexts["levelTitle"].label != initialLevel { return }
             app.buttons["reward_hint"].tap()
+            if app.waitForMazeAdvanceAfterCompletion(from: initialLevel) { return }
+            if app.staticTexts["levelTitle"].label != initialLevel { return }
             let hint = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Swipe '")).firstMatch.label
             switch hint {
             case "Swipe up": board.swipeUp(velocity: .slow)

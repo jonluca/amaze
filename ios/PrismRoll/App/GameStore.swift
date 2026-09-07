@@ -38,6 +38,7 @@ final class GameStore: ObservableObject {
     private var presentationReady = true
     private var tracksPresentationReadiness = false
     private var rewardedRequestIDs: Set<UUID> = []
+    private var completionVerification: (runID: UUID, task: Task<MazeOptimality.Result, Never>)?
     private let feedback = UIImpactFeedbackGenerator(style: .soft)
 
     init(defaults: UserDefaults = .standard, now: @escaping () -> Date = Date.init,
@@ -55,16 +56,45 @@ final class GameStore: ObservableObject {
         let loadedProgress = snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
             try? decoder.decode(ProgressData.self, from: $0)
         } ?? ProgressData()
-        let loadedRuns = snapshot?.runs ?? defaults.data(forKey: "prism.runs").flatMap {
+        var loadedRuns = snapshot?.runs ?? defaults.data(forKey: "prism.runs").flatMap {
             try? decoder.decode([String: MazeRun].self, from: $0)
         } ?? [:]
+        var loadedClocks = snapshot?.clocks ?? [:]
+        var loadedSession = snapshot?.timeRushSession
+        var refreshedGrid = false
+        // Older releases saved their generated geometry. Bring only differing
+        // grids onto the shared catalog; matching runs retain their exact state.
+        for soloMode in [GameMode.endless, .challenge] {
+            guard let saved = loadedRuns[soloMode.rawValue] else { continue }
+            let canonical = MazeLevel.generate(number: saved.level.number, mode: soloMode)
+            if saved.level.mode != soloMode || !saved.level.hasSameGrid(as: canonical) {
+                var refreshed = MazeRun(level: canonical)
+                refreshed.grantExtraMoves(count: saved.extraMovesGranted)
+                loadedRuns[soloMode.rawValue] = refreshed
+                loadedClocks.removeValue(forKey: soloMode.rawValue)
+                refreshedGrid = true
+            }
+        }
+        if let session = loadedSession, session.isValid {
+            let canonical = TimeRushCourse.generate(number: session.course.number)
+            if !zip(session.course.levels, canonical.levels).allSatisfy({ $0.hasSameGrid(as: $1) }) {
+                loadedSession = TimeRushSession(course: canonical)
+                loadedRuns[GameMode.timed.rawValue] = MazeRun(level: canonical.levels[0])
+                let extensions = max(0, loadedClocks[GameMode.timed.rawValue]?.rewardedExtensions ?? 0)
+                loadedClocks[GameMode.timed.rawValue] = TimedRunState(
+                    remainingSeconds: canonical.timeLimit + Double(extensions) * 30,
+                    rewardedExtensions: extensions
+                )
+                refreshedGrid = true
+            }
+        }
         let loadedMode = snapshot?.mode ?? GameMode(rawValue: defaults.string(forKey: "prism.mode") ?? "endless") ?? .endless
         let daily = DailyChallenge.generate(for: now())
         let resumeDaily = snapshot?.dailyActive == true && snapshot?.dailyID == daily.id
         progress = loadedProgress
         savedRuns = loadedRuns
-        savedClocks = snapshot?.clocks ?? [:]
-        timeRushSession = snapshot?.timeRushSession
+        savedClocks = loadedClocks
+        timeRushSession = loadedSession
         savedDailyRun = snapshot?.dailyID == daily.id ? snapshot?.dailyRun : nil
         dailyChallenge = daily
         mode = loadedMode
@@ -79,9 +109,11 @@ final class GameStore: ObservableObject {
         let loadedRun = resumeDaily ? (snapshot?.dailyRun ?? MazeRun(level: daily.level)) :
             (loadedRuns[loadedMode.rawValue] ?? MazeRun(level: .generate(number: frontier, mode: loadedMode)))
         run = loadedRun
-        clock = resumeDaily ? nil : snapshot?.clocks[loadedMode.rawValue] ?? loadedRun.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
+        clock = resumeDaily ? nil : loadedClocks[loadedMode.rawValue] ?? loadedRun.level.timeLimit.map { TimedRunState(remainingSeconds: $0) }
         lastTick = uptime()
         if !resumeDaily && loadedMode == .timed { restoreSoloRun() }
+        if refreshedGrid { save() }
+        startCompletionVerification()
     }
 
     var skin: BallSkin { BallSkin.catalog.first { $0.id == progress.selectedSkinID } ?? BallSkin.catalog[0] }
@@ -194,6 +226,7 @@ final class GameStore: ObservableObject {
             if !isAwaitingTimeRushMaze {
                 earnedPoints = isDuel ? 0 : isDaily ? progress.completeDailyChallenge(dailyChallenge, at: dateProvider()) : progress.completeLevel(run.level)
             }
+            startCompletionVerification()
         }
         save()
     }
@@ -356,6 +389,39 @@ final class GameStore: ObservableObject {
         blockedDirection = nil
         isRewardPending = false; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
         if tracksPresentationReadiness { presentationReady = false }
+        startCompletionVerification()
+    }
+
+    /// Presentation shares the store's work; leaving Play cannot lose a crown.
+    func completedRunOptimality(for completedRunID: UUID) async -> MazeOptimality.Result {
+        guard completedRunID == runID, run.isComplete else { return .incomplete }
+        startCompletionVerification()
+        guard let verification = completionVerification, verification.runID == completedRunID else { return .undetermined }
+        return await verification.task.value
+    }
+
+    private func startCompletionVerification() {
+        guard run.isComplete, completionVerification?.runID != runID else { return }
+        let finishedRun = run
+        let savesLevelProgress = !isDaily && !isDuel
+        let stageIndex = isTimeRush ? timeRushSession?.stageIndex : nil
+        if savesLevelProgress {
+            progress.recordCompletedRun(finishedRun, stageIndex: stageIndex)
+            save()
+        }
+        let verification = Task.detached(priority: .userInitiated) {
+            MazeOptimality.verify(finishedRun)
+        }
+        let task = Task { [weak self] in
+            let result = await verification.value
+            if let self, savesLevelProgress {
+                // Use the captured board and stage even if another level is now open.
+                self.progress.recordCompletedRun(finishedRun, optimality: result, stageIndex: stageIndex)
+                self.save()
+            }
+            return result
+        }
+        completionVerification = (runID, task)
     }
     /// Advance only after the previous maze's final movement has been presented.
     /// Loading and presentation are excluded from the player's shared time budget.

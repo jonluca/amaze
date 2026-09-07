@@ -215,6 +215,86 @@ final class MazeMotionTimelineTests: XCTestCase {
         }
     }
 
+    func testNewestQueuedMoveStartsWithinOneProMotionInterval() {
+        for count in [2, 8, 32, 128] {
+            for length in [1, 4, 10] {
+                let moves = squareMoves(count: count, length: length)
+                var timeline = MazeMotionTimeline()
+                timeline.reset(position: moves[0].origin, painted: [moves[0].origin])
+                for move in moves { timeline.enqueue(move) }
+
+                _ = timeline.advance(by: 1.0 / 120 + 0.000001)
+                XCTAssertEqual(timeline.pendingMoveCount, 1, "Older swipes delayed the newest turn")
+                let final = moves.last!
+                let origin = SIMD2<Float>(Float(final.origin.column), Float(final.origin.row))
+                XCTAssertGreaterThan(simd_distance(timeline.position, origin), 0, "The newest move has not started")
+                // Catching up must leave the latest swipe visibly rolling.
+                XCTAssertLessThan(simd_distance(timeline.position, origin), Float(length) / 4)
+            }
+        }
+    }
+
+    func testMidSlideInputDoesNotRewindOrWaitForTheOldStop() {
+        for length in [1, 4, 10] {
+            for fraction in [0.1, 0.5, 0.9] {
+                let moves = squareMoves(count: 2, length: length)
+                var timeline = MazeMotionTimeline()
+                timeline.reset(position: moves[0].origin, painted: [moves[0].origin])
+                timeline.enqueue(moves[0])
+                // Subdivide to keep even late arrivals inside the frame cap.
+                for _ in 0..<10 { _ = timeline.advance(by: moves[0].duration * fraction / 10) }
+                let before = timeline.position
+                timeline.enqueue(moves[1])
+                XCTAssertEqual(timeline.position, before, "Receiving input cannot teleport the ball")
+                let frame = timeline.advance(by: 0.000001)
+                XCTAssertGreaterThanOrEqual(timeline.position.x, before.x, "Changing easing rewound the ball")
+                XCTAssertLessThan(timeline.position.x - before.x, 0.01, "Rebasing introduced a position jump")
+                XCTAssertTrue(frame.rotations.allSatisfy { $0.x >= 0 && $0.y == 0 })
+
+                _ = timeline.advance(by: 1.0 / 120)
+                XCTAssertEqual(timeline.pendingMoveCount, 1)
+                XCTAssertEqual(timeline.position.x, Float(length))
+                XCTAssertGreaterThan(timeline.position.y, 0, "The next turn waited at the wall")
+            }
+        }
+    }
+
+    func testQueuedWallContactKeepsMovingAndFinalSlideStillSettles() {
+        let moves = squareMoves(count: 2, length: 10)
+        var timeline = MazeMotionTimeline()
+        timeline.reset(position: moves[0].origin, painted: [moves[0].origin])
+        for move in moves { timeline.enqueue(move) }
+        let step = 1.0 / 120 / 1_000
+        _ = timeline.advance(by: 1.0 / 120 - 2 * step)
+        let first = timeline.advance(by: step).rotations.reduce(SIMD2<Float>.zero, +).x
+        let wall = timeline.advance(by: step).rotations.reduce(SIMD2<Float>.zero, +).x
+        XCTAssertGreaterThan(wall, 0.009, "A pending turn must not ease to a stop at the wall")
+        XCTAssertEqual(wall, first, accuracy: 0.00001)
+        XCTAssertEqual(timeline.pendingMoveCount, 1)
+        _ = timeline.advance(by: 1.0 / 120)
+        XCTAssertGreaterThan(timeline.position.y, 0)
+        XCTAssertLessThan(timeline.position.y, 2, "The newest move was compressed into a snap")
+        for _ in 0..<12 { _ = timeline.advance(by: 1.0 / 120) }
+        XCTAssertFalse(timeline.isMoving)
+        XCTAssertEqual(timeline.position, SIMD2<Float>(10, 10))
+    }
+
+    func testSustainedInputStartsNewestTurnWithinOneDisplayFrame() {
+        for fps in [30.0, 60.0, 120.0] {
+            let moves = squareMoves(count: 128, length: 10)
+            var timeline = MazeMotionTimeline()
+            timeline.reset(position: moves[0].origin, painted: [moves[0].origin])
+            for move in moves {
+                timeline.enqueue(move)
+                _ = timeline.advance(by: 1 / fps)
+                XCTAssertLessThanOrEqual(timeline.pendingMoveCount, 1, "A continuing burst left old input queued")
+            }
+            for _ in 0..<12 { _ = timeline.advance(by: 1 / fps) }
+            XCTAssertFalse(timeline.isMoving)
+            XCTAssertEqual(timeline.painted, moves.last!.painted)
+        }
+    }
+
     func testCatchUpRateResetsAfterIdleAndReplay() {
         for reset in [false, true] {
             let moves = squareMoves(count: 32, length: 4)

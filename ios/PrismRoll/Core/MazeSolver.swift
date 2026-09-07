@@ -1,7 +1,11 @@
 /// A slide graph operates on stopping points, rather than walking between tiles.
 struct MazeSolver {
+    // This tie order is part of numbered level identity. Keep it independent of
+    // the declaration order of MoveDirection cases used by UI and input code.
+    private static let directionOrder: [MoveDirection] = [.up, .down, .left, .right]
+
     static func slides(from position: GridCell, in openCells: Set<GridCell>) -> [MazeSlide] {
-        MoveDirection.allCases.compactMap { direction in
+        directionOrder.compactMap { direction in
             let cells = path(from: position, direction: direction, in: openCells)
             return cells.isEmpty ? nil : MazeSlide(direction: direction, cells: cells)
         }

@@ -14,6 +14,7 @@ struct ProgressData: Codable, Equatable, Sendable {
     private(set) var completedLevels = 0
     private(set) var claimedMilestoneIDs: Set<String> = []
     private var rewardedLevelKeys: Set<String> = []
+    private var levelRecords: [String: LevelRecord] = [:]
     private var bonusLevelKeys: Set<String> = []
     private var collectedCoinKeys: Set<String> = []
     private var collectedCoinCounts: [String: Int] = [:]
@@ -21,11 +22,17 @@ struct ProgressData: Codable, Equatable, Sendable {
     private var dailyLogin = DailyStreak()
     private var dailyChallenges = DailyStreak()
 
+    private struct LevelRecord: Codable, Equatable, Sendable {
+        var bestMoves: Int
+        var hasOptimalCompletion: Bool
+    }
+
     private enum CodingKeys: String, CodingKey {
         case points, endlessLevel, challengeLevel, timedLevel, ownedSkinIDs, selectedSkinID
         case hapticsEnabled, soundEnabled, completedLevels, claimedMilestoneIDs
         case directionButtonsEnabled, tutorialDismissed
         case rewardedLevelKeys, bonusLevelKeys, collectedCoinKeys, collectedCoinCounts, completedDailyChallengeIDs
+        case levelRecords
         case dailyLogin, dailyChallenges
     }
 
@@ -44,6 +51,7 @@ struct ProgressData: Codable, Equatable, Sendable {
         directionButtonsEnabled = try values.decodeIfPresent(Bool.self, forKey: .directionButtonsEnabled) ?? false
         tutorialDismissed = try values.decodeIfPresent(Bool.self, forKey: .tutorialDismissed) ?? false
         rewardedLevelKeys = try values.decodeIfPresent(Set<String>.self, forKey: .rewardedLevelKeys) ?? []
+        levelRecords = try values.decodeIfPresent([String: LevelRecord].self, forKey: .levelRecords) ?? [:]
         bonusLevelKeys = try values.decodeIfPresent(Set<String>.self, forKey: .bonusLevelKeys) ?? []
         completedLevels = try values.decodeIfPresent(Int.self, forKey: .completedLevels) ?? rewardedLevelKeys.count
         claimedMilestoneIDs = try values.decodeIfPresent(Set<String>.self, forKey: .claimedMilestoneIDs) ?? []
@@ -68,7 +76,46 @@ struct ProgressData: Codable, Equatable, Sendable {
     var dailyChallengeStreak: Int { dailyChallenges.count }
 
     func hasCompleted(_ level: MazeLevel) -> Bool {
-        rewardedLevelKeys.contains(completionKey(for: level))
+        hasCompleted(number: level.number, mode: level.mode)
+    }
+
+    func hasCompleted(number: Int, mode: GameMode) -> Bool {
+        rewardedLevelKeys.contains(completionKey(number: number, mode: mode))
+    }
+
+    func bestMoves(number: Int, mode: GameMode) -> Int? {
+        // Stage bests can come from separate attempts, so adding them would not
+        // describe the player's best completed Time Rush round.
+        guard mode != .timed else { return nil }
+        return levelRecords[completionKey(number: number, mode: mode)]?.bestMoves
+    }
+
+    func hasOptimalCompletion(number: Int, mode: GameMode) -> Bool {
+        guard hasCompleted(number: number, mode: mode) else { return false }
+        let key = completionKey(number: number, mode: mode)
+        if mode == .timed {
+            return (0..<5).allSatisfy { stage in
+                levelRecords["\(key):stage:\(stage)"]?.hasOptimalCompletion == true
+            }
+        }
+        return levelRecords[key]?.hasOptimalCompletion == true
+    }
+
+    /// Save evidence from a completed run without awarding completion coins.
+    /// Time Rush records each of its five mazes by its zero-based stage index.
+    mutating func recordCompletedRun(
+        _ run: MazeRun, optimality: MazeOptimality.Result = .undetermined, stageIndex: Int? = nil
+    ) {
+        guard run.isComplete else { return }
+        var key = completionKey(for: run.level)
+        if run.level.mode == .timed {
+            guard let stageIndex, (0..<5).contains(stageIndex) else { return }
+            key += ":stage:\(stageIndex)"
+        }
+        var record = levelRecords[key] ?? LevelRecord(bestMoves: run.moves, hasOptimalCompletion: false)
+        record.bestMoves = min(record.bestMoves, run.moves)
+        record.hasOptimalCompletion = record.hasOptimalCompletion || optimality == .optimal
+        levelRecords[key] = record
     }
 
     func hasClaimedAdBonus(level: MazeLevel) -> Bool {
@@ -207,6 +254,10 @@ struct ProgressData: Codable, Equatable, Sendable {
     }
 
     private func completionKey(for level: MazeLevel) -> String {
-        "\(level.mode.rawValue):\(level.number)"
+        completionKey(number: level.number, mode: level.mode)
+    }
+
+    private func completionKey(number: Int, mode: GameMode) -> String {
+        "\(mode.rawValue):\(number)"
     }
 }

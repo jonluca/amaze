@@ -2,6 +2,25 @@
 
 Implemented September 6, 2026 and released in **TestFlight 1.0.0 (5)** on September 7, including the [missed-swipe fix](SWIPE_RELIABILITY.md). See [release verification](VALIDATION.md).
 
+## Rapid queued turns: local follow-up, September 7
+
+The earlier 100 ms queue budget limited when a burst finished, but still made later swipes wait behind older movement. The settling curve also slowed to zero at every wall, including walls with another turn already queued.
+
+Older turns now drain within 8.33 ms of a new accepted swipe. They continue through wall contact without easing to a stop, following each original segment in order. If input arrives mid-slide, continuation starts at the current eased position so the ball cannot rewind or jump. The newest move retains its visible roll and gentle final stop; the entire remaining route still finishes within 100 ms. Isolated slide durations remain unchanged.
+
+Replay measurements using the production Swift timeline:
+
+| Input at 120 Hz, four-cell slides | Previous maximum move-start delay | Revised maximum move-start delay |
+| --- | ---: | ---: |
+| Two queued swipes | 58.3 ms | 16.7 ms |
+| Eight queued swipes | 91.7 ms | 16.7 ms |
+| 32 or 128 queued swipes | 100 ms | 16.7 ms |
+| Sustained swipes every 25 ms | 83.3 ms | 16.7 ms |
+
+All 72 replay scenarios preserve route order, paint coverage, rolling distance, and exactly-once completion at 30/60/120 Hz. All 13 timeline tests pass; the four new regression tests fail against the previous implementation. Evidence and the reusable benchmark are in `artifacts/RapidMoveLatency/`. These are sampled timeline measurements, not physical touchscreen-to-display latency or a sustained device FPS measurement. This follow-up has not been released to TestFlight.
+
+The dedicated iOS 26.1 simulator also passed 45 native checks and four gameplay UI tests, including repeated ten-point flicks, diagonal flicks, native controls, and automatic progression through three mazes. These counts include the 13 timeline tests. `VerifiedNativeAndUI.xcresult` and `verified-native-ui-tests.log` contain the successful run; `verified-gameplay.mp4` and its inspected frames show the rendered board, ball, trail, and paint during play.
+
 ## What caused the rough motion
 
 Both the SceneKit game view and its separate movement display link explicitly requested a maximum of 60 FPS. The app also lacked the iPhone high-refresh opt-in. Animated collection previews were capped at 30 FPS.

@@ -49,8 +49,8 @@ struct RootView: View {
             navigationPage("Collection") { CollectionView() }
                 .tabItem { Label("Collection", systemImage: "circle.hexagongrid.fill").accessibilityIdentifier("tab_collection") }
                 .tag("collection")
-            navigationPage("Journey") { JourneyView { tab = "play" } }
-                .tabItem { Label("Journey", systemImage: "point.topleft.down.to.point.bottomright.curvepath").accessibilityIdentifier("tab_journey") }
+            navigationPage("Levels") { JourneyView { tab = "play" } }
+                .tabItem { Label("Levels", systemImage: "square.grid.2x2.fill").accessibilityIdentifier("tab_journey") }
                 .tag("journey")
         }
         .tint(Palette.violet)

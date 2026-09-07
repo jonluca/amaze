@@ -71,10 +71,10 @@ final class TimeRushUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [resumedAfterSettings], timeout: 3), .completed)
 
         let secondsBeforeJourney = remainingSeconds(app)
-        app.tabBars.buttons["Journey"].tap()
+        app.tabBars.buttons["Levels"].tap()
         let sameRound = app.buttons["journeyLevel_1"]
         XCTAssertTrue(sameRound.waitForExistence(timeout: 3))
-        XCTAssertEqual(sameRound.label, "Round 1, unlocked")
+        XCTAssertEqual(sameRound.label, "Round 1, unlocked, not solved")
         sameRound.tap()
         assertStage(app, "Maze 2 of 5")
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")

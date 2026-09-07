@@ -1,6 +1,6 @@
 import Foundation
 
-/// A saved round owns its exact mazes so updates do not change an active course.
+/// Saves stage and timer metadata; GameStore refreshes legacy grids to the shared catalog.
 struct TimeRushSession: Codable, Equatable, Sendable {
     let course: TimeRushCourse
     var stageIndex = 0

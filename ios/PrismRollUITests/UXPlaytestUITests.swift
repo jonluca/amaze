@@ -9,7 +9,7 @@ final class UXPlaytestUITests: XCTestCase {
         let painted = board.value as? String
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
 
-        app.tabBars.buttons["Journey"].tap()
+        app.tabBars.buttons["Levels"].tap()
         app.buttons["journeyLevel_1"].tap()
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         XCTAssertEqual(board.value as? String, painted)
@@ -142,6 +142,7 @@ final class UXPlaytestUITests: XCTestCase {
     private func solve(_ app: XCUIApplication) {
         let initialLevel = app.staticTexts["levelTitle"].label
         for _ in 0..<80 {
+            if app.waitForMazeAdvanceAfterCompletion(from: initialLevel) { return }
             if app.staticTexts["levelTitle"].label != initialLevel { return }
             moveWithHint(app)
         }

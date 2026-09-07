@@ -13,11 +13,13 @@ final class AutoAdvanceUITests: XCTestCase {
             let title = String(format: "Level %03d", level)
             XCTAssertEqual(app.staticTexts["levelTitle"].label, title)
             for _ in 0..<80 {
+                if app.waitForMazeAdvanceAfterCompletion(from: title) { break }
                 if app.staticTexts["levelTitle"].label != title { break }
                 XCTAssertFalse(app.buttons["Keep rolling"].exists)
                 app.buttons["reward_hint"].tap()
                 // The last roll includes a completion beat. A hint tap can
                 // overlap progression; don't send this loop's swipe to a new maze.
+                if app.waitForMazeAdvanceAfterCompletion(from: title) { break }
                 if app.staticTexts["levelTitle"].label != title { break }
                 let direction = app.staticTexts["playInstructions"].label
                 let board = app.otherElements["mazeBoard"]
@@ -34,7 +36,7 @@ final class AutoAdvanceUITests: XCTestCase {
             XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("\(level * 50)"))
         }
         XCTAssertFalse(app.buttons["nextLevel"].exists)
-        app.tabBars.buttons["Journey"].tap()
+        app.tabBars.buttons["Levels"].tap()
         XCTAssertFalse(app.buttons["completionBonus_endless_1"].exists)
         XCTAssertFalse(app.alerts.firstMatch.exists)
         app.tabBars.buttons["Play"].tap()

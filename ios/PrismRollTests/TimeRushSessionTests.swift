@@ -546,7 +546,13 @@ final class TimeRushSessionTests: XCTestCase {
             restored.openLevel(1)
             try completeCourse(restored)
             XCTAssertEqual(restored.earnedPoints, 0, "The redesign must not erase the existing timed completion ledger")
-            XCTAssertEqual(restored.progress, progress)
+            // A replay adds move records while preserving every legacy ledger,
+            // preference, unlock, and wallet field.
+            var replayed = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(restored.progress)) as? [String: Any])
+            var original = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(progress)) as? [String: Any])
+            replayed.removeValue(forKey: "levelRecords")
+            original.removeValue(forKey: "levelRecords")
+            XCTAssertEqual(replayed as NSDictionary, original as NSDictionary)
         }
     }
 

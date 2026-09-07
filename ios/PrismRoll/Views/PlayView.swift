@@ -5,8 +5,11 @@ struct PlayView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var duel: DuelService
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @State private var settledRunID: UUID?
     @State private var tutorialRunID: UUID?
+    @State private var awardRunID: UUID?
+    @State private var presentedCompletionRunID: UUID?
     let isActive: Bool
     let onRestart: () -> Void
     let onCompletionReady: (UUID) -> Void
@@ -51,10 +54,21 @@ struct PlayView: View {
             }
             .frame(maxWidth: 720)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .allowsHitTesting(!hasResult)
-            .accessibilityHidden(hasResult)
+            .allowsHitTesting(!hasResult && !showsAward)
+            .accessibilityHidden(hasResult || showsAward)
             .overlay {
-                if hasResult {
+                if showsAward {
+                    ZStack {
+                        Palette.background.opacity(0.35)
+                        ScrollView {
+                            PerfectSolveAward(moves: store.run.moves)
+                                .padding(20)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .defaultScrollAnchor(.center)
+                    }
+                } else if hasResult {
                     ZStack {
                         Palette.background.opacity(0.8)
                         ScrollView {
@@ -72,9 +86,15 @@ struct PlayView: View {
         .onAppear { tutorialRunID = store.showsTutorial ? store.runID : nil }
         .onChange(of: store.runID) { _, runID in
             tutorialRunID = store.showsTutorial ? runID : nil
+            awardRunID = nil
+            presentedCompletionRunID = nil
         }
         .onChange(of: store.hasEnded) { _, ended in
             if !ended { settledRunID = nil }
+        }
+        .task(id: completionToPresent) {
+            guard let runID = completionToPresent, presentedCompletionRunID != runID else { return }
+            await presentCompletion(for: runID)
         }
     }
 
@@ -89,7 +109,6 @@ struct PlayView: View {
                       onResultReady: {
                           guard store.runID == runID else { return }
                           settledRunID = runID
-                          if store.run.isComplete && !store.isDuel { onCompletionReady(runID) }
                       },
                       onSwipe: { store.move($0, for: inputID) })
             .accessibilityIdentifier("mazeBoard")
@@ -156,8 +175,38 @@ struct PlayView: View {
     }
 
     private var hasResult: Bool {
-        ((store.isFailed || (store.isDuel && store.run.isComplete)) && settledRunID == store.runID)
+        ((store.isFailed || (store.isDuel && store.run.isComplete && presentedCompletionRunID == store.runID)) && settledRunID == store.runID)
             || (store.isDuel && duel.didWin != nil && !store.run.isComplete)
+    }
+
+    private var showsAward: Bool { isActive && awardRunID == store.runID }
+
+    private var completionToPresent: UUID? {
+        isActive && store.run.isComplete && settledRunID == store.runID ? store.runID : nil
+    }
+
+    @MainActor
+    private func presentCompletion(for runID: UUID) async {
+        let finishedRun = store.run
+        // Verification belongs to saved progress and survives leaving this view.
+        // Only this presentation is cancelled when Play is hidden or replaced.
+        let result = await store.completedRunOptimality(for: runID)
+        guard !Task.isCancelled, store.runID == runID else { return }
+        if result == .optimal {
+            awardRunID = runID
+            if voiceOverEnabled {
+                UIAccessibility.post(notification: .announcement,
+                                     argument: "Perfect solve. \(finishedRun.moves) moves. Best possible.")
+            }
+            // This is the visible celebration interval, after the final roll.
+            // Returning from a menu gives the player the full reveal again.
+            do { try await Task.sleep(for: .seconds(voiceOverEnabled ? 1.5 : 0.65)) }
+            catch { return }
+        }
+        guard !Task.isCancelled, store.runID == runID else { return }
+        awardRunID = nil
+        presentedCompletionRunID = runID
+        if !store.isDuel { onCompletionReady(runID) }
     }
 
     private var hintText: String {

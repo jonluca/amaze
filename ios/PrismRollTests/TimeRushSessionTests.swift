@@ -4,6 +4,18 @@ import XCTest
 
 @MainActor
 final class TimeRushSessionTests: XCTestCase {
+    func testFocusedPlayFinishesFiveMazesButPreviouslyAllowedSlowCadenceExpires() throws {
+        let firstRoundMoves = try assertTimedCadence(number: 1, secondsPerSwipe: 0.35, completes: true)
+        _ = try assertTimedCadence(number: 20, secondsPerSwipe: 0.25, completes: true)
+        let slowMoves = try assertTimedCadence(number: 1, secondsPerSwipe: 0.8, completes: false)
+
+        XCTAssertLessThan(slowMoves, firstRoundMoves)
+        // The first swipe starts the clock; each later board takes one second
+        // to read. This same executable route fit comfortably in the old 2:00.
+        let slowFullCourseSeconds = Double(firstRoundMoves - 1) * 0.8 + 4
+        XCTAssertLessThan(slowFullCourseSeconds, 120)
+    }
+
     func testCourseUsesOneClockAcrossMazesAndExcludesSceneTransitionTime() throws {
         try withDefaults { defaults in
             var uptime = 10.0
@@ -293,6 +305,133 @@ final class TimeRushSessionTests: XCTestCase {
         }
     }
 
+    func testActiveLegacyCourseKeepsExactTimerRewardsPaintAndStageOnRelaunch() throws {
+        for stageIndex in [0, 2] {
+            try withDefaults { defaults in
+                let course = legacyCourse()
+                let session = TimeRushSession(course: course, stageIndex: stageIndex)
+                var run = MazeRun(level: session.currentLevel)
+                run.move(try XCTUnwrap(run.hintDirection))
+                let clock = TimedRunState(remainingSeconds: 347.25, hasStarted: true, rewardedExtensions: 2)
+                let progress = preservedProgress()
+                try saveTimedSnapshot(defaults, session: session, run: run, clock: clock, progress: progress)
+
+                let restored = makeStore(defaults)
+                XCTAssertEqual(restored.timeRushSession, session)
+                XCTAssertEqual(restored.run, run)
+                XCTAssertEqual(restored.clock, clock)
+                XCTAssertEqual(restored.timeRushMazeNumber, stageIndex + 1)
+                XCTAssertEqual(restored.progress, progress)
+                restored.switchMode(.endless)
+                restored.switchMode(.timed)
+                XCTAssertEqual(restored.timeRushSession, session)
+                XCTAssertEqual(restored.run, run)
+                XCTAssertEqual(restored.clock, clock)
+            }
+        }
+    }
+
+    func testRestartLegacyCourseAdoptsTighterTimerWithoutRegeneratingItsMazes() throws {
+        try withDefaults { defaults in
+            let course = legacyCourse()
+            let expected = course.retimed()
+            let session = TimeRushSession(course: course, stageIndex: 2)
+            var run = MazeRun(level: session.currentLevel)
+            run.move(try XCTUnwrap(run.hintDirection))
+            let clock = TimedRunState(remainingSeconds: 143.5, hasStarted: true, rewardedExtensions: 3)
+            let progress = preservedProgress()
+            try saveTimedSnapshot(defaults, session: session, run: run, clock: clock, progress: progress)
+            let restored = makeStore(defaults)
+            let previousRunID = restored.runID
+            let previousReward = try XCTUnwrap(restored.rewardRequest(.extraTime))
+
+            restored.replay()
+
+            XCTAssertLessThan(expected.timeLimit, course.timeLimit)
+            XCTAssertEqual(restored.timeRushSession, TimeRushSession(course: expected))
+            XCTAssertEqual(restored.run, MazeRun(level: expected.levels[0]))
+            XCTAssertEqual(restored.clock, TimedRunState(remainingSeconds: expected.timeLimit))
+            XCTAssertEqual(restored.timeRushMazeNumber, 1)
+            XCTAssertNotEqual(restored.runID, previousRunID)
+            XCTAssertEqual(restored.progress, progress)
+            assertSameCourseMazes(course, try XCTUnwrap(restored.timeRushSession?.course))
+            restored.applyReward(previousReward)
+            XCTAssertEqual(restored.clock, TimedRunState(remainingSeconds: expected.timeLimit))
+
+            let relaunched = makeStore(defaults)
+            XCTAssertEqual(relaunched.timeRushSession, restored.timeRushSession)
+            XCTAssertEqual(relaunched.run, restored.run)
+            XCTAssertEqual(relaunched.clock, restored.clock)
+        }
+    }
+
+    func testUnstartedLegacyCourseAdoptsAndPersistsTighterBudgetOnRestore() throws {
+        try withDefaults { defaults in
+            let course = legacyCourse()
+            let expected = course.retimed()
+            let progress = preservedProgress()
+            try saveTimedSnapshot(defaults, session: TimeRushSession(course: course),
+                                  run: MazeRun(level: course.levels[0]),
+                                  clock: TimedRunState(remainingSeconds: course.timeLimit), progress: progress)
+
+            let restored = GameStore(defaults: defaults)
+
+            XCTAssertLessThan(expected.timeLimit, course.timeLimit)
+            XCTAssertEqual(restored.timeRushSession, TimeRushSession(course: expected))
+            XCTAssertEqual(restored.run, MazeRun(level: expected.levels[0]))
+            XCTAssertEqual(restored.clock, TimedRunState(remainingSeconds: expected.timeLimit))
+            XCTAssertEqual(restored.progress, progress)
+            assertSameCourseMazes(course, try XCTUnwrap(restored.timeRushSession?.course))
+            let persisted = try JSONDecoder().decode(GameSnapshot.self, from: XCTUnwrap(defaults.data(forKey: "prism.snapshot.v2")))
+            XCTAssertEqual(persisted.timeRushSession, restored.timeRushSession)
+            XCTAssertEqual(persisted.runs["timed"], restored.run)
+            XCTAssertEqual(persisted.clocks["timed"], restored.clock)
+
+            let relaunched = makeStore(defaults)
+            XCTAssertEqual(relaunched.timeRushSession, restored.timeRushSession)
+            XCTAssertEqual(relaunched.clock, restored.clock)
+        }
+    }
+
+    func testUnstartedLegacyCourseKeepsEarnedExtraTimeWhenItsBudgetChanges() throws {
+        try withDefaults { defaults in
+            let course = legacyCourse()
+            let expected = course.retimed()
+            let clock = TimedRunState(remainingSeconds: course.timeLimit + 60, rewardedExtensions: 2)
+            try saveTimedSnapshot(defaults, session: TimeRushSession(course: course),
+                                  run: MazeRun(level: course.levels[0]), clock: clock)
+
+            let restored = makeStore(defaults)
+            let expectedClock = TimedRunState(remainingSeconds: expected.timeLimit + 60, rewardedExtensions: 2)
+            XCTAssertEqual(restored.timeRushSession?.course, expected)
+            XCTAssertEqual(restored.clock, expectedClock)
+            XCTAssertFalse(try XCTUnwrap(restored.clock).hasStarted)
+            restored.switchMode(.endless)
+            restored.switchMode(.timed)
+            XCTAssertEqual(restored.clock, expectedClock, "Restoring the same course must not add or remove rewards again")
+            let relaunched = makeStore(defaults)
+            XCTAssertEqual(relaunched.clock, expectedClock)
+        }
+    }
+
+    func testLegacyCourseWaitingInAnotherModeRetimesWhenOpened() throws {
+        try withDefaults { defaults in
+            let course = legacyCourse()
+            try saveTimedSnapshot(defaults, session: TimeRushSession(course: course),
+                                  run: MazeRun(level: course.levels[0]),
+                                  clock: TimedRunState(remainingSeconds: course.timeLimit), mode: .endless)
+            let restored = makeStore(defaults)
+            XCTAssertFalse(restored.isTimeRush)
+
+            restored.switchMode(.timed)
+
+            let expected = course.retimed()
+            XCTAssertEqual(restored.timeRushSession, TimeRushSession(course: expected))
+            XCTAssertEqual(restored.run, MazeRun(level: expected.levels[0]))
+            XCTAssertEqual(restored.clock, TimedRunState(remainingSeconds: expected.timeLimit))
+        }
+    }
+
     func testSwitchingModesDailyAndDuelPreservesTimedCourseWithoutChargingAwayTime() throws {
         try withDefaults { defaults in
             var uptime = 0.0
@@ -411,12 +550,126 @@ final class TimeRushSessionTests: XCTestCase {
         }
     }
 
+    private func assertTimedCadence(number: Int, secondsPerSwipe: TimeInterval, completes: Bool,
+                                    file: StaticString = #filePath, line: UInt = #line) throws -> Int {
+        var acceptedMoves = 0
+        try withDefaults { defaults in
+            var progress = ProgressData()
+            progress.timedLevel = number
+            defaults.set(try JSONEncoder().encode(progress), forKey: "prism.progress")
+            var uptime = 0.0
+            let store = makeStore(defaults, uptime: { uptime })
+            store.switchMode(.timed)
+            store.setPresentationReady(false, for: store.runID)
+            let budget = try XCTUnwrap(store.clock?.remainingSeconds, file: file, line: line)
+            XCTAssertEqual(store.timeRushMazeCount, 5, file: file, line: line)
+
+            course: for stageIndex in 0..<store.timeRushMazeCount {
+                let beforeLoading = store.clock
+                uptime += 20
+                store.tick()
+                XCTAssertEqual(store.clock, beforeLoading, "Scene loading must not consume play time", file: file, line: line)
+                store.setPresentationReady(true, for: store.runID)
+                uptime += 1
+                store.tick()
+                if stageIndex == 0 {
+                    XCTAssertEqual(store.clock?.remainingSeconds, budget, file: file, line: line)
+                    XCTAssertFalse(try XCTUnwrap(store.clock).hasStarted, file: file, line: line)
+                }
+                let directions = store.run.level.solution
+                for direction in directions {
+                    if store.isFailed { break course }
+                    if store.run.isComplete { break }
+                    let previousMoves = store.run.moves
+                    uptime += secondsPerSwipe
+                    store.move(direction)
+                    acceptedMoves += store.run.moves - previousMoves
+                    if !store.isFailed {
+                        XCTAssertEqual(store.run.moves, previousMoves + 1, "The stored route must execute real swipes", file: file, line: line)
+                    }
+                }
+                if store.isFailed { break }
+                XCTAssertTrue(store.run.isComplete, file: file, line: line)
+                if stageIndex < store.timeRushMazeCount - 1 {
+                    XCTAssertTrue(store.advanceTimeRushMaze(after: store.runID), file: file, line: line)
+                }
+            }
+
+            XCTAssertEqual(store.clock?.rewardedExtensions, 0, file: file, line: line)
+            XCTAssertTrue(store.hasEnded, file: file, line: line)
+            if completes {
+                XCTAssertFalse(store.isFailed, file: file, line: line)
+                XCTAssertEqual(store.timeRushMazesCompleted, 5, file: file, line: line)
+                XCTAssertGreaterThan(try XCTUnwrap(store.clock?.remainingSeconds), 0, file: file, line: line)
+                XCTAssertEqual(store.progress.completedLevels, 1, file: file, line: line)
+                XCTAssertEqual(store.progress.timedLevel, number + 1, file: file, line: line)
+            } else {
+                XCTAssertTrue(store.isFailed, file: file, line: line)
+                XCTAssertLessThan(store.timeRushMazesCompleted, 5, file: file, line: line)
+                XCTAssertEqual(store.clock?.remainingSeconds, 0, file: file, line: line)
+                XCTAssertEqual(store.progress.completedLevels, 0, file: file, line: line)
+                XCTAssertEqual(store.progress.timedLevel, number, file: file, line: line)
+            }
+        }
+        return acceptedMoves
+    }
+
     private func completeMaze(_ store: GameStore, file: StaticString = #filePath, line: UInt = #line) throws {
         for _ in 0..<500 {
             guard !store.run.isComplete else { return }
             store.move(try XCTUnwrap(store.run.hintDirection, file: file, line: line))
         }
         XCTFail("The maze did not complete within its bounded solution", file: file, line: line)
+    }
+
+    private func legacyCourse() -> TimeRushCourse {
+        let course = TimeRushCourse.generate(number: 1)
+        let levels = course.levels.map { level in
+            MazeLevel(number: level.number, mode: level.mode, width: level.width, height: level.height,
+                      openCells: level.openCells, start: level.start, solution: level.solution,
+                      moveLimit: level.moveLimit, timeLimit: 600, coinCells: level.coinCells)
+        }
+        return TimeRushCourse(number: course.number, levels: levels, timeLimit: 600)
+    }
+
+    private func preservedProgress() -> ProgressData {
+        var progress = ProgressData()
+        progress.points = 987
+        progress.endlessLevel = 8
+        progress.challengeLevel = 5
+        progress.timedLevel = 9
+        progress.ownedSkinIDs = ["coral", "mint"]
+        progress.selectedSkinID = "mint"
+        progress.hapticsEnabled = false
+        progress.soundEnabled = false
+        return progress
+    }
+
+    private func saveTimedSnapshot(_ defaults: UserDefaults, session: TimeRushSession, run: MazeRun,
+                                   clock: TimedRunState, progress: ProgressData = ProgressData(),
+                                   mode: GameMode = .timed) throws {
+        let snapshot = GameSnapshot(progress: progress, runs: ["timed": run], clocks: ["timed": clock],
+                                    mode: mode, dailyRun: nil, dailyID: nil, dailyActive: false,
+                                    themeID: "aurora", timeRushSession: session)
+        defaults.set(try JSONEncoder().encode(snapshot), forKey: "prism.snapshot.v2")
+    }
+
+    private func assertSameCourseMazes(_ original: TimeRushCourse, _ updated: TimeRushCourse,
+                                       file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(updated.number, original.number, file: file, line: line)
+        XCTAssertEqual(updated.mazeCount, original.mazeCount, file: file, line: line)
+        for (before, after) in zip(original.levels, updated.levels) {
+            XCTAssertEqual(after.number, before.number, file: file, line: line)
+            XCTAssertEqual(after.mode, before.mode, file: file, line: line)
+            XCTAssertEqual(after.width, before.width, file: file, line: line)
+            XCTAssertEqual(after.height, before.height, file: file, line: line)
+            XCTAssertEqual(after.openCells, before.openCells, file: file, line: line)
+            XCTAssertEqual(after.start, before.start, file: file, line: line)
+            XCTAssertEqual(after.solution, before.solution, file: file, line: line)
+            XCTAssertEqual(after.coinCells, before.coinCells, file: file, line: line)
+            XCTAssertEqual(after.moveLimit, before.moveLimit, file: file, line: line)
+            XCTAssertEqual(after.timeLimit, updated.timeLimit, file: file, line: line)
+        }
     }
 
     private func completeCourse(_ store: GameStore, file: StaticString = #filePath, line: UInt = #line) throws {

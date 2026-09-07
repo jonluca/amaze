@@ -11,10 +11,10 @@ enum MazeChannelOcclusion {
         for cell in level.openCells.sorted() {
             let center = MazeBoardBuilder.position(of: cell, in: level)
             for (row, column) in sides where !level.openCells.contains(GridCell(row: cell.row + row, column: cell.column + column)) {
-                let x = center.x + Float(column) * 0.455
-                let z = center.z + Float(row) * 0.455
-                let halfWidth: Float = column == 0 ? 0.5 : 0.055
-                let halfDepth: Float = row == 0 ? 0.5 : 0.055
+                let x = center.x + Float(column) * 0.44
+                let z = center.z + Float(row) * 0.44
+                let halfWidth: Float = column == 0 ? 0.5 : 0.06
+                let halfDepth: Float = row == 0 ? 0.5 : 0.06
                 let first = Int32(vertices.count)
                 vertices.append(contentsOf: [
                     SCNVector3(x - halfWidth, 0.023, z - halfDepth),
@@ -31,7 +31,7 @@ enum MazeChannelOcclusion {
         guard !vertices.isEmpty else { return node }
         let material = SCNMaterial()
         material.lightingModel = .constant
-        material.diffuse.contents = UIColor.black.withAlphaComponent(0.16)
+        material.diffuse.contents = UIColor.black.withAlphaComponent(0.22)
         material.writesToDepthBuffer = false
         let geometry = SCNGeometry(
             sources: [SCNGeometrySource(vertices: vertices),

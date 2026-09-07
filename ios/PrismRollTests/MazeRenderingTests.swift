@@ -63,11 +63,11 @@ final class MazeRenderingTests: XCTestCase {
         let start = Date()
         coordinator.renderer.update(level: level, position: level.start, painted: [level.start], skin: BallSkin.catalog[0], isComplete: false, theme: .timber)
         print("PRISM_CPU_AFTER synchronousUpdate=\(Date().timeIntervalSince(start))")
-        XCTAssertNil(view.scene)
+        XCTAssertNil(view.sceneView.scene)
         XCTAssertTrue(view.isPreparing)
         XCTAssertFalse(coordinator.isReady)
         await fulfillment(of: [ready], timeout: 10)
-        XCTAssertNil(view.scene, "A zero-size viewport cannot reveal the board")
+        XCTAssertNil(view.sceneView.scene, "A zero-size viewport cannot reveal the board")
         XCTAssertFalse(coordinator.isReady, "Material completion is not a displayed first frame")
         coordinator.stop()
     }

@@ -25,3 +25,15 @@ Included in **TestFlight 1.0.0 (6)**; see [release verification](VALIDATION.md).
 - Test evidence in the same directory: NativeAndUI.xcresult, native-ui.log, final-build.log, se-first50-proof.json, se-playthrough-proof.json, tested-source.json, and final-source.json.
 
 Simulator checks verify appearance and input/state behavior; they do not measure physical-device ProMotion frame delivery.
+
+## Depth and contrasting paint follow-up
+
+The open-board design shipped in build 6. This later local pass adds more visible depth without reinstating a rectangular tray: the rim is 0.34 units above the floor with a -0.22 underside, wider bevel, approximately 22-degree camera tilt, and stronger directional/contact shading.
+
+The selected ball skin keeps its original texture. A deterministic paint palette cycles through contrasting hues between numbered levels, accounting for patterned accents when possible. Painted tiles, splash effects and the progress indicator share that track color. Replaying the same level preserves its pairing.
+
+Validation: 28 native checks and 3 gameplay UI flows passed in ios/artifacts/MazeDepth/NativeAndUI.xcresult. These cover all skin palettes, ball-texture preservation, pooled effects, open geometry, large-board camera clearance, rapid swipes and automatic level changes. An actual 12-swipe SE playthrough matched the expected row 11, column 1 and 28/88 painted cells. Visually inspected blue/coral level 30 on SE and teal/coral level 29 on iPhone 17 Pro.
+
+Evidence: ios/artifacts/MazeDepth/se-level30.png, phone-level29.png, se-play-proof.json, native-ui.log and tested-source.json. Tests used build 6 plus the depth/color changes in an isolated source copy while separate tasks modified Time Rush and haptic/transition behavior. Their later integration additions to PlayView and MazeSceneRenderer are preserved; they were not part of this isolated test run.
+
+No commit, version change or TestFlight upload was performed for this follow-up.

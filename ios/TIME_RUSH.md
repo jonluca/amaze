@@ -1,6 +1,6 @@
 # Time Rush courses
 
-The September 7 [maze growth update](MAZE_GROWTH.md) supersedes the size and timing curve below. The following records the earlier build 4 implementation and its validation.
+The September 7 [maze growth update](MAZE_GROWTH.md) supersedes the size curve below. The subsequent [timing correction](TIME_RUSH_TIMING.md) tightens the shared clock and discounts already-painted return trips. The following records the earlier build 4 implementation and its validation.
 
 Time Rush is now a series of **five distinct mazes sharing one countdown**. The first valid swipe starts the round. Each finished maze advances automatically after its final movement settles. The next maze resumes the remaining time as soon as its scene is ready, without waiting for another first swipe. Scene preparation, background time, menus, and reward videos do not consume time.
 

@@ -17,7 +17,9 @@ struct MazeSceneView: UIViewRepresentable {
     var theme: BoardTheme = .aurora
     var resetID: UUID? = nil
     var isActive = true
+    var hapticsEnabled = true
     var moveEvents: AnyPublisher<GameMoveEvent, Never>? = nil
+    var levelTransitions: AnyPublisher<UUID, Never>? = nil
     var onReady: (Bool) -> Void = { _ in }
     var onResultReady: () -> Void = {}
     let onSwipe: (MoveDirection) -> Void
@@ -37,7 +39,8 @@ struct MazeSceneView: UIViewRepresentable {
         context.coordinator.onSwipe = onSwipe
         context.coordinator.onReady = onReady
         context.coordinator.onResultReady = onResultReady
-        context.coordinator.bind(moveEvents, runID: resetID)
+        context.coordinator.configureFeedback(enabled: hapticsEnabled, reduceMotion: reduceMotion)
+        context.coordinator.bind(moveEvents, levelTransitions: levelTransitions, runID: resetID)
         context.coordinator.setActive(isActive)
         context.coordinator.renderer.setReduceMotion(reduceMotion)
         context.coordinator.renderer.setDifferentiateWithoutColor(differentiateWithoutColor)
@@ -65,11 +68,11 @@ struct MazeSceneView: UIViewRepresentable {
         coordinator.onSwipe = { _ in }
         view.onLayout = nil
         view.onVisibilityChange = nil
-        view.delegate = nil
+        view.sceneView.delegate = nil
         view.setPreparing(false)
-        view.isPlaying = false
+        view.sceneView.isPlaying = false
         view.accessibilityCustomActions = nil
-        view.scene = nil
-        view.pointOfView = nil
+        view.sceneView.scene = nil
+        view.sceneView.pointOfView = nil
     }
 }

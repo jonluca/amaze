@@ -27,6 +27,7 @@ final class MazeSceneRenderer {
     private(set) var acceptedMoveCount = 0
     var pendingMoveCount: Int { motion.pendingMoveCount }
     var hasResult: Bool { wasComplete || wasFailed }
+    var isComplete: Bool { wasComplete }
     var resultReady: Bool { hasResult && !motion.isMoving }
     var renderedCellPosition: SIMD2<Float> { motion.position }
     var renderedPainted: Set<GridCell> { motion.painted }
@@ -89,7 +90,9 @@ final class MazeSceneRenderer {
             contentRevision += 1
             onPreparationNeeded?()
         }
-        paintTint = BallMaterialFactory.color(hex: skin.hex)
+        if changedSkin || changedLevel {
+            paintTint = BallMaterialFactory.color(hex: MazePaintPalette.hex(for: skin, levelNumber: level.number))
+        }
         if changedLevel {
             boardRoot.removeFromParentNode()
             let board = MazeBoardBuilder.build(level: level, tint: paintTint, theme: theme)

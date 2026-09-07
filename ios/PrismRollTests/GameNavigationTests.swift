@@ -121,6 +121,49 @@ final class GameNavigationTests: XCTestCase {
         }
     }
 
+    func testEnteringDuelPersistsTheLatestFractionalSoloClock() throws {
+        try withDefaults { defaults in
+            var uptime = 0.0
+            let store = makeStore(defaults: defaults, uptime: { uptime })
+            store.switchMode(.timed)
+            store.move(try XCTUnwrap(store.run.hintDirection))
+            let solo = store.run
+            let initial = try XCTUnwrap(store.clock?.remainingSeconds)
+            uptime += 0.25
+            store.tick()
+            uptime += 0.25
+
+            store.openDuel(seed: 500, id: "navigation-persistence")
+
+            let restored = GameStore(defaults: defaults, uptime: { uptime })
+            XCTAssertFalse(restored.isDuel)
+            XCTAssertEqual(restored.run, solo)
+            XCTAssertEqual(try XCTUnwrap(restored.clock?.remainingSeconds), initial - 0.5, accuracy: 0.001,
+                           "Entering a duel must persist elapsed solo time even before the next whole-second checkpoint")
+        }
+    }
+
+    func testEnteringDuelRetiresActiveDailyOnDiskAndPreservesBothSoloAndDailyRuns() throws {
+        try withDefaults { defaults in
+            let store = makeStore(defaults: defaults)
+            store.move(try XCTUnwrap(store.run.hintDirection))
+            let solo = store.run
+            store.openDaily()
+            store.move(try XCTUnwrap(store.run.hintDirection))
+            let daily = store.run
+
+            store.openDuel(seed: 500, id: "daily-navigation-persistence")
+
+            let restored = makeStore(defaults: defaults)
+            XCTAssertFalse(restored.isDuel)
+            XCTAssertFalse(restored.isDaily, "A nonpersistent duel must return to solo play after relaunch")
+            XCTAssertEqual(restored.run, solo)
+            restored.openDaily()
+            XCTAssertEqual(restored.run, daily)
+            XCTAssertEqual(restored.progress.completedLevels, 0)
+        }
+    }
+
     func testCompletedJourneyLevelStartsFreshReplayWithoutAnotherAward() throws {
         try withDefaults { defaults in
             let store = makeStore(defaults: defaults)

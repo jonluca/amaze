@@ -81,7 +81,7 @@ final class GameDifficultyCompatibilityTests: XCTestCase {
         XCTAssertTrue(store.progress.hasCompletedDailyChallenge(daily))
     }
 
-    func testExistingTimeRushCourseKeepsItsGeometryStageAndOriginalClock() throws {
+    func testExistingTimeRushCourseKeepsItsGeometryStageAndOriginalClockUntilRestart() throws {
         let suite = "PrismRoll.CourseDifficultyCompatibility.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -112,9 +112,13 @@ final class GameDifficultyCompatibilityTests: XCTestCase {
         XCTAssertEqual(restored.run.level, oldLevel)
         XCTAssertEqual(restored.clock, clock)
         restored.replay()
+        let retimedCourse = oldCourse.retimed()
         XCTAssertEqual(restored.timeRushMazeNumber, 1)
-        XCTAssertEqual(restored.run.level, oldLevel)
-        XCTAssertEqual(restored.clock?.remainingSeconds, 60)
+        XCTAssertEqual(restored.run.level, retimedCourse.levels[0])
+        XCTAssertEqual(restored.run.level.openCells, oldLevel.openCells)
+        XCTAssertEqual(restored.run.level.solution, oldLevel.solution)
+        XCTAssertEqual(restored.clock?.remainingSeconds, retimedCourse.timeLimit)
+        XCTAssertLessThan(retimedCourse.timeLimit, 60)
         XCTAssertEqual(restored.progress, progress)
     }
 

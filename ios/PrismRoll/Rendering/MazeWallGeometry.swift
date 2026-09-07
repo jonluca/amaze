@@ -4,10 +4,10 @@ import SceneKit
 /// regions remain open to the background, including islands inside the maze.
 @MainActor
 enum MazeWallGeometry {
-    static let rimWidth: Float = 0.09
-    static let topHeight: Float = 0.20
-    static let bevelWidth: Float = 0.018
-    static let bottomHeight: Float = -0.12
+    static let rimWidth: Float = 0.11
+    static let topHeight: Float = 0.34
+    static let bevelWidth: Float = 0.025
+    static let bottomHeight: Float = -0.22
 
     static func make(level: MazeLevel) -> SCNGeometry {
         // Every contour and bevel breakpoint lies on this adaptive lattice.

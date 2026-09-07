@@ -13,7 +13,7 @@ final class TimeRushUITests: XCTestCase {
         assertStage(app, "Maze 1 of 5")
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
         let initialBudget = remainingSeconds(app)
-        XCTAssertGreaterThan(initialBudget, 60)
+        XCTAssertEqual(initialBudget, 55, "A fresh round uses the tighter clock")
 
         // Executable route from TimeRushCourse.generate(number: 1).levels[0].
         // Real touch input exercises the transition without debug completion or ads.

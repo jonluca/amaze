@@ -32,16 +32,42 @@ struct TimeRushCourse: Codable, Equatable, Sendable {
             stages.append(level)
         }
 
-        // Larger courses need time proportional to their executable route. Tighten
-        // the pace gradually while retaining time to read each new board.
-        let secondsPerMove = 0.95 - min(0.20, Double(number - 1) * 0.008)
-        let moves = stages.reduce(0) { $0 + $1.solution.count }
-        let timeLimit = max(60, ceil((Double(moves) * secondsPerMove + 10) / 5) * 5)
+        let timeLimit = currentTimeLimit(number: number, levels: stages)
         let levels = stages.map { level in
             MazeLevel(number: number, mode: .timed, width: level.width, height: level.height,
                 openCells: level.openCells, start: level.start, solution: level.solution,
                 moveLimit: nil, timeLimit: timeLimit)
         }
         return TimeRushCourse(number: number, levels: levels, timeLimit: timeLimit)
+    }
+
+    /// Apply current pacing to a fresh attempt without changing its saved mazes.
+    /// An active run keeps its own remaining clock until the player restarts.
+    func retimed() -> TimeRushCourse {
+        let limit = Self.currentTimeLimit(number: number, levels: levels)
+        let updated = levels.map { level in
+            MazeLevel(number: level.number, mode: level.mode, width: level.width, height: level.height,
+                openCells: level.openCells, start: level.start, solution: level.solution,
+                moveLimit: level.moveLimit, timeLimit: limit, coinCells: level.coinCells)
+        }
+        return TimeRushCourse(number: number, levels: updated, timeLimit: limit)
+    }
+
+    private static func currentTimeLimit(number: Int, levels: [MazeLevel]) -> Double {
+        // Stored routes guarantee coverage, but their detours are not optimal.
+        // Allow thinking time for new paint and only execution time for returns.
+        // Later rounds tighten the new-paint pace from 0.50 to 0.35 seconds.
+        let paintMoveSeconds = 0.50 - min(0.15, Double(max(1, number) - 1) * 0.0075)
+        var seconds = Double(levels.count) // One second to read each new board.
+        for level in levels {
+            var run = MazeRun(level: level)
+            for direction in level.solution {
+                guard !run.isComplete else { break }
+                let paintedBefore = run.painted.count
+                guard !run.move(direction).isEmpty else { continue }
+                seconds += run.painted.count > paintedBefore ? paintMoveSeconds : 0.16
+            }
+        }
+        return max(5, ceil(seconds / 5) * 5)
     }
 }

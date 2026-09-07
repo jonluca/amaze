@@ -18,11 +18,11 @@ enum MazeStudioLighting {
         let key = SCNLight()
         key.type = .directional
         key.color = UIColor(red: 1, green: 0.97, blue: 0.95, alpha: 1)
-        key.intensity = 760
+        key.intensity = 820
         key.castsShadow = shadows
         key.shadowMode = .forward
-        key.shadowColor = UIColor.black.withAlphaComponent(0.65)
-        key.shadowRadius = 4
+        key.shadowColor = UIColor.black.withAlphaComponent(0.60)
+        key.shadowRadius = 3
         key.shadowSampleCount = 8
         key.shadowMapSize = CGSize(width: 1024, height: 1024)
         key.automaticallyAdjustsShadowProjection = false
@@ -38,7 +38,7 @@ enum MazeStudioLighting {
         let fill = SCNLight()
         fill.type = .ambient
         fill.color = UIColor(red: 0.86, green: 0.91, blue: 1, alpha: 1)
-        fill.intensity = 410
+        fill.intensity = 350
         let fillNode = SCNNode()
         fillNode.light = fill
         scene.rootNode.addChildNode(fillNode)

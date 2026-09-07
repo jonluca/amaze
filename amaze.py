@@ -59,8 +59,15 @@ class AmazeGame:
         self.last_loc = None
 
     def generate_graph(self):
-        ind = (12, 0)
+        ball_cells = np.argwhere(self.board == 2)
+        if len(ball_cells) > 1:
+            raise ValueError("The board must contain at most one ball")
+        ind = tuple(int(value) for value in ball_cells[0]) if len(ball_cells) else self.ball
+        if not self.is_move_possible(ind):
+            raise ValueError("The ball must start on an open cell")
         self.ball = ind
+        self.nodes.fill(None)
+        self.paths.clear()
         locs = [ind]
         next_loc = None
         while len(locs):
@@ -121,7 +128,8 @@ class AmazeGame:
         return all(0 <= v < self.board_size for v in move) and self.board[move] != 0
 
     def make_move(self, letter):
-        move = (0, 0)
+        if letter not in ('U', 'D', 'L', 'R'):
+            raise ValueError("Direction must be U, D, L, or R")
         if letter == 'U':
             move = (-1, 0)
         elif letter == 'D':

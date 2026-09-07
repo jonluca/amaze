@@ -5,7 +5,7 @@ enum MazeCameraFraming {
     static let widthCoverage = 0.84
     static let heightCoverage = 0.84
     static let cameraHeight = 20.0
-    static let cameraDepth = 5.8
+    static let cameraDepth = 8.0
 
     static func scale(width: Int, height: Int, viewport: CGSize) -> Double {
         guard viewport.width > 0, viewport.height > 0 else { return 6 }
@@ -16,9 +16,10 @@ enum MazeCameraFraming {
         let fittedHeightCoverage = heightCoverage + 0.10 * growth
         let aspect = Double(viewport.width / viewport.height)
         let pitch = atan2(cameraDepth, cameraHeight)
-        let horizontal = Double(width) + 0.22
-        // Include the raised walls, ball and lower rim in the camera projection.
-        let vertical = (Double(height) + 0.22) * cos(pitch) + 0.95 * sin(pitch)
+        let horizontal = Double(width) + 0.26
+        // The camera targets the floor, so reserve the ball's full height on
+        // both sides of the centered frame, not only the board's total thickness.
+        let vertical = (Double(height) + 0.26) * cos(pitch) + 1.70 * sin(pitch)
         return max(vertical / (2 * fittedHeightCoverage), horizontal / (2 * aspect * fittedWidthCoverage))
     }
 }

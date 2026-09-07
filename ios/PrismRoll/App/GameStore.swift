@@ -11,6 +11,8 @@ final class GameStore: ObservableObject {
     @Published private(set) var inputID = UUID()
     /// Direct delivery preserves every accepted turn between SwiftUI display updates.
     let moveEvents = PassthroughSubject<GameMoveEvent, Never>()
+    /// Snapshot the completed board before any next-run state reaches SwiftUI.
+    let levelTransitionEvents = PassthroughSubject<UUID, Never>()
     @Published private(set) var clock: TimedRunState?
     @Published private(set) var timeRushSession: TimeRushSession?
     @Published private(set) var dailyChallenge: DailyChallenge
@@ -187,13 +189,11 @@ final class GameStore: ObservableObject {
         lastTick = uptimeProvider()
         hint = nil
         if !isDaily && !isDuel { progress.awardCollectedCoins(for: run) }
-        if progress.hapticsEnabled { feedback.impactOccurred(intensity: 0.7) }
         if progress.soundEnabled { AudioServicesPlaySystemSound(1104) }
         if run.isComplete {
             if !isAwaitingTimeRushMaze {
                 earnedPoints = isDuel ? 0 : isDaily ? progress.completeDailyChallenge(dailyChallenge, at: dateProvider()) : progress.completeLevel(run.level)
             }
-            if progress.hapticsEnabled { UINotificationFeedbackGenerator().notificationOccurred(.success) }
         }
         save()
     }
@@ -207,8 +207,8 @@ final class GameStore: ObservableObject {
     }
 
     func replay() {
-        if isTimeRush, var session = timeRushSession {
-            session.stageIndex = 0
+        if isTimeRush, let previous = timeRushSession {
+            let session = TimeRushSession(course: previous.course.retimed())
             timeRushSession = session
             run = MazeRun(level: session.currentLevel)
             clock = freshClock(limit: session.course.timeLimit)
@@ -235,6 +235,7 @@ final class GameStore: ObservableObject {
     @discardableResult
     func advanceCompletedLevel(for completedRunID: UUID) -> Bool {
         guard completedRunID == runID, run.isComplete, hasEnded, !isDuel else { return false }
+        levelTransitionEvents.send(completedRunID)
         nextLevel()
         return true
     }
@@ -275,7 +276,7 @@ final class GameStore: ObservableObject {
         isDaily = false; duelID = id
         run = MazeRun(level: .generate(number: seed, mode: .endless))
         clock = nil
-        clearTransientState()
+        clearTransientState(); save()
     }
 
     func endSpecialSession() {
@@ -363,6 +364,7 @@ final class GameStore: ObservableObject {
         guard completedRunID == runID, isAwaitingTimeRushMaze,
               var session = timeRushSession, session.isValid,
               (clock?.remainingSeconds ?? 0) > 0 else { return false }
+        levelTransitionEvents.send(completedRunID)
         session.stageIndex += 1
         timeRushSession = session
         run = MazeRun(level: session.currentLevel)
@@ -385,6 +387,22 @@ final class GameStore: ObservableObject {
                let saved, saved.level == session.currentLevel {
                 run = saved
                 clock = savedClocks[mode.rawValue] ?? freshClock(limit: session.course.timeLimit)
+                if session.stageIndex == 0, clock?.hasStarted == false,
+                   saved == MazeRun(level: session.currentLevel) {
+                    // A round that has never started adopts the current pace. Keep
+                    // time already earned from ads, even before the first swipe.
+                    let course = session.course.retimed()
+                    guard course != session.course else { return }
+                    let previousBudget = freshClock(limit: session.course.timeLimit)?.remainingSeconds ?? session.course.timeLimit
+                    let earnedTime = max(0, (clock?.remainingSeconds ?? 0) - previousBudget)
+                    let extensions = clock?.rewardedExtensions ?? 0
+                    timeRushSession = TimeRushSession(course: course)
+                    run = MazeRun(level: course.levels[0])
+                    clock = freshClock(limit: course.timeLimit)
+                    clock?.remainingSeconds += earnedTime
+                    clock?.rewardedExtensions = extensions
+                    save()
+                }
             } else {
                 // Legacy single-maze saves start the new course at the same round.
                 // The wallet, unlocks, and completion ledger remain unchanged.

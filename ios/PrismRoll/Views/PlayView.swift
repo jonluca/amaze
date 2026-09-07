@@ -85,7 +85,9 @@ struct PlayView: View {
         MazeSceneView(level: store.run.level, position: store.run.position, painted: store.run.painted,
                       skin: store.skin, isComplete: store.run.isComplete, isFailed: store.isFailed,
                       moveCount: store.run.moves, theme: store.theme,
-                      resetID: runID, isActive: isActive, moveEvents: store.moveEvents.eraseToAnyPublisher(),
+                      resetID: runID, isActive: isActive, hapticsEnabled: store.progress.hapticsEnabled,
+                      moveEvents: store.moveEvents.eraseToAnyPublisher(),
+                      levelTransitions: store.levelTransitionEvents.eraseToAnyPublisher(),
                       onReady: { onReady($0, runID) },
                       onResultReady: {
                           guard store.runID == runID else { return }
@@ -247,7 +249,7 @@ struct PlayView: View {
                 }
             }
             ProgressView(value: store.fraction)
-                .tint(Color(hex: store.skin.hex))
+                .tint(Color(hex: MazePaintPalette.hex(for: store.skin, levelNumber: store.run.level.number)))
                 .accessibilityLabel("Maze painted")
                 .accessibilityValue("\(Int(store.fraction * 100)) percent")
         }

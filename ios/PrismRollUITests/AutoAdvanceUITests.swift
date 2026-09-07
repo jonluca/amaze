@@ -14,6 +14,9 @@ final class AutoAdvanceUITests: XCTestCase {
                 if app.staticTexts["levelTitle"].label != title { break }
                 XCTAssertFalse(app.buttons["Keep rolling"].exists)
                 app.buttons["reward_hint"].tap()
+                // The last roll includes a completion beat. A hint tap can
+                // overlap progression; don't send this loop's swipe to a new maze.
+                if app.staticTexts["levelTitle"].label != title { break }
                 let direction = app.staticTexts["playInstructions"].label
                 let board = app.otherElements["mazeBoard"]
                 switch direction {

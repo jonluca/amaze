@@ -1,5 +1,13 @@
 # Validation — September 7, 2026
 
+## Current App Store review — build 8
+
+Verified **September 7, 2026 at 3:08 PM Pacific**: **1.0.0 (8)** and the existing **No Ads** purchase are **WAITING_FOR_REVIEW** in submission `921ad12d-9cb5-4859-8a89-b866ca4c932d`. The prior build 3 review submission was withdrawn and replaced. App Store version `58e945d7-8274-42fa-8b2e-e1b47e328107` is attached to build `7ce575ab-2e76-4af4-8d5e-39b1c68e992e`; the submission includes the same No Ads IAP version `0df21e7d-4a35-4943-958a-9feba8346432`. Release remains **MANUAL**.
+
+Localization metadata was preserved, and the 2,128-character reviewer notes describe the current controls and optional ads. Validation reported no blocking app errors; the No Ads reminder was addressed by including its IAP version in the replacement submission. Final state, exact review items, build attachment, and metadata preservation are recorded in `release/build8-review/final-verification.json`. The live marketing URL remains `https://thoughtahead.com/prism-roll/support.html`; current ad prerequisites and their verification limits are recorded in [Advertising setup](README.md#advertising-setup).
+
+The release checkpoints below describe the state at their recorded times. Their earlier build 3 App Store attachments were superseded by this submission.
+
 ## Build 8 TestFlight release
 
 Verified **September 7, 2026 at 2:57 PM Pacific**: **1.0.0 (8)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The sole existing tester retains access, automatic notifications are enabled, and the 1,002-character en-US testing notes match exactly. Installation of build 8 and email inbox delivery were not independently verified.
@@ -12,7 +20,7 @@ All **160 Swift files** matched the validated combined source snapshot. The exis
 
 IPA SHA-256: `3ac9cac81f4cdc8b9cefe6d4c386220e3c31ddc3ee6e71c6a2469d9de69dcbc6`. Size: **6,218,475 bytes**. Build ID: `7ce575ab-2e76-4af4-8d5e-39b1c68e992e`. Private evidence is in `release/build8/`, including `production-verification.json`, `validated-source-match.json`, `clean-source-provenance.json`, and final Apple readbacks. The signed archive and IPA are in `artifacts/ProductionBuild8/`; committed-source smoke evidence is in `artifacts/TestFlight8Verification/CleanSourceSmoke.xcresult`.
 
-The App Store version remains attached to **build 3 and Waiting for Review**, matching the pre-release snapshot. The TestFlight audience is unchanged. Unrelated Python solver, screenshot-import scratch changes, images, and their staged state were preserved.
+At this 2:57 PM TestFlight checkpoint, the App Store version was still attached to **build 3 and Waiting for Review**, matching the pre-release snapshot. The later App Store replacement is recorded above. The TestFlight audience was unchanged. Unrelated Python solver, screenshot-import scratch changes, images, and their staged state were preserved.
 
 ## Build 7 TestFlight release
 

@@ -99,4 +99,9 @@ Native and completion-flow results are recorded in `artifacts/level-catalog-veri
 the solved/crown persistence cases are in `artifacts/level-catalog-ui.log`. Early UI
 assertions were corrected for native accessibility wrappers and localized number
 formatting. A visual preview is saved at `artifacts/level-catalog-preview.png`.
-No TestFlight or App Store release was performed for this change.
+Released in **TestFlight 1.0.0 (9)** on September 7 at 4:07 PM Pacific. Apple verified
+the build as VALID and IN_BETA_TESTING in the existing Owner Testing group. The
+production archive uses source `03b6a2845c4871eebb1f8afb25d2c2ac61618790`; its clean
+checkout passed all 103 Release engine tests, and the release checkpoint passed 38
+native checks plus all three Levels UI flows on a dedicated simulator. See
+[release verification](VALIDATION.md#build-9-testflight-release).

@@ -2,7 +2,7 @@
 
 Implemented September 6, 2026 and released in **TestFlight 1.0.0 (5)** on September 7, including the [missed-swipe fix](SWIPE_RELIABILITY.md). See [release verification](VALIDATION.md).
 
-## Rapid queued turns: local follow-up, September 7
+## Rapid queued turns: TestFlight build 9, September 7
 
 The earlier 100 ms queue budget limited when a burst finished, but still made later swipes wait behind older movement. The settling curve also slowed to zero at every wall, including walls with another turn already queued.
 
@@ -17,7 +17,7 @@ Replay measurements using the production Swift timeline:
 | 32 or 128 queued swipes | 100 ms | 16.7 ms |
 | Sustained swipes every 25 ms | 83.3 ms | 16.7 ms |
 
-All 72 replay scenarios preserve route order, paint coverage, rolling distance, and exactly-once completion at 30/60/120 Hz. All 13 timeline tests pass; the four new regression tests fail against the previous implementation. Evidence and the reusable benchmark are in `artifacts/RapidMoveLatency/`. These are sampled timeline measurements, not physical touchscreen-to-display latency or a sustained device FPS measurement. This follow-up has not been released to TestFlight.
+All 72 replay scenarios preserve route order, paint coverage, rolling distance, and exactly-once completion at 30/60/120 Hz. All 13 timeline tests pass; the four new regression tests fail against the previous implementation. Evidence and the reusable benchmark are in `artifacts/RapidMoveLatency/`. These are sampled timeline measurements, not physical touchscreen-to-display latency or a sustained device FPS measurement. This follow-up is released in **TestFlight 1.0.0 (9)**; see [release verification](VALIDATION.md#build-9-testflight-release).
 
 The dedicated iOS 26.1 simulator also passed 45 native checks and four gameplay UI tests, including repeated ten-point flicks, diagonal flicks, native controls, and automatic progression through three mazes. These counts include the 13 timeline tests. `VerifiedNativeAndUI.xcresult` and `verified-native-ui-tests.log` contain the successful run; `verified-gameplay.mp4` and its inspected frames show the rendered board, ball, trail, and paint during play.
 

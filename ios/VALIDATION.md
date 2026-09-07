@@ -8,6 +8,18 @@ Localization metadata was preserved, and the 2,128-character reviewer notes desc
 
 The release checkpoints below describe the state at their recorded times. Their earlier build 3 App Store attachments were superseded by this submission.
 
+## Build 9 TestFlight release
+
+Verified **September 7, 2026 at 4:07 PM Pacific**: **1.0.0 (9)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The same single tester retains access, automatic notifications are enabled, and the 1,190-character en-US testing notes match exactly. Build 8 remains attached to the App Store version, which is still **WAITING_FOR_REVIEW**; this TestFlight release did not replace that submission.
+
+Build 9 adds the [Levels browser and shared numbered catalog](LEVEL_CATALOG.md), persistent best move counts, solved checkmarks, and crowns awarded only for proven optimal solves. Different legacy saved grids refresh to the canonical board while preserving wallet, unlocks, skins, and earned extra-move/time allowances. It also adds the brief perfect-solve medal and [responsive queued turns](SMOOTHNESS.md#rapid-queued-turns-testflight-build-9-september-7).
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34168511261) compiled source `03b6a2845c4871eebb1f8afb25d2c2ac61618790` with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Archive checksum and exact source/workflow provenance matched before local distribution signing and export. Both the primary and independent verifier passed strict signature, authorized certificate/profile, all five distribution entitlements including Game Center, arm64, three privacy manifests, production ad identifiers, AppIcon linkage, absence of Debug/test artifacts, ZIP integrity, and executable/archive/dSYM UUID checks. Original compiler metadata was preserved.
+
+A clean `git archive` export passed **103 Release engine tests** and the **51-level catalog audit across four independent processes**. All 249 tracked entries, including six symlinks, matched the committed export. The release checkpoint passed **38 native checks**, including all 13 motion timeline tests, and **three Levels UI flows** on a fresh dedicated iOS 26.1 simulator. The first shared-simulator UI attempt unexpectedly opened level 100 during a level-1 test; all three flows passed after isolation. Counts overlap earlier feature checks. No physical-device frame-rate claim is made.
+
+IPA SHA-256: `51e0b605018a487462699923e85cee15c9fd6ef7616eadda897cd07e6bf697a6`. Size: **6,266,005 bytes**. Build ID: `1464757c-c1db-4e2c-8b5b-7bf6328d48e3`. Executable/archive/dSYM UUID: `8EB981A9-652A-3CAE-A4D1-828346AA8B72`. Private evidence is in `release/build9/`; archive and IPA are in `artifacts/ProductionBuild9/`, clean-source evidence in `artifacts/Build9CleanSource/`, and final UI evidence in `artifacts/Build9IsolatedUI.xcresult`. Device installation and notification inbox delivery were not independently verified.
+
 ## Build 8 TestFlight release
 
 Verified **September 7, 2026 at 2:57 PM Pacific**: **1.0.0 (8)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The sole existing tester retains access, automatic notifications are enabled, and the 1,002-character en-US testing notes match exactly. Installation of build 8 and email inbox delivery were not independently verified.

@@ -1,0 +1,161 @@
+name: Prism Roll Production Archive
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Commit or ref to archive
+        required: true
+        default: master
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prism-roll-production-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: macos-26
+    timeout-minutes: 35
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the requested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_ref }}
+          persist-credentials: false
+
+      - name: Verify the production toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p build/deliverables build/logs
+          xcodebuild -version | tee build/logs/xcode-version.txt
+          xcrun --sdk iphoneos --show-sdk-version | tee build/logs/iphoneos-sdk.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          version = Path("build/logs/xcode-version.txt").read_text().strip()
+          assert version == "Xcode 26.6\nBuild version 17F113", version
+          sdk = Path("build/logs/iphoneos-sdk.txt").read_text().strip()
+          assert sdk == "26.5", sdk
+          assert subprocess.check_output(["uname", "-m"], text=True).strip() == "arm64"
+          PY
+
+      - name: Resolve the committed Swift package versions
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project ios/PrismRoll.xcodeproj \
+            -scheme PrismRoll \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/PrismRollPackages" \
+            -onlyUsePackageVersionsFromResolvedFile \
+            2>&1 | tee build/logs/package-resolution.log
+
+      # No Apple account, provisioning profile, or signing private key is used here.
+      # Distribution signing and entitlement verification happen on the release Mac.
+      - name: Archive Release for physical iOS devices without signing
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project ios/PrismRoll.xcodeproj \
+            -scheme PrismRoll \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$PWD/build/PrismRoll.xcarchive" \
+            -derivedDataPath "$RUNNER_TEMP/PrismRollDerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/PrismRollPackages" \
+            -disableAutomaticPackageResolution \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY= \
+            2>&1 | tee build/logs/archive.log
+
+      - name: Verify the archive and record its provenance
+        env:
+          WORKFLOW_COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+          import plistlib
+          import shutil
+          import subprocess
+
+          archive = Path("build/PrismRoll.xcarchive")
+          app = archive / "Products/Applications/PrismRoll.app"
+          info = plistlib.loads((app / "Info.plist").read_bytes())
+          expected = {
+              "CFBundleIdentifier": "com.jonluca.prismroll",
+              "CFBundleShortVersionString": "1.0.0",
+              "CFBundleVersion": "2",
+              "DTXcodeBuild": "17F113",
+              "DTSDKName": "iphoneos26.5",
+              "DTPlatformName": "iphoneos",
+              "GADApplicationIdentifier": "ca-app-pub-8314265628354618~3970821518",
+              "PrismRewardedAdUnitID": "ca-app-pub-8314265628354618/1472545489",
+              "PrismInterstitialAdUnitID": "ca-app-pub-8314265628354618/4122030604",
+          }
+          for key, value in expected.items():
+              assert info.get(key) == value, (key, info.get(key), value)
+          executable = app / info["CFBundleExecutable"]
+          architecture = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).strip()
+          assert architecture == "arm64", architecture
+          assert not (app / "embedded.mobileprovision").exists()
+          signature = subprocess.run(["codesign", "-dv", str(app)], capture_output=True, text=True)
+          assert signature.returncode != 0, "The app unexpectedly contains a code signature"
+          assert (app / "PrivacyInfo.xcprivacy").is_file()
+          assert (archive / "dSYMs/PrismRoll.app.dSYM").is_dir()
+          assert plistlib.loads((archive / "Info.plist").read_bytes())["ApplicationProperties"]["ApplicationPath"] == "Applications/PrismRoll.app"
+          build_commands = subprocess.check_output(["xcrun", "vtool", "-show-build", str(executable)], text=True)
+          (Path("build/logs") / "executable-build-commands.txt").write_text(build_commands)
+          source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          manifest = {
+              "sourceCommit": source_commit,
+              "workflowCommit": os.environ["WORKFLOW_COMMIT"],
+              "runURL": os.environ["RUN_URL"],
+              "xcodeVersion": "26.6",
+              "xcodeBuild": "17F113",
+              "iOSSDK": "26.5",
+              "architecture": architecture,
+              "scheme": "PrismRoll",
+              "configuration": "Release",
+              "signed": False,
+              "appMetadata": expected,
+          }
+          destination = Path("build/deliverables")
+          (destination / "provenance.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          shutil.copy2("ios/PrismRoll/Resources/PrismRoll.entitlements", destination / "PrismRoll.entitlements")
+          shutil.copy2("ios/PrismRoll.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved", destination / "Package.resolved")
+          print(json.dumps(manifest, indent=2))
+          PY
+          tar -czf build/deliverables/PrismRoll.xcarchive.tar.gz -C build PrismRoll.xcarchive
+          (cd build/deliverables && shasum -a 256 PrismRoll.xcarchive.tar.gz > SHA256SUMS)
+
+      - name: Upload the unsigned archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: PrismRoll-1.0.0-2-xcode26.6-unsigned-${{ github.run_id }}
+          path: build/deliverables/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Upload archive diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: PrismRoll-archive-logs-${{ github.run_id }}
+          path: build/logs/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -13,6 +13,8 @@ struct ProgressData: Codable, Equatable, Sendable {
     var tutorialDismissed = false
     private(set) var completedLevels = 0
     private(set) var claimedMilestoneIDs: Set<String> = []
+    var receivedCoinTransactionIDs: Set<String> = []
+    private var pendingLegacySkinMilestoneReward = false
     private var rewardedLevelKeys: Set<String> = []
     private var levelRecords: [String: LevelRecord] = [:]
     private var bonusLevelKeys: Set<String> = []
@@ -33,6 +35,7 @@ struct ProgressData: Codable, Equatable, Sendable {
         case directionButtonsEnabled, tutorialDismissed
         case rewardedLevelKeys, bonusLevelKeys, collectedCoinKeys, collectedCoinCounts, completedDailyChallengeIDs
         case levelRecords
+        case receivedCoinTransactionIDs, pendingLegacySkinMilestoneReward
         case dailyLogin, dailyChallenges
     }
 
@@ -55,6 +58,9 @@ struct ProgressData: Codable, Equatable, Sendable {
         bonusLevelKeys = try values.decodeIfPresent(Set<String>.self, forKey: .bonusLevelKeys) ?? []
         completedLevels = try values.decodeIfPresent(Int.self, forKey: .completedLevels) ?? rewardedLevelKeys.count
         claimedMilestoneIDs = try values.decodeIfPresent(Set<String>.self, forKey: .claimedMilestoneIDs) ?? []
+        receivedCoinTransactionIDs = try values.decodeIfPresent(Set<String>.self, forKey: .receivedCoinTransactionIDs) ?? []
+        pendingLegacySkinMilestoneReward = try values.decodeIfPresent(Bool.self, forKey: .pendingLegacySkinMilestoneReward)
+            ?? (Set(ownedSkinIDs).count >= 4 && !claimedMilestoneIDs.contains("skin-collector"))
         collectedCoinKeys = try values.decodeIfPresent(Set<String>.self, forKey: .collectedCoinKeys) ?? []
         if let counts = try values.decodeIfPresent([String: Int].self, forKey: .collectedCoinCounts) {
             collectedCoinCounts = counts
@@ -74,6 +80,22 @@ struct ProgressData: Codable, Equatable, Sendable {
     var dailyStreak: Int { dailyLogin.count }
     var lastDailyRewardDate: Date? { dailyLogin.lastClaimedAt }
     var dailyChallengeStreak: Int { dailyChallenges.count }
+
+    var currentMilestones: [MilestoneChallenge] {
+        var milestones = MilestoneChallenge.current(in: self)
+        if pendingLegacySkinMilestoneReward && !claimedMilestoneIDs.contains("skin-collector") {
+            milestones.append(.legacyBallCollector)
+        }
+        return milestones
+    }
+
+    /// Only pickups inside mazes count, regardless of spending, ad rewards, or purchases.
+    var collectedMazeCoinCount: Int {
+        collectedCoinCounts.values.reduce(0) { total, count in
+            let addition = total.addingReportingOverflow(max(0, count))
+            return addition.overflow ? Int.max : addition.partialValue
+        }
+    }
 
     func hasCompleted(_ level: MazeLevel) -> Bool {
         hasCompleted(number: level.number, mode: level.mode)
@@ -133,7 +155,7 @@ struct ProgressData: Codable, Equatable, Sendable {
         let key = completionKey(for: level)
         guard rewardedLevelKeys.insert(key).inserted else { return 0 }
         points += 50
-        completedLevels += 1
+        if completedLevels < Int.max { completedLevels += 1 }
         let nextLevel = level.number == Int.max ? Int.max : level.number + 1
         switch level.mode {
         case .endless: endlessLevel = max(endlessLevel, nextLevel)
@@ -215,10 +237,13 @@ struct ProgressData: Codable, Equatable, Sendable {
     @discardableResult
     mutating func claimMilestone(id: String) -> Int {
         guard !claimedMilestoneIDs.contains(id),
-              let milestone = MilestoneChallenge.catalog.first(where: { $0.id == id }),
+              let milestone = currentMilestones.first(where: { $0.id == id }),
               milestone.isComplete(in: self) else { return 0 }
+        let balance = points.addingReportingOverflow(milestone.reward)
+        guard !balance.overflow else { return 0 }
         claimedMilestoneIDs.insert(id)
-        points += milestone.reward
+        points = balance.partialValue
+        if id == "skin-collector" { pendingLegacySkinMilestoneReward = false }
         return milestone.reward
     }
 

@@ -97,7 +97,7 @@ final class CollectionRarityUITests: XCTestCase {
 
     @MainActor
     private func wallet(_ app: XCUIApplication) -> XCUIElement {
-        app.otherElements.matching(identifier: "pointsBalance").firstMatch
+        app.buttons.matching(identifier: "pointsBalance").firstMatch
     }
 
     @MainActor

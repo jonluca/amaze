@@ -5,8 +5,8 @@ struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var ads: AdService
     @EnvironmentObject private var purchases: PurchaseService
-    @EnvironmentObject private var duel: DuelService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         NavigationStack {
@@ -42,10 +42,12 @@ struct SettingsView: View {
                         Button {
                             Task { await purchases.purchase() }
                         } label: {
-                            HStack {
+                            purchaseLayout {
                                 Label("Remove between-level ads", systemImage: "sparkles")
-                                Spacer(minLength: 8)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if dynamicTypeSize < .xxLarge { Spacer(minLength: 8) }
                                 Text(product.displayPrice).fontWeight(.bold)
+                                    .fixedSize()
                             }
                         }
                         .disabled(purchases.isBusy)
@@ -55,11 +57,11 @@ struct SettingsView: View {
                     }
                     Text(purchases.status).font(.caption).foregroundStyle(.secondary)
                         .accessibilityIdentifier("purchaseStatus")
-                    HStack {
+                    purchaseLayout {
                         Button("Restore purchases") { Task { await purchases.restore() } }
                             .disabled(purchases.isBusy)
                             .accessibilityIdentifier("restorePurchases")
-                        Spacer()
+                        if dynamicTypeSize < .xxLarge { Spacer() }
                         if purchases.isBusy { ProgressView().tint(Palette.violet) }
                         else if purchases.product == nil && !purchases.removesAds {
                             Button("Retry") { Task { await purchases.load() } }
@@ -69,17 +71,6 @@ struct SettingsView: View {
                         Text("Optional reward videos remain available when you choose to watch one.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
-                Section("Game Center") {
-                    Label(duel.authenticated ? "Connected to Game Center" : "Race a friend in Duel",
-                          systemImage: duel.authenticated ? "person.crop.circle.badge.checkmark" : "person.2.fill")
-                    Text(duel.status).font(.caption).foregroundStyle(.secondary)
-                    if !duel.authenticated {
-                        Button("Sign in to Game Center", action: duel.authenticate)
-                            .accessibilityIdentifier("signInGameCenter")
-                    }
-                    Text("Open Challenges to find a match. Both players paint the same maze; the first to finish wins.")
-                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Privacy & ads") {
                     NavigationLink {
@@ -94,7 +85,7 @@ struct SettingsView: View {
                         }
                         .accessibilityIdentifier("supportWebsite")
                     }
-                    Text("Solo progress stays on this device. Duel uses Game Center to connect players. Ads may appear between levels; reward videos are always optional.")
+                    Text("Progress stays on this device. Ads may appear between levels; reward videos are always optional.")
                         .font(.subheadline)
                     if ads.privacyOptionsRequired {
                         Button("Manage ad privacy", action: ads.presentPrivacyOptions)
@@ -115,5 +106,11 @@ struct SettingsView: View {
         }
         .preferredColorScheme(.dark)
         .task { await purchases.load() }
+    }
+
+    private var purchaseLayout: AnyLayout {
+        dynamicTypeSize >= .xxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 12))
     }
 }

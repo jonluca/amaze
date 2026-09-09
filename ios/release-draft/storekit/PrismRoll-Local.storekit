@@ -16,6 +16,51 @@
       "productID": "com.jonluca.prismroll.removeads",
       "referenceName": "No Ads - Local Test Only",
       "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "b91876da-3d11-4886-ac0b-2a2481704c99",
+      "localizations": [
+        {
+          "description": "Add 1,000 coins to your balance.",
+          "displayName": "1,000 Coins",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.jonluca.prismroll.coins.1000",
+      "referenceName": "1,000 Coins - Local Test Only",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6412e5db-3c0f-479c-94a2-4d877b31078d",
+      "localizations": [
+        {
+          "description": "Add 5,500 coins to your balance.",
+          "displayName": "5,500 Coins",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.jonluca.prismroll.coins.5500",
+      "referenceName": "5,500 Coins - Local Test Only",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "c8ee48a7-4ece-48ab-b5f0-ee1b25f59b36",
+      "localizations": [
+        {
+          "description": "Add 15,000 coins to your balance.",
+          "displayName": "15,000 Coins",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.jonluca.prismroll.coins.15000",
+      "referenceName": "15,000 Coins - Local Test Only",
+      "type": "Consumable"
     }
   ],
   "settings": {

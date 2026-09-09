@@ -117,9 +117,12 @@ struct PlayView: View {
     @ViewBuilder
     private var modeControls: some View {
         if store.isDaily {
-            HStack {
+            let layout = dynamicTypeSize >= .xxLarge
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 12))
+            layout {
                 Label("Daily challenge", systemImage: "calendar")
-                Spacer()
+                if dynamicTypeSize < .xxLarge { Spacer() }
                 Button("Back to play", action: store.endSpecialSession)
             }
             .font(.subheadline)
@@ -240,11 +243,11 @@ struct PlayView: View {
                 }
                 Text(store.isDuel ? "Race to paint" : store.isDaily ? "Today’s maze" : (store.isTimeRush ? "Round \(store.run.level.number)" : "Level \(store.run.level.number)"))
                     .font(compact ? .title2.bold() : .title.bold())
-                    .lineLimit(1).minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("levelTitle")
                 runSummary
             }
-            Spacer(minLength: 0)
+            if dynamicTypeSize < .xxLarge { Spacer(minLength: 0) }
             if store.clock != nil {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(store.timerText)
@@ -274,16 +277,23 @@ struct PlayView: View {
                 .buttonStyle(.bordered)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var runSummary: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 4) {
             if !store.run.level.coinCells.isEmpty && !store.isDuel {
                 Label("\(store.run.collectedCoinCells.count)/\(store.run.level.coinCells.count)", systemImage: "circle.inset.filled")
                     .foregroundStyle(Palette.gold)
             } else {
                 Text(store.run.moves == 1 ? "1 move" : "\(store.run.moves) moves")
                     .accessibilityIdentifier("moveCount")
+            }
+            if store.mode == .endless && !store.isDaily && !store.isDuel {
+                PerfectMoveCount(level: store.run.level, runID: store.runID,
+                                 knownMinimum: store.progress.hasOptimalCompletion(number: store.run.level.number, mode: .endless)
+                                     ? store.progress.bestMoves(number: store.run.level.number, mode: .endless) : nil,
+                                 bestCompletedMoves: store.progress.bestMoves(number: store.run.level.number, mode: .endless))
             }
         }
         .font(.caption)

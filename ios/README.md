@@ -4,6 +4,8 @@ A native SwiftUI + SceneKit maze-painting game inspired by the swipe-to-paint me
 
 **TestFlight 1.0.0 (10)** expands the collection to **18 balls across six rarities**, with paid unlocks from **500 to 150,000 coins** and existing ownership preserved. Six new balls add increasingly elaborate textures and trails. The build also includes smoother rolling, ball compression at walls, gold coin completion effects, and stronger, deeper haptics. Verified **September 8, 2026 at 9:13 PM Pacific** as **VALID** and **IN_BETA_TESTING** in the existing private **Owner Testing** group. See [release verification](VALIDATION.md#build-10-testflight-release).
 
+The current source adds a [Coin Shop, advancing milestones, and spacing fixes](COINS_MILESTONES.md). Tap the wallet or **Get coins** in Collection for coin packs and optional 50-coin videos. Milestone claims advance to the next goal, and the Duel entry is removed. These changes follow build 10.
+
 **Build 8** introduced painted squares with slim gaps, rounded corners, satin gradients, and subtle beveled highlights; distinct animated trails for all 12 ball skins; and [stronger continuous rolling haptics](HAPTICS_TRANSITIONS.md), including firm feedback with Reduce Motion. The gameplay screen removes the separate paint progress bar and Pause button, keeps moves and coin counts below the title, and pauses through Settings. Rewarded-ad buttons appear only when a video is ready; first-maze hints remain free. See [release verification](VALIDATION.md).
 
 ## Play
@@ -22,9 +24,9 @@ Build **1.0.0 (10)** is the latest private TestFlight build. The App Store versi
 - **Limited Moves:** a harder separate progression with an achievable swipe budget and free retry. The allowance tightens from three spare moves to one beyond the verified route. Blocked swipes cost nothing.
 - **Reward videos:** hints, +30 seconds, +3 moves, skipping a regular level, and optional 50-coin bonuses on completed Journey rows. Video buttons appear only when an ad is ready; first-maze hints remain free. Benefits require the SDK earned-reward callback; failed or dismissed ads grant nothing.
 - **Coins:** 50 per new completion; three collectible coins on every fifth Classic board. Claim-once ledgers and per-level collectible allowances prevent replay farming across changed layouts. Coins unlock and equip 18 skins across Common, Uncommon, Rare, Epic, Legendary, and Mythic rarities. Coral is free; paid balls progress from 500 to 150,000 coins, and existing ownership is preserved.
-- **Daily rewards:** consecutive daily claims earn 25–55 coins. A date-seeded daily maze awards 100 coins once, alongside four milestone challenges.
+- **Daily rewards:** consecutive daily claims earn 25–55 coins. A date-seeded daily maze awards 100 coins once. Three milestone tracks keep advancing after each claim: completed levels, Time Rush rounds, and coins collected inside mazes.
 - **Worlds:** Aurora, Timber, Porcelain, and Midnight themes with freeform contour walls, transparent cutouts, visible path grids, spaced painted squares with satin gradients, reflective textured balls, distinct trails for all 18 skins, animated coins, and native 3D collection previews.
-- **Duel:** real two-player Game Center matchmaking with a shared maze, opponent progress, and a first-finish result. Requires configured Game Center and two accounts to verify an actual match.
+- **Coin Shop:** consumable 1,000-, 5,500-, and 15,000-coin packs show App Store prices. Optional videos grant 50 coins per completed video. The wallet and purchase receipt ledger are saved atomically; coins remain on this installation.
 - **No Ads:** StoreKit 2 non-consumable purchase and restoration suppress between-level interstitials while retaining voluntary reward videos. The App Store product is created; local StoreKit purchase, restore, revocation, and Ask to Buy flows pass. App Store sandbox and production purchases remain unverified.
 - Separate saved runs for all three modes, saved daily progress, theme/skin preferences, haptics, move sounds, Reduce Motion, and VoiceOver movement actions. Original saves migrate without losing currency or ownership.
 

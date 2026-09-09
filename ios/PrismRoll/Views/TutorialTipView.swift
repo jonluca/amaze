@@ -1,12 +1,16 @@
 import SwiftUI
 
 struct TutorialTipView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let hasMoved: Bool
     let instruction: String?
     let onDismiss: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        let layout = dynamicTypeSize >= .xxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 12))
+        layout {
             VStack(alignment: .leading, spacing: 4) {
                 Text(hasMoved ? "Paint every path" : "Roll to the wall")
                     .font(.subheadline.weight(.semibold))
@@ -16,7 +20,8 @@ struct TutorialTipView: View {
                     .font(.caption).foregroundStyle(Palette.ink.opacity(0.8))
                     .accessibilityIdentifier("playInstructions")
             }
-            Spacer(minLength: 0)
+            .fixedSize(horizontal: false, vertical: true)
+            if dynamicTypeSize < .xxLarge { Spacer(minLength: 0) }
             Button("Hide tips", action: onDismiss)
                 .font(.caption)
                 .frame(minWidth: 44, minHeight: 44)

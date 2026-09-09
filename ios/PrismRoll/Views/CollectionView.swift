@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CollectionView: View {
+    var onGetCoins: () -> Void = {}
     @EnvironmentObject private var store: GameStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var skinToUnlock: BallSkin?
@@ -23,6 +24,11 @@ struct CollectionView: View {
                 Text("Set the scene")
             }
             Section {
+                Button(action: onGetCoins) {
+                    Label("Get coins", systemImage: "plus.circle.fill")
+                        .frame(minHeight: 32)
+                }
+                .accessibilityIdentifier("collectionGetCoins")
                 Picker("Rarity", selection: $selectedRarity) {
                     Text("All rarities").tag(nil as BallRarity?)
                     ForEach(BallRarity.allCases) { rarity in

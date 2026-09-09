@@ -2,6 +2,67 @@ import XCTest
 @testable import PrismRoll
 
 final class MazeOptimalityTests: XCTestCase {
+    func testMinimumCountIgnoresUnprovenStoredRoutes() {
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: squareLevel()), 3)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: squareLevel(solution: [])), 3)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: squareLevel(solution: [.right])), 3)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: squareLevel(
+            solution: [.right, .left, .right, .down, .left]
+        )), 3)
+    }
+
+    func testClassicLevelSixteenHasVerifiedMinimumBelowItsGeneratedRoute() {
+        let level = MazeLevel.generate(number: 16, mode: .endless)
+        XCTAssertEqual(level.solution.count, 46)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: level, timeLimit: .seconds(5)), 38)
+    }
+
+    func testMinimumCountRespectsSearchBudgetsAndCancellation() {
+        let level = squareLevel()
+        XCTAssertNil(MazeOptimality.minimumMoves(for: level, stateLimit: 1))
+        XCTAssertNil(MazeOptimality.minimumMoves(for: level, stateLimit: 0))
+        XCTAssertNil(MazeOptimality.minimumMoves(for: level, stateLimit: -1))
+        XCTAssertNil(MazeOptimality.minimumMoves(for: level, timeLimit: .zero))
+        XCTAssertNil(MazeOptimality.minimumMoves(for: level, timeLimit: .milliseconds(-1)))
+        XCTAssertNil(MazeOptimality.minimumMoves(for: level, isCancelled: { true }))
+    }
+
+    func testMinimumCountHandlesAlreadyCompleteAndSingleMoveBoards() {
+        let start = GridCell(row: 0, column: 0)
+        let singleCell = MazeLevel(number: 1, mode: .endless, width: 1, height: 1,
+                                   openCells: [start], start: start, solution: [], moveLimit: nil)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: singleCell), 0)
+        let corridor = MazeLevel(number: 1, mode: .endless, width: 16, height: 1,
+                                 openCells: Set((0..<16).map { GridCell(row: 0, column: $0) }),
+                                 start: start, solution: [], moveLimit: nil)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: corridor, stateLimit: 1), 1)
+    }
+
+    func testMinimumCountRejectsUnsupportedOrUnreachableBoards() {
+        let start = GridCell(row: 0, column: 0)
+        let invalidLevels = [
+            MazeLevel(number: 1, mode: .endless, width: 0, height: 1,
+                      openCells: [start], start: start, solution: [], moveLimit: nil),
+            MazeLevel(number: 1, mode: .endless, width: 17, height: 1,
+                      openCells: [start], start: start, solution: [], moveLimit: nil),
+            MazeLevel(number: 1, mode: .endless, width: 1, height: 1,
+                      openCells: [], start: start, solution: [], moveLimit: nil),
+            MazeLevel(number: 1, mode: .endless, width: 2, height: 1,
+                      openCells: [GridCell(row: 0, column: 1)], start: start,
+                      solution: [], moveLimit: nil),
+            MazeLevel(number: 1, mode: .endless, width: 2, height: 1,
+                      openCells: [start, GridCell(row: -1, column: 1)], start: start,
+                      solution: [], moveLimit: nil),
+            MazeLevel(number: 1, mode: .endless, width: 2, height: 1,
+                      openCells: [start, GridCell(row: 0, column: 2)], start: start,
+                      solution: [], moveLimit: nil),
+            MazeLevel(number: 1, mode: .endless, width: 3, height: 1,
+                      openCells: [start, GridCell(row: 0, column: 2)], start: start,
+                      solution: [], moveLimit: nil)
+        ]
+        for level in invalidLevels { XCTAssertNil(MazeOptimality.minimumMoves(for: level)) }
+    }
+
     func testOptimalRouteEarnsAwardEvenWhenStoredSolutionIsLonger() {
         var run = MazeRun(level: squareLevel(solution: [.right, .left, .right, .down, .left]))
         for direction in [MoveDirection.right, .down, .left] { run.move(direction) }
@@ -59,6 +120,7 @@ final class MazeOptimalityTests: XCTestCase {
         XCTAssertTrue(run.isComplete)
         XCTAssertGreaterThan(cells.count, 128)
         XCTAssertEqual(MazeOptimality.verify(run), .optimal)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: level), run.moves)
     }
 
     func testIndependentExhaustiveSmallBoardsAgree() {
@@ -72,7 +134,9 @@ final class MazeOptimalityTests: XCTestCase {
             let start = cells.min()!
             let level = MazeLevel(number: 1, mode: .endless, width: 3, height: 3,
                                   openCells: cells, start: start, solution: [], moveLimit: nil)
-            guard let shortest = shortestCompletedRun(level) else { continue }
+            let shortest = shortestCompletedRun(level)
+            XCTAssertEqual(MazeOptimality.minimumMoves(for: level), shortest?.moves, "Minimum on board \(boardMask)")
+            guard let shortest else { continue }
             XCTAssertEqual(MazeOptimality.verify(shortest), .optimal, "Board \(boardMask)")
             // A return trip before solving must fail, even with no stored route.
             guard let direction = MoveDirection.allCases.first(where: {

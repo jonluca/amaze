@@ -2,6 +2,8 @@ import SwiftUI
 
 struct JourneyView: View {
     @EnvironmentObject private var store: GameStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var levelIconWidth: CGFloat = 22
     @State private var pageStart: Int?
     @State private var jumpOpen = false
     @State private var jumpNumber = ""
@@ -15,7 +17,7 @@ struct JourneyView: View {
                         .font(.headline).accessibilityIdentifier("journeyHeading")
                     LabeledContent(store.mode == .timed ? "Rounds solved" : "Levels solved",
                                    value: store.progress.completedLevelCount(in: store.mode).formatted())
-                    HStack(spacing: 20) {
+                    legendLayout {
                         Label("Solved", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(Palette.cyan)
                         Label("Optimal", systemImage: "crown.fill")
@@ -92,13 +94,21 @@ struct JourneyView: View {
     }
 
     private var browseControls: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("\(store.mode == .timed ? "Rounds" : "Levels") \(currentPageStart)–\(visibleLevels.last ?? currentPageStart)")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .accessibilityIdentifier("journeyRange")
-                Spacer()
-                Menu("Jump to") {
+        browseLayout {
+            Text("\(store.mode == .timed ? "Rounds" : "Levels") \(currentPageStart)–\(visibleLevels.last ?? currentPageStart)")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("journeyRange")
+            if dynamicTypeSize < .xxLarge { Spacer(minLength: 4) }
+            HStack(spacing: 4) {
+                Button { pageStart = max(1, currentPageStart - 20) } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: 44, height: 44)
+                }
+                .disabled(currentPageStart == 1)
+                .accessibilityLabel(store.mode == .timed ? "Earlier rounds" : "Earlier levels")
+                .accessibilityIdentifier("journeyEarlier")
+                Menu {
                     Button(store.mode == .timed ? "First rounds" : "First levels") { pageStart = 1 }
                     Button(store.mode == .timed ? "Current round" : "Current level") { pageStart = nil }
                     Button(store.mode == .timed ? "Go to round…" : "Go to level…") {
@@ -106,27 +116,38 @@ struct JourneyView: View {
                         jumpOpen = true
                     }
                     .accessibilityIdentifier("journeyJumpToNumber")
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel(store.mode == .timed ? "Browse rounds" : "Browse levels")
                 .accessibilityIdentifier("journeyJump")
-            }
-            HStack {
-                Button { pageStart = max(1, currentPageStart - 20) } label: {
-                    Label("Earlier", systemImage: "chevron.left")
-                }
-                .disabled(currentPageStart == 1)
-                .accessibilityIdentifier("journeyEarlier")
-                Spacer()
                 Button {
                     guard currentPageStart <= Int.max - 20 else { return }
                     pageStart = currentPageStart + 20
                 } label: {
-                    Label("Later", systemImage: "chevron.right")
+                    Image(systemName: "chevron.right")
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(currentPageStart > Int.max - 20)
+                .accessibilityLabel(store.mode == .timed ? "Later rounds" : "Later levels")
                 .accessibilityIdentifier("journeyLater")
             }
             .buttonStyle(.borderless)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
+    }
+
+    private var browseLayout: AnyLayout {
+        dynamicTypeSize >= .xxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 4))
+    }
+
+    private var legendLayout: AnyLayout {
+        dynamicTypeSize >= .xxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 20))
     }
 
     private func levelRow(_ number: Int) -> some View {
@@ -146,7 +167,7 @@ struct JourneyView: View {
                 HStack(spacing: 12) {
                     Image(systemName: solved ? "checkmark.circle.fill" : unlocked ? "play.circle.fill" : "lock")
                         .foregroundStyle(solved ? Palette.cyan : unlocked ? Palette.violet : .secondary)
-                        .frame(width: 22)
+                        .frame(width: levelIconWidth)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title)
                         if let bestMoves {
@@ -155,13 +176,18 @@ struct JourneyView: View {
                         } else if solved {
                             Text("Solved").font(.caption).foregroundStyle(.secondary)
                         }
+                        if dynamicTypeSize >= .xxLarge, current || resumable {
+                            Text(resumable ? "Continue" : "Play")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     if optimal {
                         Image(systemName: "crown.fill")
                             .foregroundStyle(Palette.gold)
                     }
-                    if current || resumable {
+                    if dynamicTypeSize < .xxLarge, current || resumable {
                         Text(resumable ? "Continue" : "Play").font(.subheadline).foregroundStyle(.secondary)
                     }
                 }

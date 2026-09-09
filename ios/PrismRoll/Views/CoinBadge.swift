@@ -2,15 +2,15 @@ import SwiftUI
 
 struct CoinBadge: View {
     let amount: Int
+    var compactDisplay = false
 
     var body: some View {
-        Label {
-            Text(amount.formatted()).monospacedDigit()
-        } icon: {
+        HStack(spacing: 5) {
             Image(systemName: "circle.inset.filled").foregroundStyle(Palette.gold)
+            Text(compactDisplay ? amount.formatted(.number.notation(.compactName)) : amount.formatted())
+                .monospacedDigit()
         }
-        .labelStyle(.titleAndIcon)
         .font(.subheadline.weight(.semibold))
-        .fixedSize()
+        .fixedSize(horizontal: true, vertical: false)
     }
 }

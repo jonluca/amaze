@@ -2,6 +2,41 @@ import XCTest
 
 final class ResearchUXUITests: XCTestCase {
     @MainActor
+    func testCoinShopFreezesTimerAndResumesTheSameRun() {
+        let app = launch()
+        app.segmentedControls["modePicker"].buttons["Time Rush"].tap()
+        app.buttons["reward_hint"].tap()
+        let board = app.otherElements["mazeBoard"]
+        swipe(board, hintDirection(app))
+        let paintedBoard = board.value as? String
+        let stage = app.staticTexts["timeRushStage"].label
+        let beforeShop = remainingSeconds(app)
+        app.buttons["pointsBalance"].tap()
+        let done = app.buttons["coinShopDone"]
+        XCTAssertTrue(done.waitForExistence(timeout: 3))
+        let unexpectedlyDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in !done.exists }, object: nil
+        )
+        unexpectedlyDismissed.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [unexpectedlyDismissed], timeout: 2), .completed)
+        capture(app, "coin-shop-freezes-time-rush")
+        done.tap()
+        let afterShop = remainingSeconds(app)
+        XCTAssertGreaterThanOrEqual(afterShop, beforeShop - 1,
+                                    "The coin shop must pause the budget, allowing one second for modal gestures")
+        XCTAssertLessThanOrEqual(afterShop, beforeShop)
+        XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
+        XCTAssertEqual(app.staticTexts["timeRushStage"].label, stage)
+        XCTAssertEqual(board.value as? String, paintedBoard)
+        let afterShopText = String(format: "%02d:%02d", afterShop / 60, afterShop % 60)
+        let resumes = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", afterShopText),
+            object: app.staticTexts["timeRemaining"]
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [resumes], timeout: 3), .completed)
+    }
+
+    @MainActor
     func testFirstMazeTipsAndFreeHintsWorkWithoutDebugHintBypass() {
         let app = launch()
         XCTAssertTrue(app.buttons["reward_hint"].label.contains("Free hint"))

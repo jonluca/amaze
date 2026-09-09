@@ -82,10 +82,10 @@ final class PrismRollUITests: XCTestCase {
         solve(app)
         XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 2")
         XCTAssertFalse(app.buttons["Keep rolling"].exists)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("450"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("450"))
         capture(app, name: "02-completed")
         solve(app)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("500"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("500"))
         app.tabBars.buttons["Collection"].tap()
         XCTAssertTrue(app.buttons["worldPicker"].waitForExistence(timeout: 3))
         capture(app, name: "03-collection")
@@ -94,19 +94,19 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertTrue(affordableSkin.label.contains("500 coins"))
         affordableSkin.tap()
         app.alerts.buttons.matching(identifier: "confirmSkinUnlock").firstMatch.tap()
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
         app.terminate()
         app.launchArguments = ["--no-ads", "--ui-hints"]
         app.launch()
         app.tabBars.buttons["Collection"].tap()
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'skin_' AND label CONTAINS 'equipped'")).count, 1)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
         app.tabBars.buttons["Levels"].tap()
         XCTAssertTrue(app.staticTexts["journeyHeading"].waitForExistence(timeout: 3))
         capture(app, name: "04-journey")
         app.buttons["journeyLevel_1"].tap()
         solve(app)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"), "Replay must not farm points")
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("0"), "Replay must not farm points")
     }
 
     @MainActor
@@ -172,7 +172,7 @@ final class PrismRollUITests: XCTestCase {
             }
         }
         XCTAssertTrue(app.buttons["retryLevel"].exists)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
         app.buttons["retryLevel"].tap()
         XCTAssertEqual(app.otherElements["movesRemaining"].label, budgetLabel)
         XCTAssertFalse(app.buttons["retryLevel"].exists)
@@ -199,7 +199,7 @@ final class PrismRollUITests: XCTestCase {
         }
         XCTAssertTrue(app.staticTexts["Out of time."].waitForExistence(timeout: 6))
         XCTAssertFalse(app.buttons["reward_extraTime"].exists)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
         capture(app, name: "08-time-expired")
         app.buttons["retryLevel"].tap()
         XCTAssertEqual(app.staticTexts["timeRemaining"].label, "00:02")
@@ -216,7 +216,7 @@ final class PrismRollUITests: XCTestCase {
         app.buttons["claimDaily"].tap()
         app.alerts.buttons["Got it"].tap()
         XCTAssertFalse(app.buttons["claimDaily"].isEnabled)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("25"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("25"))
         app.buttons["playDaily"].tap()
         XCTAssertTrue(app.staticTexts["Today’s maze"].exists)
         XCTAssertTrue(app.otherElements["movesRemaining"].exists)
@@ -235,7 +235,7 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Today’s maze"].exists)
         app.tabBars.buttons["Challenges"].tap()
         XCTAssertFalse(app.buttons["claimDaily"].isEnabled)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("25"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("25"))
     }
 
     @MainActor

@@ -109,6 +109,6 @@ final class PerfectSolveAwardUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [nextLevel], timeout: 8), .completed)
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
         XCTAssertFalse(app.otherElements["perfectSolveAward"].exists)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("50"))
+        XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("50"))
     }
 }

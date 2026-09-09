@@ -33,7 +33,7 @@ final class AutoAdvanceUITests: XCTestCase {
             }
             XCTAssertEqual(app.staticTexts["levelTitle"].label, String(format: "Level %d", level + 1))
             XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
-            XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("\(level * 50)"))
+            XCTAssertTrue(app.buttons.matching(identifier: "pointsBalance").firstMatch.label.contains("\(level * 50)"))
         }
         XCTAssertFalse(app.buttons["nextLevel"].exists)
         app.tabBars.buttons["Levels"].tap()

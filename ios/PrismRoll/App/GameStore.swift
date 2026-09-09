@@ -25,6 +25,7 @@ final class GameStore: ObservableObject {
     @Published private(set) var earnedPoints = 0
     @Published private(set) var isRewardPending = false
     private let defaults: UserDefaults
+    private let progressPersistence: ProgressPersistence
     private let snapshotEncoder = GameSnapshotEncoder()
     private let dateProvider: () -> Date
     private let uptimeProvider: () -> TimeInterval
@@ -38,22 +39,25 @@ final class GameStore: ObservableObject {
     private var presentationReady = true
     private var tracksPresentationReadiness = false
     private var rewardedRequestIDs: Set<UUID> = []
+    private var coinRewardRequestID: UUID?
     private var completionVerification: (runID: UUID, task: Task<MazeOptimality.Result, Never>)?
     private let feedback = UIImpactFeedbackGenerator(style: .soft)
 
-    init(defaults: UserDefaults = .standard, now: @escaping () -> Date = Date.init,
+    init(defaults: UserDefaults = .standard, progressFileURL: URL? = nil, now: @escaping () -> Date = Date.init,
          uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         self.defaults = defaults
+        progressPersistence = ProgressPersistence(url: progressFileURL ?? ProgressPersistence.defaultURL(for: defaults))
         dateProvider = now
         uptimeProvider = uptime
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
             for key in ["prism.snapshot.v2", "prism.progress", "prism.runs", "prism.mode"] { defaults.removeObject(forKey: key) }
+            progressPersistence.resetForUITesting()
         }
 #endif
         let decoder = JSONDecoder()
         let snapshot = defaults.data(forKey: "prism.snapshot.v2").flatMap { try? decoder.decode(GameSnapshot.self, from: $0) }
-        var loadedProgress = snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
+        var loadedProgress = (try? progressPersistence.load()) ?? snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
             try? decoder.decode(ProgressData.self, from: $0)
         } ?? ProgressData()
 #if DEBUG
@@ -351,7 +355,54 @@ final class GameStore: ObservableObject {
     }
 
     func beginReward() { tick(); isRewardPending = true; inputID = UUID(); save() }
-    func finishReward() { isRewardPending = false; inputID = UUID(); lastTick = uptimeProvider() }
+    func finishReward() { isRewardPending = false; coinRewardRequestID = nil; inputID = UUID(); lastTick = uptimeProvider() }
+
+    static let videoCoinReward = 50
+
+    func beginCoinReward() -> UUID? {
+        guard !isRewardPending, !isDuel else { return nil }
+        let id = UUID()
+        beginReward()
+        coinRewardRequestID = id
+        return id
+    }
+
+    /// Called only by the ad SDK's earned-reward callback for this presentation.
+    @discardableResult
+    func claimCoinReward(_ id: UUID) -> Int {
+        guard isRewardPending, coinRewardRequestID == id else { return 0 }
+        coinRewardRequestID = nil
+        let (balance, overflow) = progress.points.addingReportingOverflow(Self.videoCoinReward)
+        guard !overflow else { return 0 }
+        let previous = progress
+        progress.points = balance
+        guard save() else { progress = previous; return 0 }
+        return Self.videoCoinReward
+    }
+
+    /// Finish a verified consumable only after its balance and receipt ID have
+    /// reached the same atomic file. Replayed StoreKit deliveries are harmless.
+    func deliverCoinPurchase(_ purchase: CoinPurchase) throws -> CoinDeliveryResult {
+        guard progressPersistence.supportsDurablePurchases else { throw CoinDeliveryError.storageUnavailable }
+        guard !purchase.transactionID.isEmpty, purchase.quantity > 0,
+              let pack = CoinPack.catalog.first(where: { $0.id == purchase.productID }) else {
+            throw CoinDeliveryError.invalidPurchase
+        }
+        if progress.receivedCoinTransactionIDs.contains(purchase.transactionID) {
+            try progressPersistence.persist(progress)
+            return .alreadyDelivered
+        }
+        let (amount, amountOverflow) = pack.coins.multipliedReportingOverflow(by: purchase.quantity)
+        let (balance, balanceOverflow) = progress.points.addingReportingOverflow(amount)
+        guard !amountOverflow, !balanceOverflow, amount > 0 else { throw CoinDeliveryError.balanceLimit }
+        var credited = progress
+        credited.points = balance
+        credited.receivedCoinTransactionIDs.insert(purchase.transactionID)
+        try progressPersistence.persist(credited)
+        progress = credited
+        save()
+        return .credited(amount)
+    }
 
     func applyReward(_ request: GameplayRewardRequest) {
         guard request.runID == runID, rewardedRequestIDs.insert(request.id).inserted else { return }
@@ -375,22 +426,29 @@ final class GameStore: ObservableObject {
 
     func claimDaily() {
         refreshDaily()
+        let previous = progress
         let amount = progress.claimDailyReward(at: dateProvider())
+        guard save() else { progress = previous; notice = "Your reward could not be saved. Please try again."; return }
         if amount > 0 { notice = "+\(amount) coins! Day \(currentStreak) of your streak." }
-        save()
     }
     func claimMilestone(_ id: String) {
+        let previous = progress
         let amount = progress.claimMilestone(id: id)
-        if amount > 0 { notice = "Challenge complete. +\(amount) coins!" }
-        save()
+        guard save() else { progress = previous; notice = "Your reward could not be saved. Please try again."; return }
+        if amount > 0, progress.hapticsEnabled { feedback.impactOccurred() }
     }
     func selectSkin(_ skin: BallSkin) {
+        let previous = progress
         if progress.purchaseSkin(skin) {
+            guard save() else { progress = previous; notice = "Your ball could not be saved. Please try again."; return }
             if progress.hapticsEnabled { feedback.impactOccurred() }
         } else { notice = "Earn \(max(0, skin.price - progress.points)) more coins to unlock \(skin.name)." }
-        save()
     }
-    func claimAdBonus(for level: MazeLevel) { progress.claimAdBonus(level: level); save() }
+    func claimAdBonus(for level: MazeLevel) {
+        let previous = progress
+        progress.claimAdBonus(level: level)
+        if !save() { progress = previous; notice = "Your reward could not be saved. Please try again." }
+    }
     func setHaptics(_ enabled: Bool) { progress.hapticsEnabled = enabled; save() }
     func setSound(_ enabled: Bool) { progress.soundEnabled = enabled; save() }
     func setDirectionButtons(_ enabled: Bool) { progress.directionButtonsEnabled = enabled; save() }
@@ -399,7 +457,7 @@ final class GameStore: ObservableObject {
     private func clearTransientState() {
         runID = UUID(); inputID = UUID(); earnedPoints = 0; hint = nil; notice = nil
         blockedDirection = nil
-        isRewardPending = false; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
+        isRewardPending = false; coinRewardRequestID = nil; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
         if tracksPresentationReadiness { presentationReady = false }
         startCompletionVerification()
     }
@@ -417,12 +475,24 @@ final class GameStore: ObservableObject {
         let finishedRun = run
         let savesLevelProgress = !isDaily && !isDuel
         let stageIndex = isTimeRush ? timeRushSession?.stageIndex : nil
+        let savedMinimum = savesLevelProgress && finishedRun.level.mode == .endless
+            && progress.hasOptimalCompletion(number: finishedRun.level.number, mode: .endless)
+            ? progress.bestMoves(number: finishedRun.level.number, mode: .endless) : nil
         if savesLevelProgress {
             progress.recordCompletedRun(finishedRun, stageIndex: stageIndex)
             save()
         }
         let verification = Task.detached(priority: .userInitiated) {
-            MazeOptimality.verify(finishedRun)
+            if let savedMinimum {
+                return finishedRun.moves == savedMinimum ? MazeOptimality.Result.optimal : .notOptimal
+            }
+            if finishedRun.level.mode == .endless,
+               let minimum = await MazeMinimumMoveCache.shared.minimumMoves(for: finishedRun.level) {
+                // Use the same proof shown by the Classic move target. A player
+                // who meets that minimum must receive the matching crown.
+                return finishedRun.moves == minimum ? MazeOptimality.Result.optimal : .notOptimal
+            }
+            return MazeOptimality.verify(finishedRun)
         }
         let task = Task { [weak self] in
             let result = await verification.value
@@ -505,11 +575,19 @@ final class GameStore: ObservableObject {
         savedRuns[mode.rawValue] = run
         savedClocks[mode.rawValue] = clock
     }
-    private func save() {
+    @discardableResult
+    private func save() -> Bool {
         cacheCurrentRun()
         let snapshot = GameSnapshot(progress: progress, runs: savedRuns, clocks: savedClocks, mode: mode,
                                     dailyRun: savedDailyRun, dailyID: dailyChallenge.id, dailyActive: isDaily, themeID: theme.rawValue,
                                     timeRushSession: timeRushSession)
-        if let data = try? snapshotEncoder.encode(snapshot) { defaults.set(data, forKey: "prism.snapshot.v2") }
+        do {
+            let data = try snapshotEncoder.encode(snapshot)
+            try progressPersistence.persist(progress)
+            defaults.set(data, forKey: "prism.snapshot.v2")
+            return true
+        } catch {
+            return false
+        }
     }
 }

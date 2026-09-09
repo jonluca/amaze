@@ -53,7 +53,7 @@ final class UXPlaytestUITests: XCTestCase {
         app.tabBars.buttons["Challenges"].tap()
         app.buttons["playDaily"].tap()
         solve(app)
-        let coins = app.otherElements.matching(identifier: "pointsBalance").firstMatch.label
+        let coins = app.buttons.matching(identifier: "pointsBalance").firstMatch.label
         XCTAssertTrue(coins.contains("100"))
         app.tabBars.buttons["Challenges"].tap()
         XCTAssertEqual(app.buttons["playDaily"].label, "Replay daily maze")
@@ -61,7 +61,7 @@ final class UXPlaytestUITests: XCTestCase {
         XCTAssertFalse(app.buttons["nextLevel"].exists)
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
         solve(app)
-        XCTAssertEqual(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label, coins)
+        XCTAssertEqual(app.buttons.matching(identifier: "pointsBalance").firstMatch.label, coins)
         capture(app, "daily-replayed-without-duplicate-coins")
     }
 
@@ -71,7 +71,7 @@ final class UXPlaytestUITests: XCTestCase {
         app.tabBars.buttons["Collection"].tap()
         let skin = app.buttons["skin_mint"]
         XCTAssertTrue(skin.waitForExistence(timeout: 3))
-        let wallet = app.otherElements.matching(identifier: "pointsBalance").firstMatch
+        let wallet = app.buttons.matching(identifier: "pointsBalance").firstMatch
         skin.tap()
         app.alerts.buttons.matching(identifier: "cancelSkinUnlock").firstMatch.tap()
         XCTAssertTrue(wallet.label.contains("500"))

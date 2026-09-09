@@ -7,8 +7,10 @@ struct RootView: View {
     @EnvironmentObject private var duel: DuelService
     @EnvironmentObject private var purchases: PurchaseService
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var tab = "play"
     @State private var settingsOpen = false
+    @State private var coinShopOpen = false
     @State private var restartPromptOpen = false
     @State private var restartRunID: UUID?
     @State private var readyRunID: UUID?
@@ -46,7 +48,7 @@ struct RootView: View {
             navigationPage("Challenges") { ChallengesView { tab = "play" } }
                 .tabItem { Label("Challenges", systemImage: "trophy.fill").accessibilityIdentifier("tab_challenges") }
                 .tag("challenges")
-            navigationPage("Collection") { CollectionView() }
+            navigationPage("Collection") { CollectionView { coinShopOpen = true } }
                 .tabItem { Label("Collection", systemImage: "circle.hexagongrid.fill").accessibilityIdentifier("tab_collection") }
                 .tag("collection")
             navigationPage("Levels") { JourneyView { tab = "play" } }
@@ -56,13 +58,14 @@ struct RootView: View {
         .tint(Palette.violet)
         .gameplaySwipes(
             enabled: tab == "play" && readyRunID == store.runID && store.acceptsGameplayInput
-                && scenePhase == .active && !settingsOpen && !restartPromptOpen && !duel.isMatching
+                && scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen && !duel.isMatching
                 && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
                 && !store.hasEnded && !store.isRewardPending && !(store.isDuel && duel.didWin != nil),
             sessionID: store.inputID,
             onSwipe: { direction, inputID in store.move(direction, for: inputID) }
         )
         .sheet(isPresented: $settingsOpen) { SettingsView() }
+        .sheet(isPresented: $coinShopOpen) { CoinShopView() }
         .alert("Prism Roll", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
             Button("Got it", role: .cancel) { store.notice = nil }
         } message: { Text(store.notice ?? "") }
@@ -78,16 +81,24 @@ struct RootView: View {
                     return
                 }
                 settingsOpen = false
+                coinShopOpen = false
                 store.notice = nil
                 store.openDuel(seed: seed, id: id)
                 tab = "play"
                 duel.sendProgress(painted: store.run.painted.count, total: store.run.level.openCells.count, moves: 0)
             }
         }
-        .task { await purchases.load() }
+        .task {
+            purchases.configureCoinDelivery { try store.deliverCoinPurchase($0) }
+            await purchases.load()
+        }
         .onChange(of: scenePhase) { _, phase in
             store.setActivity(active: phase == .active)
-            if phase == .active { store.refreshDaily(); prepareAds() }
+            if phase == .active {
+                store.refreshDaily()
+                prepareAds()
+                Task { await purchases.recoverUnfinishedPurchases() }
+            }
             else if phase == .background, duel.isMatching || duel.isPlaying || store.isDuel {
                 duel.cancel()
                 if store.isDuel { store.endSpecialSession() }
@@ -107,6 +118,7 @@ struct RootView: View {
         }
         .onChange(of: duel.isMatching) { _, _ in syncModalState() }
         .onChange(of: settingsOpen) { _, _ in syncModalState() }
+        .onChange(of: coinShopOpen) { _, _ in syncModalState() }
         .onChange(of: restartPromptOpen) { _, _ in syncModalState() }
         .onChange(of: playSceneActive) { _, active in
             if active { advanceCompletedLevelIfReady() }
@@ -132,7 +144,7 @@ struct RootView: View {
     }
 
     private var playSceneActive: Bool {
-        tab == "play" && scenePhase == .active && !settingsOpen && !restartPromptOpen && !duel.isMatching
+        tab == "play" && scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen && !duel.isMatching
             && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
     }
 
@@ -175,7 +187,7 @@ struct RootView: View {
         }
     }
 
-    private func syncModalState() { store.setActivity(modal: settingsOpen || restartPromptOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
+    private func syncModalState() { store.setActivity(modal: settingsOpen || coinShopOpen || restartPromptOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
     private func prepareAds() {
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()
@@ -186,23 +198,28 @@ struct RootView: View {
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button { tab = "challenges" } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "flame.fill")
-                                Text("\(store.currentStreak)").monospacedDigit()
+                    if !dynamicTypeSize.isAccessibilitySize {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button { tab = "challenges" } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "flame.fill")
+                                    Text("\(store.currentStreak)").monospacedDigit()
+                                }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("Daily streak, \(store.currentStreak) days")
                             }
-                            .accessibilityElement(children: .ignore)
                             .accessibilityLabel("Daily streak, \(store.currentStreak) days")
+                            .accessibilityIdentifier("dailyStreak")
                         }
-                        .accessibilityLabel("Daily streak, \(store.currentStreak) days")
-                        .accessibilityIdentifier("dailyStreak")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        CoinBadge(amount: store.progress.points)
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel("\(store.progress.points) coins")
-                            .accessibilityIdentifier("pointsBalance")
+                        Button { coinShopOpen = true } label: {
+                            CoinBadge(amount: store.progress.points, compactDisplay: true)
+                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                        }
+                        .accessibilityLabel("\(store.progress.points) coins")
+                        .accessibilityHint("Opens the coin shop")
+                        .accessibilityIdentifier("pointsBalance")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { settingsOpen = true } label: {

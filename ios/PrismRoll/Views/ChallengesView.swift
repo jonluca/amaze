@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ChallengesView: View {
     @EnvironmentObject private var store: GameStore
-    @EnvironmentObject private var duel: DuelService
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let onPlay: () -> Void
 
     var body: some View {
@@ -43,7 +43,12 @@ struct ChallengesView: View {
             }
 
             Section("The daily maze") {
-                LabeledContent(store.dailyChallenge.date.formatted(date: .abbreviated, time: .omitted)) {
+                let rewardLayout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout(spacing: 12))
+                rewardLayout {
+                    Text(store.dailyChallenge.date.formatted(date: .abbreviated, time: .omitted))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     CoinBadge(amount: store.dailyChallenge.reward)
                 }
                 Button { store.openDaily(replayCompleted: true); onPlay() } label: {
@@ -55,17 +60,8 @@ struct ChallengesView: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
 
-            Section("Duel") {
-                Label("Same maze. Two players. Paint it first.", systemImage: "person.2")
-                Text(duel.status).font(.subheadline).foregroundStyle(.secondary)
-                Button(duel.isMatching ? "Cancel matchmaking" : duel.authenticated ? "Find match" : "Connect Game Center") {
-                    if duel.isMatching { duel.cancel() } else { duel.findMatch() }
-                }
-                .accessibilityIdentifier("findDuel")
-            }
-
             Section("Milestones") {
-                ForEach(MilestoneChallenge.catalog) { milestone in
+                ForEach(store.progress.currentMilestones) { milestone in
                     milestoneRow(milestone)
                 }
             }
@@ -75,19 +71,29 @@ struct ChallengesView: View {
 
     private func milestoneRow(_ milestone: MilestoneChallenge) -> some View {
         let value = milestone.progress(in: store.progress)
-        let claimed = store.progress.claimedMilestoneIDs.contains(milestone.id)
         return VStack(alignment: .leading, spacing: 10) {
-            Label(milestone.title, systemImage: milestone.icon).font(.headline)
-            Text(milestone.subtitle).font(.subheadline).foregroundStyle(.secondary)
-            ProgressView(value: Double(value), total: Double(milestone.target)) {
-                Text("\(value) / \(milestone.target)").font(.caption).monospacedDigit()
+            Label(milestone.title, systemImage: milestone.icon)
+                .font(.headline)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(milestone.subtitle)
+                .font(.subheadline).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("milestoneTarget-\(milestone.trackID)")
+            if let target = milestone.target {
+                ProgressView(value: Double(value), total: Double(target)) {
+                    Text("\(value.formatted()) / \(target.formatted())")
+                        .font(.caption).monospacedDigit()
+                }
             }
             Button { store.claimMilestone(milestone.id) } label: {
-                Label(claimed ? "Claimed" : "Claim \(milestone.reward) coins", systemImage: claimed ? "checkmark.circle" : "circle.inset.filled")
+                Label("Claim \(milestone.reward.formatted()) coins", systemImage: "circle.inset.filled")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .disabled(claimed || !milestone.isComplete(in: store.progress))
-            .accessibilityLabel(claimed ? "\(milestone.title), claimed" : "Claim \(milestone.reward) coins for \(milestone.title)")
+            .disabled(!milestone.isComplete(in: store.progress))
+            .accessibilityIdentifier("claimMilestone-\(milestone.id)")
+            .accessibilityLabel("Claim \(milestone.reward) coins for \(milestone.subtitle)")
         }
         .padding(.vertical, 6)
     }

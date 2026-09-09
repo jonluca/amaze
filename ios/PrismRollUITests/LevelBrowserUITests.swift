@@ -87,9 +87,71 @@ final class LevelBrowserUITests: XCTestCase {
     }
 
     @MainActor
-    private func launch() -> XCUIApplication {
+    func testPaginationFitsAtLargestAccessibilityTextSize() {
+        let app = launch(extra: ["--ui-test-coins", "150000", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        capture(app, "padding-accessibility-play")
+        let wallet = app.buttons["pointsBalance"]
+        XCTAssertTrue(wallet.isHittable)
+        XCTAssertEqual(wallet.label, "150,000 coins")
+
+        app.tabBars.buttons["Levels"].tap()
+        let later = app.buttons["journeyLater"]
+        for _ in 0..<10 where !later.isHittable { app.swipeUp() }
+        XCTAssertTrue(later.isHittable)
+        for id in ["journeyEarlier", "journeyJump", "journeyLater"] {
+            let button = app.buttons[id]
+            XCTAssertGreaterThanOrEqual(button.frame.minX, app.frame.minX + 16)
+            XCTAssertLessThanOrEqual(button.frame.maxX, app.frame.maxX - 16)
+            XCTAssertGreaterThanOrEqual(button.frame.height, 44)
+        }
+        XCTAssertFalse(app.staticTexts["Jump to"].exists)
+        XCTAssertFalse(app.staticTexts["Later"].exists)
+        capture(app, "padding-accessibility-levels")
+        later.tap()
+        XCTAssertEqual(app.staticTexts["journeyRange"].label, "Levels 21–40")
+        app.buttons["journeyEarlier"].tap()
+        XCTAssertEqual(app.staticTexts["journeyRange"].label, "Levels 1–20")
+
+        app.tabBars.buttons["Challenges"].tap()
+        XCTAssertFalse(app.buttons["findDuel"].exists)
+        capture(app, "padding-accessibility-challenges")
+        app.buttons["Settings"].tap()
+        capture(app, "padding-accessibility-settings")
+        for _ in 0..<15 { app.swipeUp() }
+        XCTAssertFalse(app.buttons["signInGameCenter"].exists)
+        XCTAssertFalse(app.staticTexts["Game Center"].exists)
+        capture(app, "padding-accessibility-settings-footer")
+    }
+
+    @MainActor
+    func testCompactTabsKeepWalletAndPaginationReadable() {
+        let app = launch(extra: ["--ui-test-coins", "150000"])
+        for tab in ["Play", "Challenges", "Collection", "Levels"] {
+            app.tabBars.buttons[tab].tap()
+            let wallet = app.buttons["pointsBalance"]
+            XCTAssertTrue(wallet.isHittable)
+            XCTAssertEqual(wallet.label, "150,000 coins")
+            XCTAssertLessThan(wallet.frame.maxX, app.buttons["Settings"].frame.minX)
+            XCTAssertFalse(app.buttons["findDuel"].exists)
+            capture(app, "padding-compact-\(tab.lowercased())")
+        }
+        for id in ["journeyEarlier", "journeyJump", "journeyLater"] {
+            let button = app.buttons[id]
+            XCTAssertGreaterThanOrEqual(button.frame.height, 44)
+            XCTAssertLessThanOrEqual(button.frame.maxX, app.frame.maxX - 16)
+        }
+        app.buttons["Settings"].tap()
+        capture(app, "padding-compact-settings")
+        for _ in 0..<8 { app.swipeUp() }
+        XCTAssertFalse(app.buttons["signInGameCenter"].exists)
+        XCTAssertFalse(app.staticTexts["Game Center"].exists)
+        capture(app, "padding-compact-settings-footer")
+    }
+
+    @MainActor
+    private func launch(extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"] + extra
         app.launch()
         XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
         return app

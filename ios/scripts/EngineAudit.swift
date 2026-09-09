@@ -194,26 +194,34 @@ struct EngineAudit {
 
     static func auditMilestones(encoder: JSONEncoder, decoder: JSONDecoder) throws -> [String: Any] {
         var progress = ProgressData()
-        for milestone in MilestoneChallenge.catalog { precondition(progress.claimMilestone(id: milestone.id) == 0) }
+        for milestone in progress.currentMilestones { precondition(progress.claimMilestone(id: milestone.id) == 0) }
         for number in 1...25 { progress.completeLevel(.generate(number: number, mode: .endless)) }
         for number in 1...10 { progress.completeLevel(.generate(number: number, mode: .timed)) }
-        let collectorSkins = BallSkin.catalog.prefix(4)
-        progress.points = collectorSkins.reduce(0) { $0 + $1.price }
-        for skin in collectorSkins { precondition(progress.purchaseSkin(skin)) }
-        precondition(progress.points == 0)
+        for number in stride(from: 5, through: 25, by: 5) {
+            let level = MazeLevel.generate(number: number, mode: .endless)
+            var run = MazeRun(level: level)
+            for direction in level.solution { run.move(direction) }
+            progress.awardCollectedCoins(for: run)
+        }
+        progress.points = 0
         var coins = 0
-        for milestone in MilestoneChallenge.catalog {
-            precondition(milestone.isComplete(in: progress))
+        var claims: [String] = []
+        while let milestone = progress.currentMilestones.first(where: { $0.isComplete(in: progress) }) {
             let reward = progress.claimMilestone(id: milestone.id)
             precondition(reward == milestone.reward)
             coins += reward
+            claims.append(milestone.id)
             precondition(progress.claimMilestone(id: milestone.id) == 0)
         }
+        precondition(progress.currentMilestones.count == 3)
+        precondition(progress.currentMilestones.first?.target == 50)
+        precondition(Set(claims) == ["first-five", "twenty-five", "timed-ten", "coins:0"])
+        precondition(coins == 575)
         var restored = try decoder.decode(ProgressData.self, from: encoder.encode(progress))
         precondition(restored == progress)
-        for milestone in MilestoneChallenge.catalog { precondition(restored.claimMilestone(id: milestone.id) == 0) }
+        for id in claims { precondition(restored.claimMilestone(id: id) == 0) }
         return ["claimed_ids": progress.claimedMilestoneIDs.sorted(), "reward_coins": coins,
-                "verified": MilestoneChallenge.catalog.count]
+                "verified": claims.count, "advancing_tracks": progress.currentMilestones.count]
     }
 
     static func signature(_ level: MazeLevel) -> String {

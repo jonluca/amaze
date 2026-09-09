@@ -1,8 +1,22 @@
 # Validation — September 9, 2026
 
+## Current TestFlight and App Store review — build 12
+
+Verified **September 9, 2026 at 11:26 AM Pacific**: **1.0.0 (12)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private **Owner Testing** group. The existing single tester retains access, automatic notifications are enabled, and the en-US testing notes match exactly. Device installation and notification inbox delivery were not independently verified.
+
+The app and all four purchases (**No Ads**, **1,000 Coins**, **5,500 Coins**, and **15,000 Coins**) are **WAITING_FOR_REVIEW** in submission `12bc5c50-afed-41cc-997f-d8c6aba00c57`, submitted at **11:26 AM Pacific**. The previous queued build 11 submission was cancelled and read back **COMPLETE**. Version `58e945d7-8274-42fa-8b2e-e1b47e328107` is attached to build `b102cf7c-c64e-4f02-8df0-9500de9a85d3`. The new submission contains exactly that app version and the same four IAP versions. Existing App Store localization and reviewer contacts were preserved; review notes describe the new controls, exact targets, and asynchronous hints. Release remains **MANUAL** after approval.
+
+Build 12 adds 1,000 unique Classic boards with immediately available exact Perfect counts, optimal hints calculated asynchronously from the current position and paint state, bounded shared native workers, and continuous drag turns and reversals. The unreleased catalog uses one current board and progress record per level, with no historical-board preservation machinery. Exact-grid proof checks remain so a cached result cannot apply to another board.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34387985530) compiled frozen source `ec474f79a8ec260fa29db5ec92770c9a2d472df3` with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Downloaded archive provenance, package lock, privacy manifest, and checksum matched before local distribution signing and export. Both IPA verification passes confirmed strict signatures, the authorized certificate/profile and five distribution entitlements, arm64, production ad and purchase identifiers, three privacy manifests, and absence of Debug/test payloads. Executable/archive/dSYM UUID: `CF7EAC91-0180-3ED4-A4EA-F69224049887`.
+
+Independent inspection found all **1,000 geometry/count entries** in the actual signed arm64 executable and matched their **64,000 bytes** directly to the committed proof data. IPA SHA-256: `e4cffe6fbe801a5fdb2d55fbc7a8bf908c1d5c0693c6010d5a01bba4259ede99`; size **7,688,603 bytes**. Private release evidence is in `release/build12/` and `release/build12-review/`, including primary and independent binary checks, frozen-source validation, TestFlight readbacks, and final submission verification. The archive and IPA are in `artifacts/ProductionBuild12/`.
+
 ## Build 12 catalog and input — local verification
 
 Verified **September 9, 2026 at 11:13 AM Pacific**: the final build 12 source passed **49 app/catalog tests**, including exact bundled-count availability on every Classic level 1...1,000. A separate run passed **43 input tests and 7 UI tests** for held-finger turns, reversals, immediate Perfect targets, and legal live hints. The UI sample boards are unchanged by the final catalog regeneration. These are local iOS 26.1 simulator checks, separate from Apple release verification.
+
+The final Release engine suite passed **184 tests with zero failures** in **108.400 seconds**, including exhaustive current-state solver checks and cache concurrency. All 1,120 tracked entries (including 12 symlinks) match the frozen production source, and final app-test source hashes match that commit. Bundled count lookups measured **1.292 µs median**, **1.708 µs p95**, and **0.032667 ms maximum**, excluding generation.
 
 The unreleased catalog now uses sequential offline seed selection with one current board and one progress record per level. Historical-board records and preservation policies were removed. Exact board identity still guards saved proofs, so a count cannot apply to different geometry. Tests cover resetting a changed-board record, protecting a proved minimum, discarding obsolete pending Classic completions, and keeping gameplay responsive while hints calculate.
 
@@ -22,7 +36,7 @@ Final evidence: `/tmp/amaze-optimal-hints-final.log`, `/tmp/amaze-optimal-hints-
 
 The initial compatibility audit reproduced two stale `GameDifficultyCompatibilityTests` expectations against unchanged HEAD `aedee5d781a821ceac21d05435922673b61d33f0`: they expected differing legacy grids to survive even though the existing initializer refreshes them. The unique-catalog work updates those tests to assert canonical solo/Time Rush refresh, preserved paid extensions and wallet/unlocks, and persistence after refresh. The daily legacy-board preservation case remains unchanged. Original audit evidence is retained in `/tmp/amaze-optimal-hints-baseline.log` and `/tmp/amaze-optimal-hints-compatibility.log`.
 
-## Current App Store review — build 11
+## Previous App Store review — build 11
 
 Verified **September 9, 2026 at 9:27 AM Pacific**: **1.0.0 (11)** and all four purchases (**No Ads**, **1,000 Coins**, **5,500 Coins**, and **15,000 Coins**) are **WAITING_FOR_REVIEW** in submission `f16ce497-6a80-4818-a6b4-749180fb5b5b`. The queued build 8 submission was withdrawn and replaced. Version `58e945d7-8274-42fa-8b2e-e1b47e328107` is attached to build `13e10acb-818e-491f-b2ab-6716457f5e2c`, which Apple processed as **VALID** and **APP_STORE_ELIGIBLE**. Release remains **MANUAL** after approval.
 
@@ -42,7 +56,7 @@ Verified **September 7, 2026 at 3:08 PM Pacific**: **1.0.0 (8)** and the existin
 
 Localization metadata was preserved, and the 2,128-character reviewer notes describe the current controls and optional ads. Validation reported no blocking app errors; the No Ads reminder was addressed by including its IAP version in the replacement submission. Final state, exact review items, build attachment, and metadata preservation are recorded in `release/build8-review/final-verification.json`. The live marketing URL remains `https://thoughtahead.com/prism-roll/support.html`; current ad prerequisites and their verification limits are recorded in [Advertising setup](README.md#advertising-setup).
 
-The release checkpoints below describe the state at their recorded times. Their earlier App Store attachments were superseded by the build 11 submission above.
+The release checkpoints below describe the state at their recorded times. Their earlier App Store attachments were superseded by the build 12 submission above.
 
 ## Build 10 TestFlight release
 

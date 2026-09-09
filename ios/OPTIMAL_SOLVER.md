@@ -19,10 +19,10 @@ perfect target is available immediately.
 These 1,000 Classic boards also have unique wall layouts. An offline seed catalog
 selects each board in level order and rejects repeated layouts. It applies the
 existing difficulty and playability gates without retaining historical boards.
-The native proof generator reuses only exact geometry matches. See [catalog identity and save migration](LEVEL_CATALOG.md).
+The native proof generator reuses only exact geometry matches. See [current catalog and proof identity](LEVEL_CATALOG.md).
 
 Across all 1,000 Classic levels in the Release lookup benchmark, the median was
-**1.38 µs**, p95 **1.67 µs**, and maximum **0.032 ms**, excluding generation.
+**1.292 µs**, p95 **1.708 µs**, and maximum **0.032667 ms**, excluding generation.
 These are measured development-Mac lookup times, not device latency guarantees.
 
 The offline counts do not stand in for move directions. An optimal hint still

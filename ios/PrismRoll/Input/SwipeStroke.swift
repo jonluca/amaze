@@ -6,6 +6,7 @@ struct SwipeStroke {
     private var lastDirection: MoveDirection?
     var hasEmitted: Bool { lastDirection != nil }
     static let threshold: CGFloat = 8
+    private static let turnThreshold: CGFloat = 24
 
     init(origin: CGPoint) {
         self.origin = origin
@@ -16,10 +17,12 @@ struct SwipeStroke {
     }
 
     mutating func finish(at point: CGPoint) -> MoveDirection? {
+        // Once a swipe has fired, lift-off only ends it. The contact can jump
+        // as the finger leaves the glass; that is not another deliberate turn.
+        guard !hasEmitted else { return nil }
         // A fast diagonal may lift before a clear-axis sample arrives. Resolve
         // its dominant direction instead of throwing away the entire flick.
-        // Once moving, a lift-off wobble must not invent another turn.
-        recognize(at: point, requiresClearAxis: hasEmitted)
+        return recognize(at: point, requiresClearAxis: false)
     }
 
     mutating func continueTracking(at point: CGPoint) {
@@ -39,6 +42,21 @@ struct SwipeStroke {
             // from here, even after a long drag away from the touch-down point.
             origin = point
             return nil
+        }
+        if hasEmitted {
+            // Keep the opening flick light, but require a deliberate segment
+            // to turn. Thumb hooks and near-diagonal drift must not add moves.
+            let dominant = max(horizontal, vertical)
+            let minor = min(horizontal, vertical)
+            guard dominant >= minor * 2 else {
+                // Follow uncertain diagonal travel without changing direction,
+                // so the next clear corner starts from the finger's new position.
+                if dx * dx + dy * dy >= Self.threshold * Self.threshold {
+                    origin = point
+                }
+                return nil
+            }
+            guard dominant >= Self.turnThreshold else { return nil }
         }
         // Sensitivity follows actual finger travel in every direction, rather
         // than making angled flicks travel farther than horizontal ones.

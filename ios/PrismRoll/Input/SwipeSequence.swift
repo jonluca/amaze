@@ -46,7 +46,11 @@ struct SwipeSequence<ContactID: Hashable> {
             if stroke.hasEmitted {
                 // A held finger can turn several times in one delivered event.
                 // Process real history in order and never replay older samples.
+                let liftTimestamp = ending ? ordered.last?.timestamp : nil
                 for sample in ordered {
+                    // Preserve motion recorded before lift-off, but ignore the
+                    // release coordinate, including any duplicate of that sample.
+                    if sample.timestamp == liftTimestamp { continue }
                     if let direction = stroke.direction(at: sample.point) {
                         recognized.append((direction, sample.timestamp))
                     }

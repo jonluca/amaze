@@ -150,4 +150,111 @@ final class SwipeDirectionTests: XCTestCase {
         XCTAssertEqual(sequence.consume([sample]), [])
         XCTAssertFalse(sequence.hasEmitted)
     }
+
+    func testShortHeldHookAndReverseTailsDoNotAddASecondMove() {
+        let directions: [MoveDirection] = [.right, .down, .left, .up]
+        for rotation in 0..<4 {
+            for distance: CGFloat in [8, 12, 18] {
+                for tail in [CGPoint(x: -1, y: 0), CGPoint(x: 0, y: -1),
+                             CGPoint(x: 0, y: 1), CGPoint(x: 0.2, y: -1), CGPoint(x: 0.2, y: 1)] {
+                    var sequence = SwipeSequence<Int>()
+                    sequence.begin(1, at: .zero)
+                    XCTAssertEqual(sequence.consume([
+                        SwipeSample(contact: 1, point: rotated(CGPoint(x: 8, y: 0), by: rotation), timestamp: 1)
+                    ]), [directions[rotation]])
+                    XCTAssertEqual(sequence.consume([
+                        SwipeSample(contact: 1, point: rotated(CGPoint(x: 100, y: 0), by: rotation), timestamp: 2)
+                    ]), [])
+
+                    // A thumb can hook sideways or recoil near the end of a
+                    // stroke. Sample the tail progressively while still down.
+                    let samples = (1...3).map { step in
+                        let travel = distance * CGFloat(step) / 3
+                        let point = CGPoint(x: 100 + tail.x * travel, y: tail.y * travel)
+                        return SwipeSample(contact: 1, point: rotated(point, by: rotation), timestamp: Double(step + 2))
+                    }
+                    XCTAssertEqual(sequence.consume(samples), [],
+                                   "A \(distance)-point hooked tail must remain one swipe (rotation \(rotation), tail \(tail))")
+                    XCTAssertNil(sequence.end(1, at: samples.last!.point))
+                }
+            }
+        }
+    }
+
+    func testDiagonalCrossoverDoesNotInventASecondDirection() {
+        let directions: [MoveDirection] = [.right, .down, .left, .up]
+        for rotation in 0..<4 {
+            for sign: CGFloat in [-1, 1] {
+                var sequence = SwipeSequence<Int>()
+                sequence.begin(1, at: .zero)
+                XCTAssertEqual(sequence.consume([
+                    SwipeSample(contact: 1, point: rotated(CGPoint(x: 8, y: 0), by: rotation), timestamp: 1)
+                ]), [directions[rotation]])
+                XCTAssertEqual(sequence.consume([
+                    SwipeSample(contact: 1, point: rotated(CGPoint(x: 100, y: 0), by: rotation), timestamp: 2)
+                ]), [])
+                // A curved continuation can cross the 45-degree line without
+                // clearly committing to a perpendicular turn.
+                let crossover = rotated(CGPoint(x: 132, y: 40 * sign), by: rotation)
+                XCTAssertEqual(sequence.consume([
+                    SwipeSample(contact: 1, point: crossover, timestamp: 3)
+                ]), [])
+                XCTAssertNil(sequence.end(1, at: crossover))
+            }
+        }
+    }
+
+    func testReleaseOnlySpikeCannotAddATurnThroughEitherEndingPath() {
+        for rotation in 0..<4 {
+            for spike in [CGPoint(x: 100, y: 80), CGPoint(x: 100, y: -80), CGPoint(x: 20, y: 0)] {
+                for useCoalescedEnding in [false, true] {
+                    var sequence = SwipeSequence<Int>()
+                    sequence.begin(1, at: .zero)
+                    XCTAssertEqual(sequence.consume([
+                        SwipeSample(contact: 1, point: rotated(CGPoint(x: 8, y: 0), by: rotation), timestamp: 1)
+                    ]).count, 1)
+                    XCTAssertEqual(sequence.consume([
+                        SwipeSample(contact: 1, point: rotated(CGPoint(x: 100, y: 0), by: rotation), timestamp: 2)
+                    ]), [])
+
+                    let releasePoint = rotated(spike, by: rotation)
+                    if useCoalescedEnding {
+                        let release = SwipeSample(contact: 1, point: releasePoint, timestamp: 3)
+                        // UIKit can include the endpoint in coalescedTouches
+                        // and the recognizer also appends the touch itself.
+                        XCTAssertEqual(sequence.consume([release, release], ending: true), [])
+                    } else {
+                        XCTAssertNil(sequence.end(1, at: releasePoint))
+                    }
+                    XCTAssertFalse(sequence.hasActiveContacts)
+                }
+            }
+        }
+    }
+
+    func testEndingBatchKeepsEarlierDeliberateTurnButDropsEveryFinalEndpointCopy() {
+        var sequence = SwipeSequence<Int>()
+        sequence.begin(1, at: .zero)
+        XCTAssertEqual(sequence.consume([
+            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 0), timestamp: 1)
+        ]), [.right])
+
+        let release = SwipeSample(contact: 1, point: CGPoint(x: 64, y: 36), timestamp: 4)
+        XCTAssertEqual(sequence.consume([
+            release,
+            SwipeSample(contact: 1, point: CGPoint(x: 100, y: 36), timestamp: 3),
+            SwipeSample(contact: 1, point: CGPoint(x: 100, y: 0), timestamp: 2),
+            release
+        ], ending: true), [.down], "Real held motion before lift-off must survive endpoint filtering")
+        XCTAssertFalse(sequence.hasActiveContacts)
+    }
+
+    private func rotated(_ point: CGPoint, by quarterTurns: Int) -> CGPoint {
+        switch quarterTurns {
+        case 1: CGPoint(x: -point.y, y: point.x)
+        case 2: CGPoint(x: -point.x, y: -point.y)
+        case 3: CGPoint(x: point.y, y: -point.x)
+        default: point
+        }
+    }
 }

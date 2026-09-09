@@ -159,9 +159,9 @@ final class SwipeSequenceTests: XCTestCase {
         sequence.begin(1, at: .zero)
         XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8, y: 0)), .right)
         XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 100, y: 0)))
-        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 100, y: 8)), .down)
-        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 92, y: 8)), .left)
-        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 92, y: 0)), .up)
+        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 100, y: 30)), .down)
+        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 70, y: 30)), .left)
+        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 70, y: 0)), .up)
         XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 100, y: 0)), .right)
         XCTAssertTrue(sequence.hasActiveContacts)
         XCTAssertNil(sequence.end(1, at: CGPoint(x: 100, y: 0)))
@@ -174,15 +174,15 @@ final class SwipeSequenceTests: XCTestCase {
             horizontal.begin(1, at: .zero)
             XCTAssertEqual(horizontal.direction(for: 1, at: CGPoint(x: 8 * sign, y: 0)), sign > 0 ? .right : .left)
             XCTAssertNil(horizontal.direction(for: 1, at: CGPoint(x: 1_000 * sign, y: 0)))
-            XCTAssertNil(horizontal.direction(for: 1, at: CGPoint(x: 993 * sign, y: 0)))
-            XCTAssertEqual(horizontal.direction(for: 1, at: CGPoint(x: 992 * sign, y: 0)), sign > 0 ? .left : .right)
+            XCTAssertNil(horizontal.direction(for: 1, at: CGPoint(x: 977 * sign, y: 0)))
+            XCTAssertEqual(horizontal.direction(for: 1, at: CGPoint(x: 976 * sign, y: 0)), sign > 0 ? .left : .right)
 
             var vertical = SwipeSequence<Int>()
             vertical.begin(1, at: .zero)
             XCTAssertEqual(vertical.direction(for: 1, at: CGPoint(x: 0, y: 8 * sign)), sign > 0 ? .down : .up)
             XCTAssertNil(vertical.direction(for: 1, at: CGPoint(x: 0, y: 1_000 * sign)))
-            XCTAssertNil(vertical.direction(for: 1, at: CGPoint(x: 0, y: 993 * sign)))
-            XCTAssertEqual(vertical.direction(for: 1, at: CGPoint(x: 0, y: 992 * sign)), sign > 0 ? .up : .down)
+            XCTAssertNil(vertical.direction(for: 1, at: CGPoint(x: 0, y: 977 * sign)))
+            XCTAssertEqual(vertical.direction(for: 1, at: CGPoint(x: 0, y: 976 * sign)), sign > 0 ? .up : .down)
         }
     }
 
@@ -191,9 +191,40 @@ final class SwipeSequenceTests: XCTestCase {
             var sequence = SwipeSequence<Int>()
             sequence.begin(1, at: .zero)
             XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8, y: 0)), .right)
-            XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 8.1, y: 3 * sign)))
-            XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 8.2, y: 6 * sign)))
-            XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8.3, y: 9 * sign)), sign > 0 ? .down : .up)
+            for step in 1..<8 {
+                XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 8 + CGFloat(step) * 0.1, y: CGFloat(step) * 3 * sign)))
+            }
+            XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8.8, y: 24 * sign)), sign > 0 ? .down : .up)
+        }
+    }
+
+    func testDiagonalDriftDoesNotDelayTheNextDeliberateCorner() {
+        for samples in [1, 10, 100] {
+            var sequence = SwipeSequence<Int>()
+            sequence.begin(1, at: .zero)
+            XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8, y: 0)), .right)
+            XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 108, y: 96)))
+            for sample in 1...samples {
+                let fraction = CGFloat(sample) / CGFloat(samples)
+                XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 108 + 80 * fraction, y: 96 + 88 * fraction)))
+            }
+            XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 188, y: 214)), .down)
+            XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 188, y: 184)), .up)
+        }
+    }
+
+    func testSlowHeldTurnAccumulatesThroughSmallSidewaysJitter() {
+        for sign: CGFloat in [-1, 1] {
+            var sequence = SwipeSequence<Int>()
+            sequence.begin(1, at: .zero)
+            XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 80, y: 0)), .right)
+            var directions: [MoveDirection] = []
+            for step in 1...20 {
+                let point = CGPoint(x: step.isMultiple(of: 2) ? 80 : 82, y: CGFloat(step) * 3 * sign)
+                if let direction = sequence.direction(for: 1, at: point) { directions.append(direction) }
+            }
+            XCTAssertEqual(directions, [sign > 0 ? .down : .up])
+            XCTAssertNil(sequence.end(1, at: CGPoint(x: 80, y: 60 * sign)))
         }
     }
 
@@ -213,14 +244,13 @@ final class SwipeSequenceTests: XCTestCase {
         XCTAssertNil(sequence.end(1, at: CGPoint(x: 100, y: 0)))
     }
 
-    func testLiftOffRecognizesAClearFinalTurnButIgnoresAngledWobble() {
-        for (point, expected) in [(CGPoint(x: 8, y: 8), MoveDirection.down as MoveDirection?),
-                                  (CGPoint(x: 8, y: 7.99), nil),
-                                  (CGPoint(x: 15, y: 8), nil)] {
+    func testLiftOffCannotAddAnotherDirectionAfterASwipe() {
+        for point in [CGPoint(x: 8, y: 8), CGPoint(x: 8, y: 7.99),
+                      CGPoint(x: 15, y: 8), CGPoint(x: 8, y: 40)] {
             var sequence = SwipeSequence<Int>()
             sequence.begin(1, at: .zero)
             XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8, y: 0)), .right)
-            XCTAssertEqual(sequence.end(1, at: point), expected)
+            XCTAssertNil(sequence.end(1, at: point))
             XCTAssertFalse(sequence.hasActiveContacts)
         }
     }
@@ -230,9 +260,9 @@ final class SwipeSequenceTests: XCTestCase {
         sequence.begin(1, at: .zero)
         let initial = SwipeSample(contact: 1, point: CGPoint(x: 8, y: 0), timestamp: 1)
         XCTAssertEqual(sequence.consume([initial]), [.right])
-        let down = SwipeSample(contact: 1, point: CGPoint(x: 8, y: 8), timestamp: 2)
-        let left = SwipeSample(contact: 1, point: CGPoint(x: 0, y: 8), timestamp: 3)
-        let up = SwipeSample(contact: 1, point: .zero, timestamp: 4)
+        let down = SwipeSample(contact: 1, point: CGPoint(x: 8, y: 32), timestamp: 2)
+        let left = SwipeSample(contact: 1, point: CGPoint(x: -24, y: 32), timestamp: 3)
+        let up = SwipeSample(contact: 1, point: CGPoint(x: -24, y: 0), timestamp: 4)
         XCTAssertEqual(sequence.consume([up, initial, left, down, down]), [.down, .left, .up])
         XCTAssertEqual(sequence.consume([down, left, up, initial]), [])
         XCTAssertEqual(sequence.consume([up, SwipeSample(contact: 1, point: CGPoint(x: 8, y: 0), timestamp: 5)]), [.right])
@@ -249,24 +279,24 @@ final class SwipeSequenceTests: XCTestCase {
             SwipeSample(contact: 2, point: CGPoint(x: 100, y: 108), timestamp: 2)
         ]), [.right, .down])
         XCTAssertEqual(sequence.consume([
-            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 8), timestamp: 4),
-            SwipeSample(contact: 2, point: CGPoint(x: 92, y: 100), timestamp: 5),
-            SwipeSample(contact: 2, point: CGPoint(x: 92, y: 108), timestamp: 3)
+            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 32), timestamp: 4),
+            SwipeSample(contact: 2, point: CGPoint(x: 68, y: 76), timestamp: 5),
+            SwipeSample(contact: 2, point: CGPoint(x: 68, y: 108), timestamp: 3)
         ]), [.left, .down, .up])
-        XCTAssertNil(sequence.end(2, at: CGPoint(x: 92, y: 100)))
+        XCTAssertNil(sequence.end(2, at: CGPoint(x: 68, y: 76)))
         XCTAssertTrue(sequence.hasActiveContacts)
-        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 0, y: 8)), .left)
+        XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: -24, y: 32)), .left)
     }
 
-    func testEndingCoalescedHistoryIncludesAClearFinalHeldTurn() {
+    func testEndingCoalescedHistoryPreservesMotionRecordedBeforeLiftOff() {
         var sequence = SwipeSequence<Int>()
         sequence.begin(1, at: .zero)
         XCTAssertEqual(sequence.consume([
             SwipeSample(contact: 1, point: CGPoint(x: 8, y: 0), timestamp: 1)
         ]), [.right])
         XCTAssertEqual(sequence.consume([
-            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 8), timestamp: 3),
-            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 4), timestamp: 2)
+            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 36), timestamp: 3),
+            SwipeSample(contact: 1, point: CGPoint(x: 8, y: 32), timestamp: 2)
         ], ending: true), [.down])
         XCTAssertFalse(sequence.hasActiveContacts)
     }

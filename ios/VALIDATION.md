@@ -1,4 +1,4 @@
-# Validation — September 7, 2026
+# Validation — September 8, 2026
 
 ## Current App Store review — build 8
 
@@ -7,6 +7,20 @@ Verified **September 7, 2026 at 3:08 PM Pacific**: **1.0.0 (8)** and the existin
 Localization metadata was preserved, and the 2,128-character reviewer notes describe the current controls and optional ads. Validation reported no blocking app errors; the No Ads reminder was addressed by including its IAP version in the replacement submission. Final state, exact review items, build attachment, and metadata preservation are recorded in `release/build8-review/final-verification.json`. The live marketing URL remains `https://thoughtahead.com/prism-roll/support.html`; current ad prerequisites and their verification limits are recorded in [Advertising setup](README.md#advertising-setup).
 
 The release checkpoints below describe the state at their recorded times. Their earlier build 3 App Store attachments were superseded by this submission.
+
+## Build 10 TestFlight release
+
+Verified **September 8, 2026 at 9:13 PM Pacific**: **1.0.0 (10)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The same single tester retains access, automatic notifications are enabled, and the 932-character en-US testing notes match exactly. No individual or external tester assignments were added. The App Store version remains attached to **build 8**, **WAITING_FOR_REVIEW**, with **MANUAL** release, matching the pre-upload snapshot.
+
+Build 10 expands the collection to **18 balls across six rarities**, with paid unlocks from **500 to 150,000 coins**. Existing skin IDs and ownership are preserved. Solar Flare, Plasma, Supernova, Singularity, Tesseract, and Genesis add distinct procedural materials and trails. Collection groups, rarity filtering, ownership counts, purchase confirmation, and large-text layouts make the progression visible. The build also includes smoother rolling, subtle compression at walls, directional trails, a gold coin completion celebration, stronger and deeper rolling haptics, and the simplified level heading.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34309631839) compiled source `2deb7b13f65704d5cdf737e675194105f50c59f9` with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Archive checksum, exact source/workflow provenance, package lock, and requested entitlements matched before local distribution signing and export. Primary and independent verification passed strict signatures, authorized certificate/profile, all five distribution entitlements including Game Center, arm64, three privacy manifests, production ad identifiers, AppIcon linkage, absence of Debug/test artifacts, ZIP integrity, and matching executable/archive/dSYM UUIDs. The Debug-only test wallet flag is absent from Release. Original compiler and SDK metadata were preserved.
+
+A clean export of the exact source passed **106 Release engine tests**, all **four milestone reward audits**, and the **51-level catalog audit across four independent processes** with randomized/fixed hashing and reversed generation order. All **259 tracked entries**, including six symlinks, and all **45 release source snapshot paths** matched the committed export. The milestone audit fixture now seeds its purchase wallet from current catalog prices and verifies the resulting balance, preserving the claim-once reward checks.
+
+Collection validation passed **26 native checks and four UI flows**, plus a separate large-text preview check, on an isolated simulator. Motion and haptic validation passed **75 native checks and eight unique UI flows**. Earlier UI failures were outdated selectors and passed after correction; these counts overlap the engine tests and must not be summed as unique coverage. Rendered Mythic/Legendary collections, the largest accessibility text layout, and Genesis in gameplay were inspected. Simulator results do not measure physical haptic feel or sustained device ProMotion performance.
+
+IPA SHA-256: `397fcfc8ec4d2dfce8bf4c25d4004e54c805de267f89aba53b4cc9e182d2069e`. Size: **6,288,210 bytes**. Build ID: `cc018a0b-3091-4430-8e0e-842a85c6a780`. Executable/archive/dSYM UUID: `CB2BB9B1-F3A3-3A31-83A1-9755180983BE`. Private release evidence is in `release/build10/`, including `release-result.json`, `production-verification.json`, `independent-verification.json`, `clean-source-validation.json`, and exact Apple audience/notes readbacks. Archive and IPA are in `artifacts/ProductionBuild10/`; clean-source evidence is in `artifacts/Build10CleanSource/`; feature evidence is in `artifacts/BallRarity/` and `artifacts/MotionPolish/`. Device installation and notification inbox delivery were not independently verified.
 
 ## Build 9 TestFlight release
 

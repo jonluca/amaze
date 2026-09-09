@@ -1,6 +1,18 @@
 # Validation — September 9, 2026
 
-## Current TestFlight and App Store review — build 12
+## Build 13 TestFlight release
+
+Verified **September 9, 2026 at 4:12 PM Pacific**: **1.0.0 (13)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private internal **Owner Testing** group. The existing single tester retains access, automatic notifications are enabled, and the 601-character en-US testing notes match exactly. No individual or external tester assignments were added. The App Store version remains attached to **build 12**, **WAITING_FOR_REVIEW**, matching the pre-upload snapshot. Device installation and notification inbox delivery were not independently verified.
+
+Build 13 reduces accidental extra moves during continuous dragging. The first swipe retains its 8-point threshold; subsequent turns require 24 points of travel with at least 2:1 axis dominance. Small hooks, recoil, and diagonal drift retain the current direction. Ambiguous movement accumulates through the initial touch slop so slow turns with sideways jitter still work. Release coordinates cannot add a turn after an existing move; actual coalesced motion recorded before lift-off remains ordered and usable.
+
+The final input source passed **49 native tests and three simulator UI tests**. A clean export of committed source `872e19753cc5974853a3106fc587a3551c9b5d54` separately passed **40 focused Release input tests**, with all 1,120 tracked entries and 12 symlinks matching the commit before and after testing. Counts overlap. Regression traces cover hooked/reverse tails, diagonal crossovers, duplicate lift-off endpoints, deliberate corners, and slow noisy turns. Native UI checks cover ordinary angled flicks, long straight drags, and controls; deterministic multipoint finger paths are covered by the input tests rather than public XCTest touch synthesis.
+
+The [production archive](https://github.com/jonluca/amaze/actions/runs/34415171977) compiled that exact source with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Archive checksum and source/workflow provenance matched before local distribution signing and export. Primary and independent verification passed signatures, the authorized profile and five entitlements, production configuration, three privacy manifests, absence of Debug/test payloads, and matching executable/archive/dSYM UUIDs. All 1,000 bundled count entries were independently matched inside the signed executable.
+
+IPA SHA-256: `8e64c0fdf47ef28cc7272c2f01a1f39bef4c09dffe0ae5d56c6894e1f18582c0`; size **7,689,602 bytes**. Build ID: `57ea8979-dadb-4643-9776-9a57031e04d6`. Executable/archive/dSYM UUID: `3990173E-D49D-3D8F-B1CB-4EB7A23CED91`. Private evidence is in `release/build13/`; production artifacts are in `artifacts/ProductionBuild13/`; clean-source checks are in `artifacts/Build13CleanSource-validation/`.
+
+## Build 12 TestFlight and App Store review
 
 Verified **September 9, 2026 at 11:26 AM Pacific**: **1.0.0 (12)** is **VALID**, **APP_STORE_ELIGIBLE**, and **IN_BETA_TESTING** in the private **Owner Testing** group. The existing single tester retains access, automatic notifications are enabled, and the en-US testing notes match exactly. Device installation and notification inbox delivery were not independently verified.
 

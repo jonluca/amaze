@@ -134,6 +134,7 @@ struct RootView: View {
         .onChange(of: ads.isPresenting) { _, _ in syncModalState() }
         .onChange(of: ads.isPrivacyFormPresenting) { _, _ in syncModalState() }
         .onChange(of: store.notice) { _, _ in syncModalState() }
+        .onChange(of: store.progress.soundEnabled) { _, enabled in ads.setSoundEnabled(enabled) }
         .onChange(of: purchases.removesAds) { _, removed in ads.interstitialsDisabled = removed }
         .onChange(of: store.run.moves) { _, _ in
             if store.isDuel {
@@ -189,6 +190,7 @@ struct RootView: View {
 
     private func syncModalState() { store.setActivity(modal: settingsOpen || coinShopOpen || restartPromptOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
     private func prepareAds() {
+        ads.setSoundEnabled(store.progress.soundEnabled)
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()
     }

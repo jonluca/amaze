@@ -2,6 +2,45 @@ import XCTest
 
 final class ResearchUXUITests: XCTestCase {
     @MainActor
+    func testSoundAndHapticsCanBeDisabledIndependentlyAndPersist() {
+        let app = launch()
+        app.buttons["Settings"].tap()
+        let sound = app.switches["soundToggle"]
+        let haptics = app.switches["hapticsToggle"]
+        XCTAssertTrue(sound.waitForExistence(timeout: 3))
+        XCTAssertEqual(sound.value as? String, "1")
+        XCTAssertEqual(haptics.value as? String, "1")
+
+        sound.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(sound.value as? String, "0")
+        XCTAssertEqual(haptics.value as? String, "1")
+        haptics.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(haptics.value as? String, "0")
+        XCTAssertEqual(sound.value as? String, "0")
+        capture(app, "sound-and-haptics-disabled")
+        app.navigationBars["Settings"].buttons["Done"].tap()
+
+        app.buttons["reward_hint"].tap()
+        swipe(app.otherElements["mazeBoard"], hintDirection(app))
+        XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
+        app.terminate()
+        app.launchArguments = ["--no-ads"]
+        app.launch()
+        XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(sound.waitForExistence(timeout: 3))
+        XCTAssertEqual(sound.value as? String, "0")
+        XCTAssertEqual(haptics.value as? String, "0")
+
+        sound.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(sound.value as? String, "1")
+        XCTAssertEqual(haptics.value as? String, "0")
+        haptics.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(haptics.value as? String, "1")
+        XCTAssertEqual(sound.value as? String, "1")
+    }
+
+    @MainActor
     func testCoinShopFreezesTimerAndResumesTheSameRun() {
         let app = launch()
         app.segmentedControls["modePicker"].buttons["Time Rush"].tap()

@@ -191,9 +191,9 @@ struct PlayView: View {
     @MainActor
     private func presentCompletion(for runID: UUID) async {
         let finishedRun = store.run
-        // Verification belongs to saved progress and survives leaving this view.
-        // Only this presentation is cancelled when Play is hidden or replaced.
-        let result = await store.completedRunOptimality(for: runID)
+        // Native proofs have no time cutoff. Celebrate one that's ready while
+        // allowing pending proofs to update saved crowns after the next level.
+        let result = store.completedRunOptimalityIfReady(for: runID)
         guard !Task.isCancelled, store.runID == runID else { return }
         if result == .optimal {
             awardRunID = runID
@@ -292,8 +292,7 @@ struct PlayView: View {
             if store.mode == .endless && !store.isDaily && !store.isDuel {
                 PerfectMoveCount(level: store.run.level, runID: store.runID,
                                  knownMinimum: store.progress.hasOptimalCompletion(number: store.run.level.number, mode: .endless)
-                                     ? store.progress.bestMoves(number: store.run.level.number, mode: .endless) : nil,
-                                 bestCompletedMoves: store.progress.bestMoves(number: store.run.level.number, mode: .endless))
+                                     ? store.progress.bestMoves(number: store.run.level.number, mode: .endless) : nil)
             }
         }
         .font(.caption)

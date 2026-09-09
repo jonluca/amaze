@@ -14,6 +14,8 @@ settings:
     DEVELOPMENT_TEAM: F35YQQ5672
     OTHER_LDFLAGS: ['$(inherited)', '-ObjC']
 packages:
+  PrismOptimizer:
+    path: Packages/PrismOptimizer
   GoogleMobileAds:
     url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
     exactVersion: 13.9.0
@@ -34,6 +36,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: PrismRoll/Resources/PrismRoll.entitlements
     dependencies:
+      - package: PrismOptimizer
+        product: CPrismOptimizer
       - package: GoogleMobileAds
       - package: UserMessagingPlatform
         product: GoogleUserMessagingPlatform

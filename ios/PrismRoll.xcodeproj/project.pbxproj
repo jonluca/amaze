@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		005BE756EBDE4416B29E671F /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = 1833D866BAFAF8572C8AC11C /* GoogleUserMessagingPlatform */; };
 		013912332FDFFDFC4ACA2C9D /* MazeChannelOcclusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = EABD35063E5AA60E674E32AA /* MazeChannelOcclusion.swift */; };
 		042209CAD7214D828FF97F9A /* GameAutoAdvanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD4B3ED11A67A4510BED6B /* GameAutoAdvanceTests.swift */; };
 		0424891E65BF9EE9287E785B /* AdService+FullScreenContentDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D87BB5D70F7B211C7F2C91 /* AdService+FullScreenContentDelegate.swift */; };
 		044DF378D41ADC7478C5004F /* BallCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0023CCFF87C2EBABDA9B5E /* BallCatalogTests.swift */; };
 		0476CB61F404C51424043F53 /* JourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E53F50932A1E12850D64DF /* JourneyView.swift */; };
 		04EB2196A6223218FF1062C0 /* SwipeSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCAECD83566567559CF0509 /* SwipeSample.swift */; };
-		05BCC7C6FC7A32533077024A /* MazeMoveTargetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47F9D3D18572558C078147BC /* MazeMoveTargetTests.swift */; };
 		06CA996D9DF22560A2C4EA4B /* GameMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D31ACB3EF16380940EE29A3 /* GameMode.swift */; };
 		079F0B66C35807BEA9E586E2 /* CoinPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDAA6A141351E7D5C5C38C17 /* CoinPack.swift */; };
 		0A89738E925495C58C11182C /* MazeRoutePlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC7BC32248D8E569D6C22B6 /* MazeRoutePlanner.swift */; };
@@ -25,10 +25,12 @@
 		0D83E8FCE52E64A67BA9E32A /* MazeGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DD3C672F590299AADFA4F3 /* MazeGeometryTests.swift */; };
 		0ECB1BA6B89C24471A4F4B7F /* MazeGrowthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26603E6E16F64764CDCFD3DF /* MazeGrowthTests.swift */; };
 		0F46F2A5053383AD9ACBAAFF /* MazeSceneCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91782993680E5F0E6105B203 /* MazeSceneCoordinator.swift */; };
+		1114EF27D6021498370391E7 /* MazeNativeOptimizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D9C8110E50628C3506F338 /* MazeNativeOptimizerTests.swift */; };
 		12B3B3F8DDAAFF6350E3B296 /* MazeLevelTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8076D139C45A34EBEF7A244 /* MazeLevelTransition.swift */; };
 		1352869DB831E4D42D0AD222 /* GameLevelTransitionEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47D17BF7930935E8AF9FCA29 /* GameLevelTransitionEventTests.swift */; };
 		138D9530E6046165D0C885A0 /* MazeBallImpactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE7739D6021FB7F3F9DEEBB /* MazeBallImpactTests.swift */; };
 		155E134B6D26C0AC95D477F0 /* GameLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F665B42D5370EB4E7F91519 /* GameLifecycleTests.swift */; };
+		16F76F3870422F022CFE7BF1 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = B83CD0C8F2A751A61561A4C4 /* ThirdPartyNotices.txt */; };
 		19733951A3E184DA06A92323 /* RewardButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DE3B0134A982CB547667CF7 /* RewardButton.swift */; };
 		1A880ACB2638A71833F5CD1E /* PerfectMoveProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F7BD7B9C3C932395DD33138 /* PerfectMoveProgressTests.swift */; };
 		1BC534E6A1902FB483AA7566 /* GameCoachingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6162269D83C5650451D2FC80 /* GameCoachingTests.swift */; };
@@ -84,7 +86,6 @@
 		5FE4D8EDB3D06B960D9A0F82 /* MazeCompletionBeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0CA5E1D439E9079559D384 /* MazeCompletionBeat.swift */; };
 		6006697E8745DA4841A57CA6 /* LevelBrowserUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CCD5910E1408EF32390B7CB /* LevelBrowserUITests.swift */; };
 		600F2142094F36423EB5CE4D /* MazeOptimality.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4F1A74465EA5AF6F4F38E0 /* MazeOptimality.swift */; };
-		63B03283A44740F79F6F7A75 /* MazeMoveTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B9A411F6504E188A741B7B /* MazeMoveTarget.swift */; };
 		63C662CBDF0E1E06DF2F01DD /* MazeMotionUpdate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6DD6DC5F674D6E922F92B05 /* MazeMotionUpdate.swift */; };
 		65721258C0DE09E4FF2BFC46 /* CoreMazeHapticHardware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82D5CE454593947358391E04 /* CoreMazeHapticHardware.swift */; };
 		65CB974ED67781FA262741D1 /* MazeMotionTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CEAB9185D912FBC0BE50F8B /* MazeMotionTimeline.swift */; };
@@ -126,10 +127,10 @@
 		97B9C7BBA86F807207C334DD /* HapticPlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E03F8A7FA81126643B38E9 /* HapticPlaybackTests.swift */; };
 		9846FCAB4C7D3A1037A3F813 /* DuelService+MatchDelegates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FED03015DEB922822F7C42C5 /* DuelService+MatchDelegates.swift */; };
 		9A0316A5D835E29FDF30F5DE /* DuelSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501369831FB0A1F6EAFD818A /* DuelSession.swift */; };
-		9ADAB8BC7FF329AC6825B4E0 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = E0D9431986DC1FE69E59ABC7 /* GoogleMobileAds */; };
+		9ADAB8BC7FF329AC6825B4E0 /* CPrismOptimizer in Frameworks */ = {isa = PBXBuildFile; productRef = 7A04AFD6D867134E1120B37D /* CPrismOptimizer */; };
 		9B626A7FCA6DA181849A2595 /* MazeHapticPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81AF2E5278E512E01098937 /* MazeHapticPlayer.swift */; };
 		9DB5BC56D4EA48D3BC99CF87 /* CoinWalletTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4334ADC705C2F30FAAC31C33 /* CoinWalletTests.swift */; };
-		A1874BD8927EE6C7815CDFD1 /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = 1833D866BAFAF8572C8AC11C /* GoogleUserMessagingPlatform */; };
+		A1874BD8927EE6C7815CDFD1 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = E0D9431986DC1FE69E59ABC7 /* GoogleMobileAds */; };
 		A1DE8F07923A089DD631EF08 /* MazeSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502D8431F8F7DA0BC52261EE /* MazeSceneView.swift */; };
 		A2C10495F92E1B4ECEFD14AC /* SwipeStroke.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1938ACE9517956CD0E910BF /* SwipeStroke.swift */; };
 		A305FC5A1DC069192F0628DF /* MazePaintPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EC055F3567A4CC55C59E995 /* MazePaintPaletteTests.swift */; };
@@ -151,6 +152,7 @@
 		B742089D3AD8299B7E490B03 /* CoinPurchaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64408C50A575E760CC8B5276 /* CoinPurchaseTests.swift */; };
 		B750ACEB4938B19D898B46A3 /* CompletionBonusButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F948A25EC349C94AC19A8557 /* CompletionBonusButton.swift */; };
 		B98E5E9479A703233B53B1B4 /* TimeRushUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFD478DF53E02AAAA50B197 /* TimeRushUITests.swift */; };
+		BA9AB3DDAAC3198CCDF1B637 /* PendingCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 452886034B07D311DFC43D1D /* PendingCompletion.swift */; };
 		BD73BA7C22DA101343982D28 /* CoinShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3E2FEBC7642410A92BAC03 /* CoinShopView.swift */; };
 		BD8E73495FA0D1196BC98B5C /* MazeMotionPolishVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9046BCA9C2E45280CD696991 /* MazeMotionPolishVisualTests.swift */; };
 		BE1CF29D4623363B2BD07746 /* MazeHapticHardware.swift in Sources */ = {isa = PBXBuildFile; fileRef = C56C35BE841426058253AEF0 /* MazeHapticHardware.swift */; };
@@ -173,6 +175,7 @@
 		D341EE712761AC59C62EED8F /* PurchaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFCEDD1FF1B9D3E30C88B45 /* PurchaseService.swift */; };
 		D3A50BA6A3EEAAB5B334C357 /* GameplaySwipeGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8260DE59C1DE49201B3D946 /* GameplaySwipeGestureRecognizer.swift */; };
 		D3FD37CDECCB2AD5BE8A2D09 /* CollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96770D4FEEF56DB81F62EF4D /* CollectionView.swift */; };
+		D4D215B80D3C622576DD6529 /* MazeNativeOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04F4AFEB7E0E73F14BA3B6A /* MazeNativeOptimizer.swift */; };
 		D5D75CF95CD34D657BE40727 /* PlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37DC88E44F545598E8EF462 /* PlayView.swift */; };
 		D6F52D527658B377E9AF4F35 /* LevelCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54557426D025298115CE7CDE /* LevelCatalogTests.swift */; };
 		D751AA6528745E9DD37D81DA /* MazeStudioLighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = C506C6CE5063585D2456CF9E /* MazeStudioLighting.swift */; };
@@ -284,10 +287,10 @@
 		426C9755E5BABD33416C67FD /* SwipeSequenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeSequenceTests.swift; sourceTree = "<group>"; };
 		4334ADC705C2F30FAAC31C33 /* CoinWalletTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinWalletTests.swift; sourceTree = "<group>"; };
 		44AFD1C6E4A710ECF7581E7E /* SaveMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveMigrationTests.swift; sourceTree = "<group>"; };
+		452886034B07D311DFC43D1D /* PendingCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCompletion.swift; sourceTree = "<group>"; };
 		45AFAF156FA541F77F56B199 /* DirectionControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionControls.swift; sourceTree = "<group>"; };
 		46BBB81203DFD7C463C8222F /* SceneFrameRatePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneFrameRatePolicy.swift; sourceTree = "<group>"; };
 		47D17BF7930935E8AF9FCA29 /* GameLevelTransitionEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLevelTransitionEventTests.swift; sourceTree = "<group>"; };
-		47F9D3D18572558C078147BC /* MazeMoveTargetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeMoveTargetTests.swift; sourceTree = "<group>"; };
 		4813CC4F86B7F0D2DC3F8E7F /* MazePathGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazePathGeometry.swift; sourceTree = "<group>"; };
 		4A06194F25325D8002973073 /* PrismRoll-Local.storekit */ = {isa = PBXFileReference; path = "PrismRoll-Local.storekit"; sourceTree = "<group>"; };
 		4C0023CCFF87C2EBABDA9B5E /* BallCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BallCatalogTests.swift; sourceTree = "<group>"; };
@@ -326,7 +329,6 @@
 		72027D3E9F70C790620BA95D /* BallSceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BallSceneView.swift; sourceTree = "<group>"; };
 		72A4AFB069255795C31DDAD0 /* BallTrailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BallTrailTests.swift; sourceTree = "<group>"; };
 		73951718A194E7224BEB2063 /* MazeSolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeSolver.swift; sourceTree = "<group>"; };
-		74B9A411F6504E188A741B7B /* MazeMoveTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeMoveTarget.swift; sourceTree = "<group>"; };
 		7529DFC5C1DFF670319975F1 /* TimeRushSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeRushSession.swift; sourceTree = "<group>"; };
 		764EC55364FD4B0BDB7D11E9 /* PrismRoll.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PrismRoll.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		76CD33BAFF98186066B0F9D6 /* HapticIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticIntegrationTests.swift; sourceTree = "<group>"; };
@@ -355,12 +357,14 @@
 		91D7FE6B880F26CF5425DEE8 /* CoinShopUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinShopUITests.swift; sourceTree = "<group>"; };
 		9425B8904C15790C05230A38 /* MazeCompletionCoinEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeCompletionCoinEffects.swift; sourceTree = "<group>"; };
 		96770D4FEEF56DB81F62EF4D /* CollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionView.swift; sourceTree = "<group>"; };
+		97BB0300F6675D116186F3DB /* PrismOptimizer */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PrismOptimizer; path = Packages/PrismOptimizer; sourceTree = SOURCE_ROOT; };
 		98C1AB1990965F1474DB4349 /* PrismRollApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrismRollApp.swift; sourceTree = "<group>"; };
 		98D1A7F6096F8B2806A06AB3 /* MazeRenderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeRenderingTests.swift; sourceTree = "<group>"; };
 		9AB5473C546E2C5D519F56F9 /* MazeCoinBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeCoinBuilder.swift; sourceTree = "<group>"; };
 		9C9748755046A3A4B6AF84DC /* TimeRushSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeRushSessionTests.swift; sourceTree = "<group>"; };
 		9EDB890ED0183C1BDEEF10E2 /* InterstitialFrequencyPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterstitialFrequencyPolicy.swift; sourceTree = "<group>"; };
 		9F9B23770A07AFFA42C8D504 /* PerfectSolveAwardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfectSolveAwardUITests.swift; sourceTree = "<group>"; };
+		A04F4AFEB7E0E73F14BA3B6A /* MazeNativeOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeNativeOptimizer.swift; sourceTree = "<group>"; };
 		A14FE55BB8D2B9498D4590E0 /* MazeMinimumMoveCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeMinimumMoveCacheTests.swift; sourceTree = "<group>"; };
 		A325A92DFA23D99D12107CFB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A34860861171A6C5F389CAF9 /* MazeBallImpact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeBallImpact.swift; sourceTree = "<group>"; };
@@ -379,6 +383,7 @@
 		B6DFE42415B794330D0CDED0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B76C41C2E442EA89E3EE8B45 /* MazeRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeRun.swift; sourceTree = "<group>"; };
 		B8260DE59C1DE49201B3D946 /* GameplaySwipeGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplaySwipeGestureRecognizer.swift; sourceTree = "<group>"; };
+		B83CD0C8F2A751A61561A4C4 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 		BD3E2FEBC7642410A92BAC03 /* CoinShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinShopView.swift; sourceTree = "<group>"; };
 		BDAA3A13612A9376AEB70513 /* MazeBoardBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeBoardBuilder.swift; sourceTree = "<group>"; };
 		BE4BF1ED6F322D8DD2C67718 /* MazeTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeTopology.swift; sourceTree = "<group>"; };
@@ -417,6 +422,7 @@
 		E555604F10819DAA930D88BD /* ProgressData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressData.swift; sourceTree = "<group>"; };
 		E6FCFF0CEA196B323A8EDA58 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		E7BFDA4BC428499CB182939B /* AdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdService.swift; sourceTree = "<group>"; };
+		E7D9C8110E50628C3506F338 /* MazeNativeOptimizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeNativeOptimizerTests.swift; sourceTree = "<group>"; };
 		E8076D139C45A34EBEF7A244 /* MazeLevelTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeLevelTransition.swift; sourceTree = "<group>"; };
 		E81AF2E5278E512E01098937 /* MazeHapticPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeHapticPlayer.swift; sourceTree = "<group>"; };
 		E87420E7895281CF35668846 /* PrismRollUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrismRollUITests.swift; sourceTree = "<group>"; };
@@ -440,8 +446,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9ADAB8BC7FF329AC6825B4E0 /* GoogleMobileAds in Frameworks */,
-				A1874BD8927EE6C7815CDFD1 /* GoogleUserMessagingPlatform in Frameworks */,
+				9ADAB8BC7FF329AC6825B4E0 /* CPrismOptimizer in Frameworks */,
+				A1874BD8927EE6C7815CDFD1 /* GoogleMobileAds in Frameworks */,
+				005BE756EBDE4416B29E671F /* GoogleUserMessagingPlatform in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -473,6 +480,7 @@
 				7C55D75ED05BD0542D187E7A /* GameSnapshot.swift */,
 				ADB886B8D66D088237FE3200 /* GameSnapshotEncoder.swift */,
 				5ADCCA59DDC969355B06988B /* GameStore.swift */,
+				452886034B07D311DFC43D1D /* PendingCompletion.swift */,
 				98C1AB1990965F1474DB4349 /* PrismRollApp.swift */,
 				5AB7A26C42CCF0E941746162 /* ProgressPersistence.swift */,
 				B1B2C27C098774E86ED42193 /* TimedRunState.swift */,
@@ -492,6 +500,7 @@
 		3DC80E4D85D75E9BF6BA2038 = {
 			isa = PBXGroup;
 			children = (
+				A7FA0BC4C7EAC218A380A33E /* Packages */,
 				A2E49A6980BDCB39104D86EF /* PrismRoll */,
 				48949C2E452B1A070FD9B1BF /* PrismRollTests */,
 				FE740D9BAF6FF029315234D5 /* PrismRollUITests */,
@@ -542,7 +551,7 @@
 				A14FE55BB8D2B9498D4590E0 /* MazeMinimumMoveCacheTests.swift */,
 				9046BCA9C2E45280CD696991 /* MazeMotionPolishVisualTests.swift */,
 				895DBB553DBCEB63B631098D /* MazeMotionTimelineTests.swift */,
-				47F9D3D18572558C078147BC /* MazeMoveTargetTests.swift */,
+				E7D9C8110E50628C3506F338 /* MazeNativeOptimizerTests.swift */,
 				0A0E0ABABB9BF70CFFC1ADB5 /* MazeOptimalityTests.swift */,
 				B0078429EA592A040AD0DCAD /* MazePaintEffectsTests.swift */,
 				7EC055F3567A4CC55C59E995 /* MazePaintPaletteTests.swift */,
@@ -567,6 +576,7 @@
 				15B83A71B2D67FEF7C430E4A /* Info.plist */,
 				0EEA3AE29E32D5330EDB1EA2 /* PrismRoll.entitlements */,
 				CB9410635D4F7209037FDB36 /* PrivacyInfo.xcprivacy */,
+				B83CD0C8F2A751A61561A4C4 /* ThirdPartyNotices.txt */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -607,7 +617,7 @@
 				FA4871D982D5AD5A38D56D84 /* MazeLayout.swift */,
 				7E899C519482A66944C354AC /* MazeLevel.swift */,
 				1AF5191C8AD1E08F831C29F6 /* MazeMinimumMoveCache.swift */,
-				74B9A411F6504E188A741B7B /* MazeMoveTarget.swift */,
+				A04F4AFEB7E0E73F14BA3B6A /* MazeNativeOptimizer.swift */,
 				EB4F1A74465EA5AF6F4F38E0 /* MazeOptimality.swift */,
 				2CC7BC32248D8E569D6C22B6 /* MazeRoutePlanner.swift */,
 				B76C41C2E442EA89E3EE8B45 /* MazeRun.swift */,
@@ -639,6 +649,14 @@
 				F3FEB219D66176ED0589407E /* Views */,
 			);
 			path = PrismRoll;
+			sourceTree = "<group>";
+		};
+		A7FA0BC4C7EAC218A380A33E /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				97BB0300F6675D116186F3DB /* PrismOptimizer */,
+			);
+			path = Packages;
 			sourceTree = "<group>";
 		};
 		D4FD32535355E80DA81313B6 /* Style */ = {
@@ -811,6 +829,7 @@
 			);
 			name = PrismRoll;
 			packageProductDependencies = (
+				7A04AFD6D867134E1120B37D /* CPrismOptimizer */,
 				E0D9431986DC1FE69E59ABC7 /* GoogleMobileAds */,
 				1833D866BAFAF8572C8AC11C /* GoogleUserMessagingPlatform */,
 			);
@@ -892,6 +911,7 @@
 			packageReferences = (
 				CA28435D56BEB8BAD6FE815D /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				AD7EA556E0392862AA40F967 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */,
+				1CB635726FA813320C976537 /* XCLocalSwiftPackageReference "Packages/PrismOptimizer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ECF385621E9C767E2C059FA9 /* Products */;
@@ -928,6 +948,7 @@
 			files = (
 				4CC88F6DCDB8ED1B022D5B16 /* Assets.xcassets in Resources */,
 				4D4F9EBF8931A05223463913 /* PrivacyInfo.xcprivacy in Resources */,
+				16F76F3870422F022CFE7BF1 /* ThirdPartyNotices.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -977,7 +998,7 @@
 				491B30A25A7DF3491E600EFE /* MazeMinimumMoveCacheTests.swift in Sources */,
 				BD8E73495FA0D1196BC98B5C /* MazeMotionPolishVisualTests.swift in Sources */,
 				79148D276A3725C279585CDE /* MazeMotionTimelineTests.swift in Sources */,
-				05BCC7C6FC7A32533077024A /* MazeMoveTargetTests.swift in Sources */,
+				1114EF27D6021498370391E7 /* MazeNativeOptimizerTests.swift in Sources */,
 				3DF2FEDF9C7E596544519549 /* MazeOptimalityTests.swift in Sources */,
 				5E3C030FF9913C7304E3EEED /* MazePaintEffectsTests.swift in Sources */,
 				A305FC5A1DC069192F0628DF /* MazePaintPaletteTests.swift in Sources */,
@@ -1081,7 +1102,7 @@
 				888F56E6E375E5F3D5CDDFD5 /* MazeMinimumMoveCache.swift in Sources */,
 				65CB974ED67781FA262741D1 /* MazeMotionTimeline.swift in Sources */,
 				63C662CBDF0E1E06DF2F01DD /* MazeMotionUpdate.swift in Sources */,
-				63B03283A44740F79F6F7A75 /* MazeMoveTarget.swift in Sources */,
+				D4D215B80D3C622576DD6529 /* MazeNativeOptimizer.swift in Sources */,
 				600F2142094F36423EB5CE4D /* MazeOptimality.swift in Sources */,
 				3E49FB2AC7CD94FCFB3FE343 /* MazePaintEffects.swift in Sources */,
 				FF039E05B0506105E91FE3AF /* MazePaintPalette.swift in Sources */,
@@ -1102,6 +1123,7 @@
 				E0A49F944D55344FCD4DA773 /* ModePicker.swift in Sources */,
 				F870BE070529F2D8A3D8DEAA /* MoveDirection.swift in Sources */,
 				4BA3D152B85D3FC085552D61 /* Palette.swift in Sources */,
+				BA9AB3DDAAC3198CCDF1B637 /* PendingCompletion.swift in Sources */,
 				4AFCFA848D7E29E05A67B975 /* PerfectMoveCount.swift in Sources */,
 				AED7D09B9D7937CFE914F159 /* PerfectSolveAward.swift in Sources */,
 				D5D75CF95CD34D657BE40727 /* PlayView.swift in Sources */,
@@ -1447,6 +1469,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		1CB635726FA813320C976537 /* XCLocalSwiftPackageReference "Packages/PrismOptimizer" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PrismOptimizer;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		AD7EA556E0392862AA40F967 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1471,6 +1500,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AD7EA556E0392862AA40F967 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */;
 			productName = GoogleUserMessagingPlatform;
+		};
+		7A04AFD6D867134E1120B37D /* CPrismOptimizer */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CPrismOptimizer;
 		};
 		E0D9431986DC1FE69E59ABC7 /* GoogleMobileAds */ = {
 			isa = XCSwiftPackageProductDependency;

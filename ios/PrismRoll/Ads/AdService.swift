@@ -44,6 +44,10 @@ final class AdService: NSObject, ObservableObject {
 
     var canShowRewarded: Bool { rewardedAvailability == .ready && rewardedAd?.isFresh == true }
 
+    func setSoundEnabled(_ enabled: Bool) {
+        MobileAds.shared.isApplicationMuted = !enabled
+    }
+
     /// Call after the root view is visible, on foreground, and after level transitions.
     /// UMP is refreshed once per launch; failed requests can retry on a later call.
     func prepare() {

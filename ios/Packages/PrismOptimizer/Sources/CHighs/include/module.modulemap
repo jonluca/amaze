@@ -1,0 +1,4 @@
+module CHighs {
+    header "interfaces/highs_c_api.h"
+    export *
+}

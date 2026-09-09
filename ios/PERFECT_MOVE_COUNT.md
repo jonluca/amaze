@@ -1,15 +1,35 @@
-# Classic move targets
+# Classic perfect move count
 
-The Classic (infinite levels) heading shows a gold crown and **Perfect: N moves** when the minimum has been proven. This is the number of swipes from the level's starting position, so it stays fixed as the player moves. It also appears on Classic coin boards. Time Rush, Limited Moves, Daily, and Duel keep their existing summaries.
+Classic/infinite levels show a gold crown and **Perfect: N moves** beneath the
+current move count, including coin boards. N is the fewest swipes from the
+level's starting position, so it stays fixed while the player moves. Level 16
+shows **38**; Level 50 shows **58**. Other modes retain their existing summaries.
 
-The calculation searches the same immutable grid used by gameplay. It does not treat the generated hint route as proof: Classic level 16's hint route takes 46 moves, while its verified minimum is **38**. Existing saved optimal completions can supply their proven count immediately.
+The row shows **Calculating perfect…** while native integer optimization proves
+the answer. There is no time, search-node, or difficulty cutoff and no
+best-known approximation. If work fails, **Retry perfect count** starts a new
+attempt. The row stays present throughout, and gameplay remains available.
 
-An actor performs the bounded search away from the main actor and retains results for 32 recent grids. Identity includes the grid dimensions, open cells, and start. Leaving a level cancels its view's calculation; cancelled work is not cached. The row reserves its height while loading. Completion verification shares the cache, so meeting a displayed perfect count earns the corresponding crown.
+The solver searches the immutable grid used by gameplay, reconstructs an
+optimal route, and independently replays it through `MazeRun`. A generated
+hint is only a verified upper bound, never a perfect count: Level 16's stored
+hint takes 46 moves, while its exact minimum is 38. Existing saved optimal
+completions can supply their already-proved minimum immediately.
 
-Search is limited to 500,000 states and two seconds. If it cannot prove a minimum, the header displays **Best known: N moves** with a flag instead of a crown, using an executable stored route or a better saved completion. Such a target is achievable but is not labeled perfect. Some larger generated levels require this fallback.
+An actor performs optimization away from the main actor and caches only proved
+minima for 32 recent grids. Identity includes dimensions, open cells and start.
+Leaving a level cancels its view's request; cancelled or failed work is not
+cached, so revisiting or retrying can calculate it again.
 
-## Validation
+Completion progression never waits for an unfinished proof. A ready result can
+show the immediate perfect-solve celebration; otherwise the player advances
+while store-owned verification continues. The captured completed run receives
+its earned crown when verification finishes, even if another level is open.
+Pending completed runs survive app restart and resume verification on launch.
+Meeting the displayed minimum and earning the saved crown use the same proof.
 
-Validated on an isolated iPhone 17 Pro simulator running iOS 26.5. Across the focused runs, 27 native tests and four UI tests pass: exact search (including an independent oracle for all 511 nonempty 3×3 grids), bounded/cancelled work, grid cache identity/eviction, truthful fallback counts, progress/crown persistence, and the Classic target through a swipe, mode changes, and restart. A restored Level 16 completion earns a crown at 38 moves and does not at 40.
-
-The final rendered Level 16 screen shows **0 moves** and **Perfect: 38 moves** without clipping. Local evidence is under `artifacts/PerfectMoveCount/`: `FinalChecks.xcresult` contains the eight passing final progress tests, `FinalUI.xcresult` contains the passing target UI test, and `level16-perfect-count.png` / `level16-ui.json` capture the rendered result. Earlier runs contain the passing solver, cache, fallback, and three award UI tests; the initial empty-view loading issue and restart test selector were corrected before the final UI run.
+[The algorithm and native package notes](OPTIMAL_SOLVER.md) explain the integer
+flow model, source pin, three merged upstream correctness backports and
+reproduction commands. Final mathematical validation matches all 111 sampled
+canonical levels and all 2,304 independent 3×3 board/start oracle cases. Local
+native, UI and benchmark evidence is retained under `artifacts/NativeOptimizer/`.

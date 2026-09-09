@@ -41,14 +41,27 @@ final class GameStore: ObservableObject {
     private var rewardedRequestIDs: Set<UUID> = []
     private var coinRewardRequestID: UUID?
     private var completionVerification: (runID: UUID, task: Task<MazeOptimality.Result, Never>)?
+    private var completionTasks: [UUID: Task<MazeOptimality.Result, Never>] = [:]
+    private var completionResults: [UUID: Task<MazeOptimality.Result, Never>] = [:]
+    private var nonpersistentCompletionIDs: Set<UUID> = []
+    private var pendingCompletions: [PendingCompletion] = []
+    private var completedOptimality: (runID: UUID, result: MazeOptimality.Result)?
+    private let completionVerifier: @Sendable (MazeRun) async -> MazeOptimality.Result
     private let feedback = UIImpactFeedbackGenerator(style: .soft)
 
     init(defaults: UserDefaults = .standard, progressFileURL: URL? = nil, now: @escaping () -> Date = Date.init,
-         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
+         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+         completionVerifier: @escaping @Sendable (MazeRun) async -> MazeOptimality.Result = { run in
+             guard let minimum = await MazeMinimumMoveCache.shared.minimumMoves(for: run.level) else {
+                 return .undetermined
+             }
+             return run.moves == minimum ? .optimal : .notOptimal
+         }) {
         self.defaults = defaults
         progressPersistence = ProgressPersistence(url: progressFileURL ?? ProgressPersistence.defaultURL(for: defaults))
         dateProvider = now
         uptimeProvider = uptime
+        self.completionVerifier = completionVerifier
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
             for key in ["prism.snapshot.v2", "prism.progress", "prism.runs", "prism.mode"] { defaults.removeObject(forKey: key) }
@@ -57,6 +70,7 @@ final class GameStore: ObservableObject {
 #endif
         let decoder = JSONDecoder()
         let snapshot = defaults.data(forKey: "prism.snapshot.v2").flatMap { try? decoder.decode(GameSnapshot.self, from: $0) }
+        pendingCompletions = snapshot?.pendingCompletions ?? []
         var loadedProgress = (try? progressPersistence.load()) ?? snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
             try? decoder.decode(ProgressData.self, from: $0)
         } ?? ProgressData()
@@ -129,7 +143,12 @@ final class GameStore: ObservableObject {
         lastTick = uptime()
         if !resumeDaily && loadedMode == .timed { restoreSoloRun() }
         if refreshedGrid { save() }
+        resumeCompletionVerifications()
         startCompletionVerification()
+    }
+
+    deinit {
+        for task in completionTasks.values { task.cancel() }
     }
 
     var skin: BallSkin { BallSkin.catalog.first { $0.id == progress.selectedSkinID } ?? BallSkin.catalog[0] }
@@ -455,14 +474,24 @@ final class GameStore: ObservableObject {
     func dismissTutorial() { progress.tutorialDismissed = true; save() }
 
     private func clearTransientState() {
+        // Special-session results have no saved crown once their board is gone.
+        // Cancel the actual native owner, not just its awaiting presentation task.
+        for id in nonpersistentCompletionIDs { completionTasks[id]?.cancel() }
         runID = UUID(); inputID = UUID(); earnedPoints = 0; hint = nil; notice = nil
+        completedOptimality = nil
         blockedDirection = nil
         isRewardPending = false; coinRewardRequestID = nil; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
         if tracksPresentationReadiness { presentationReady = false }
         startCompletionVerification()
     }
 
-    /// Presentation shares the store's work; leaving Play cannot lose a crown.
+    /// A celebration may use an available proof, but progression must never wait.
+    func completedRunOptimalityIfReady(for completedRunID: UUID) -> MazeOptimality.Result? {
+        guard completedRunID == runID, completedOptimality?.runID == completedRunID else { return nil }
+        return completedOptimality?.result
+    }
+
+    /// Explicit proof consumers can await the store's work after completion.
     func completedRunOptimality(for completedRunID: UUID) async -> MazeOptimality.Result {
         guard completedRunID == runID, run.isComplete else { return .incomplete }
         startCompletionVerification()
@@ -472,38 +501,98 @@ final class GameStore: ObservableObject {
 
     private func startCompletionVerification() {
         guard run.isComplete, completionVerification?.runID != runID else { return }
+        let completedRunID = runID
         let finishedRun = run
         let savesLevelProgress = !isDaily && !isDuel
         let stageIndex = isTimeRush ? timeRushSession?.stageIndex : nil
-        let savedMinimum = savesLevelProgress && finishedRun.level.mode == .endless
-            && progress.hasOptimalCompletion(number: finishedRun.level.number, mode: .endless)
-            ? progress.bestMoves(number: finishedRun.level.number, mode: .endless) : nil
+        let savedMinimum = savesLevelProgress ? savedMinimum(for: finishedRun) : nil
+        let pending = savesLevelProgress
+            ? pendingCompletions.first { $0.run == finishedRun && $0.stageIndex == stageIndex }
+            : nil
+        let completion = pending ?? PendingCompletion(id: completedRunID, run: finishedRun, stageIndex: stageIndex)
         if savesLevelProgress {
             progress.recordCompletedRun(finishedRun, stageIndex: stageIndex)
+            if pending == nil { pendingCompletions.append(completion) }
             save()
         }
-        let verification = Task.detached(priority: .userInitiated) {
-            if let savedMinimum {
-                return finishedRun.moves == savedMinimum ? MazeOptimality.Result.optimal : .notOptimal
-            }
-            if finishedRun.level.mode == .endless,
-               let minimum = await MazeMinimumMoveCache.shared.minimumMoves(for: finishedRun.level) {
-                // Use the same proof shown by the Classic move target. A player
-                // who meets that minimum must receive the matching crown.
-                return finishedRun.moves == minimum ? MazeOptimality.Result.optimal : .notOptimal
-            }
-            return MazeOptimality.verify(finishedRun)
+        if let savedMinimum {
+            completedOptimality = (completedRunID, finishedRun.moves == savedMinimum ? .optimal : .notOptimal)
         }
+        let result = launchCompletionVerification(completion, savesLevelProgress: savesLevelProgress,
+                                                 savedMinimum: savedMinimum)
+        bindCompletionResult(result, to: completedRunID)
+    }
+
+    private func savedMinimum(for run: MazeRun) -> Int? {
+        guard run.level.mode == .endless,
+              progress.hasOptimalCompletion(number: run.level.number, mode: .endless) else { return nil }
+        return progress.bestMoves(number: run.level.number, mode: .endless)
+    }
+
+    private func resumeCompletionVerifications() {
+        var seen: Set<UUID> = []
+        pendingCompletions = pendingCompletions.filter {
+            $0.run.isComplete && $0.run.moves >= 0 && seen.insert($0.id).inserted
+                && ($0.run.level.mode != .timed || $0.stageIndex.map { (0..<5).contains($0) } == true)
+        }
+        for completion in pendingCompletions {
+            let result = launchCompletionVerification(completion, savesLevelProgress: true,
+                                                     savedMinimum: savedMinimum(for: completion.run))
+            // The currently restored completed board shares its persisted proof.
+            // Starting a second request here would waste another uncapped solve.
+            if !isDaily && !isDuel && run == completion.run,
+               completion.stageIndex == (isTimeRush ? timeRushSession?.stageIndex : nil) {
+                bindCompletionResult(result, to: runID)
+            }
+        }
+    }
+
+    private func bindCompletionResult(_ result: Task<MazeOptimality.Result, Never>, to completedRunID: UUID) {
+        let task = Task { [weak self] in
+            let value = await result.value
+            if self?.runID == completedRunID { self?.completedOptimality = (completedRunID, value) }
+            return value
+        }
+        completionVerification = (completedRunID, task)
+    }
+
+    private func launchCompletionVerification(
+        _ completion: PendingCompletion, savesLevelProgress: Bool, savedMinimum: Int?
+    ) -> Task<MazeOptimality.Result, Never> {
+        if let existing = completionResults[completion.id] { return existing }
+        let verifier = completionVerifier
+        let verification = Task.detached(priority: .userInitiated) {
+            guard !Task.isCancelled else { return MazeOptimality.Result.undetermined }
+            if let savedMinimum {
+                return completion.run.moves == savedMinimum ? MazeOptimality.Result.optimal : .notOptimal
+            }
+            let result = await verifier(completion.run)
+            return Task.isCancelled ? .undetermined : result
+        }
+        completionTasks[completion.id] = verification
+        if !savesLevelProgress { nonpersistentCompletionIDs.insert(completion.id) }
         let task = Task { [weak self] in
             let result = await verification.value
-            if let self, savesLevelProgress {
-                // Use the captured board and stage even if another level is now open.
-                self.progress.recordCompletedRun(finishedRun, optimality: result, stageIndex: stageIndex)
-                self.save()
+            if let self {
+                self.completionTasks.removeValue(forKey: completion.id)
+                self.completionResults.removeValue(forKey: completion.id)
+                self.nonpersistentCompletionIDs.remove(completion.id)
+                if savesLevelProgress {
+                    // Use the captured board and stage even if another level is now open.
+                    self.progress.recordCompletedRun(completion.run, optimality: result, stageIndex: completion.stageIndex)
+                    let proved = result == .optimal || result == .notOptimal
+                    if proved { self.pendingCompletions.removeAll { $0.id == completion.id } }
+                    if !self.save(), proved {
+                        // Keep retry evidence if this write failed; the last
+                        // persisted snapshot already contains the pending run.
+                        self.pendingCompletions.append(completion)
+                    }
+                }
             }
             return result
         }
-        completionVerification = (runID, task)
+        completionResults[completion.id] = task
+        return task
     }
     /// Advance only after the previous maze's final movement has been presented.
     /// Loading and presentation are excluded from the player's shared time budget.
@@ -580,7 +669,8 @@ final class GameStore: ObservableObject {
         cacheCurrentRun()
         let snapshot = GameSnapshot(progress: progress, runs: savedRuns, clocks: savedClocks, mode: mode,
                                     dailyRun: savedDailyRun, dailyID: dailyChallenge.id, dailyActive: isDaily, themeID: theme.rawValue,
-                                    timeRushSession: timeRushSession)
+                                    timeRushSession: timeRushSession,
+                                    pendingCompletions: pendingCompletions.isEmpty ? nil : pendingCompletions)
         do {
             let data = try snapshotEncoder.encode(snapshot)
             try progressPersistence.persist(progress)

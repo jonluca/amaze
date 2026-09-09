@@ -10,4 +10,5 @@ struct GameSnapshot: Codable {
     var dailyActive: Bool
     var themeID: String
     var timeRushSession: TimeRushSession? = nil
+    var pendingCompletions: [PendingCompletion]? = nil
 }

@@ -13,6 +13,7 @@ final class GameLevelProgressTests: XCTestCase {
         XCTAssertEqual(store.progress.bestMoves(number: 1, mode: .endless), moves)
         let result = await store.completedRunOptimality(for: store.runID)
         XCTAssertEqual(result, .optimal)
+        XCTAssertEqual(store.completedRunOptimalityIfReady(for: store.runID), .optimal)
         XCTAssertTrue(store.progress.hasOptimalCompletion(number: 1, mode: .endless))
 
         let restored = makeStore(defaults)
@@ -67,6 +68,176 @@ final class GameLevelProgressTests: XCTestCase {
         XCTAssertFalse(store.progress.hasCompleted(number: 1, mode: .challenge))
         XCTAssertNil(store.progress.bestMoves(number: 1, mode: .challenge))
         XCTAssertTrue(makeStore(defaults).progress.hasOptimalCompletion(number: 1, mode: .endless))
+    }
+
+    func testPendingProofAllowsNextLevelAndSavesItsCrownLater() async throws {
+        let defaults = try makeDefaults()
+        let proof = AsyncStream<MazeOptimality.Result>.makeStream()
+        defer { proof.continuation.finish() }
+        let store = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { _ in
+            for await result in proof.stream { return result }
+            return .undetermined
+        })
+        store.setHaptics(false)
+        store.setSound(false)
+        let crowned = expectation(description: "Delayed proof crowns the original level")
+        let observation = store.$progress.first { $0.hasOptimalCompletion(number: 1, mode: .endless) }
+            .sink { _ in crowned.fulfill() }
+        try complete(store)
+        let completedRunID = store.runID
+        XCTAssertNil(store.completedRunOptimalityIfReady(for: completedRunID))
+        XCTAssertTrue(store.advanceCompletedLevel(for: completedRunID))
+        XCTAssertEqual(store.run.level.number, 2)
+        XCTAssertFalse(store.progress.hasOptimalCompletion(number: 1, mode: .endless))
+
+        proof.continuation.yield(.optimal)
+        await fulfillment(of: [crowned], timeout: 5)
+        withExtendedLifetime(observation) {}
+        XCTAssertNil(store.completedRunOptimalityIfReady(for: completedRunID))
+        XCTAssertNil(store.completedRunOptimalityIfReady(for: store.runID))
+        XCTAssertTrue(makeStore(defaults).progress.hasOptimalCompletion(number: 1, mode: .endless))
+    }
+
+    func testPendingProofAllowsNextTimeRushMaze() throws {
+        let proof = AsyncStream<MazeOptimality.Result>.makeStream()
+        defer { proof.continuation.finish() }
+        let store = GameStore(defaults: try makeDefaults(), uptime: { 0 }, completionVerifier: { _ in
+            for await result in proof.stream { return result }
+            return .undetermined
+        })
+        store.setHaptics(false)
+        store.setSound(false)
+        store.switchMode(.timed)
+        try complete(store)
+        let completedRunID = store.runID
+        let remainingSeconds = store.clock?.remainingSeconds
+        XCTAssertNil(store.completedRunOptimalityIfReady(for: completedRunID))
+        XCTAssertTrue(store.advanceTimeRushMaze(after: completedRunID))
+        XCTAssertEqual(store.timeRushMazeNumber, 2)
+        XCTAssertEqual(store.clock?.remainingSeconds, remainingSeconds)
+        proof.continuation.yield(.optimal)
+    }
+
+    func testStoreDeallocationCancelsProofsFromEveryCompletedLevel() async throws {
+        let started = expectation(description: "Both completion proofs started")
+        started.expectedFulfillmentCount = 2
+        let cancelled = expectation(description: "Both owned proofs cancelled")
+        cancelled.expectedFulfillmentCount = 2
+        var store: GameStore? = GameStore(defaults: try makeDefaults(), uptime: { 0 }, completionVerifier: { _ in
+            // Each proof owns its wait; cancelling one must not finish the other.
+            let proof = AsyncStream<MazeOptimality.Result>.makeStream()
+            defer { proof.continuation.finish() }
+            started.fulfill()
+            return await withTaskCancellationHandler {
+                for await result in proof.stream { return result }
+                return .undetermined
+            } onCancel: {
+                cancelled.fulfill()
+            }
+        })
+        store?.setHaptics(false)
+        store?.setSound(false)
+        try complete(try XCTUnwrap(store))
+        XCTAssertTrue(store!.advanceCompletedLevel(for: store!.runID))
+        try complete(try XCTUnwrap(store))
+        await fulfillment(of: [started], timeout: 5)
+        weak var releasedStore = store
+        store = nil
+        XCTAssertNil(releasedStore, "Pending proofs must not retain the game store")
+        await fulfillment(of: [cancelled], timeout: 5)
+    }
+
+    func testPendingCrownResumesAfterAdvancingAndRestoringStore() async throws {
+        let defaults = try makeDefaults()
+        let started = expectation(description: "Original proof started")
+        let proof = AsyncStream<MazeOptimality.Result>.makeStream()
+        defer { proof.continuation.finish() }
+        var original: GameStore? = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { _ in
+            started.fulfill()
+            for await result in proof.stream { return result }
+            return .undetermined
+        })
+        original?.setHaptics(false)
+        original?.setSound(false)
+        try complete(try XCTUnwrap(original))
+        XCTAssertTrue(original!.advanceCompletedLevel(for: original!.runID))
+        await fulfillment(of: [started], timeout: 5)
+        XCTAssertEqual(try snapshot(defaults).pendingCompletions?.count, 1)
+        weak var released = original
+        original = nil
+        XCTAssertNil(released)
+
+        let resumed = expectation(description: "Original board proof resumed")
+        let restored = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { run in
+            XCTAssertEqual(run.level.number, 1)
+            XCTAssertEqual(run.moves, 8)
+            resumed.fulfill()
+            return .optimal
+        })
+        let crowned = expectation(description: "Restored proof awarded the original crown")
+        let observation = restored.$progress.first { $0.hasOptimalCompletion(number: 1, mode: .endless) }
+            .sink { _ in crowned.fulfill() }
+        await fulfillment(of: [resumed, crowned], timeout: 5)
+        withExtendedLifetime(observation) {}
+        XCTAssertEqual(restored.run.level.number, 2)
+        XCTAssertEqual(restored.run.moves, 0)
+        XCTAssertNil(restored.completedRunOptimalityIfReady(for: restored.runID))
+        XCTAssertNil(try snapshot(defaults).pendingCompletions)
+        XCTAssertEqual(restored.progress.points, 50)
+    }
+
+    func testRestoredCompletedRunSharesItsPendingProofAndRetriesFailure() async throws {
+        let defaults = try makeDefaults()
+        var original: GameStore? = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { _ in .undetermined })
+        original?.setHaptics(false)
+        original?.setSound(false)
+        try complete(try XCTUnwrap(original))
+        let failed = await original!.completedRunOptimality(for: original!.runID)
+        XCTAssertEqual(failed, .undetermined)
+        XCTAssertEqual(try snapshot(defaults).pendingCompletions?.count, 1)
+        original = nil
+
+        let resumed = expectation(description: "Only one resumed verification runs")
+        resumed.assertForOverFulfill = true
+        let restored = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { _ in
+            resumed.fulfill()
+            return .optimal
+        })
+        let result = await restored.completedRunOptimality(for: restored.runID)
+        await fulfillment(of: [resumed], timeout: 5)
+        XCTAssertEqual(result, .optimal)
+        XCTAssertEqual(restored.completedRunOptimalityIfReady(for: restored.runID), .optimal)
+        XCTAssertTrue(restored.progress.hasOptimalCompletion(number: 1, mode: .endless))
+        XCTAssertNil(try snapshot(defaults).pendingCompletions)
+    }
+
+    func testLeavingSpecialSessionCancelsItsUnsavedProof() async throws {
+        for daily in [false, true] {
+            let defaults = try makeDefaults()
+            let started = expectation(description: "Special proof started")
+            let cancelled = expectation(description: "Special proof cancelled on navigation")
+            let proof = AsyncStream<MazeOptimality.Result>.makeStream()
+            defer { proof.continuation.finish() }
+            let store = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { _ in
+                started.fulfill()
+                return await withTaskCancellationHandler {
+                    for await result in proof.stream { return result }
+                    return .undetermined
+                } onCancel: {
+                    cancelled.fulfill()
+                }
+            })
+            store.setHaptics(false)
+            store.setSound(false)
+            if daily { store.openDaily() }
+            else { store.openDuel(seed: 1, id: "cancel-proof") }
+            try complete(store)
+            await fulfillment(of: [started], timeout: 5)
+            store.endSpecialSession()
+            await fulfillment(of: [cancelled], timeout: 5)
+            XCTAssertNil(try snapshot(defaults).pendingCompletions)
+            XCTAssertFalse(store.progress.hasOptimalCompletion(number: 1, mode: .endless))
+        }
     }
 
     func testSpecialMazesAndSkippedLevelsDoNotEarnCatalogRecords() async throws {
@@ -151,6 +322,10 @@ final class GameLevelProgressTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
         return defaults
+    }
+
+    private func snapshot(_ defaults: UserDefaults) throws -> GameSnapshot {
+        try JSONDecoder().decode(GameSnapshot.self, from: XCTUnwrap(defaults.data(forKey: "prism.snapshot.v2")))
     }
 
     private func makeStore(_ defaults: UserDefaults) -> GameStore {

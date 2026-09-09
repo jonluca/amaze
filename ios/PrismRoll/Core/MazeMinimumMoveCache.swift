@@ -1,11 +1,11 @@
-/// Reuses bounded searches across views and completion checks without blocking
-/// the main actor. Both proven counts and completed, unproven searches are kept.
+/// Reuses exact native proofs across views and completion checks without blocking
+/// the main actor. Cancelled or failed work is never retained as a finished result.
 actor MazeMinimumMoveCache {
     static let shared = MazeMinimumMoveCache()
 
     private struct Entry {
         let level: MazeLevel
-        let minimumMoves: Int?
+        let minimumMoves: Int
     }
 
     private var entries: [Entry] = []
@@ -19,9 +19,9 @@ actor MazeMinimumMoveCache {
             return entry.minimumMoves
         }
 
-        let minimum = MazeOptimality.minimumMoves(for: level, isCancelled: { Task.isCancelled })
-        // A cancelled request must not suppress a later attempt for this board.
-        guard !Task.isCancelled else { return nil }
+        // A cancelled or failed request must not suppress a later attempt.
+        guard let minimum = MazeOptimality.minimumMoves(for: level, isCancelled: { Task.isCancelled }),
+              !Task.isCancelled else { return nil }
         if entries.count == capacity { entries.removeFirst() }
         entries.append(Entry(level: level, minimumMoves: minimum))
         return minimum

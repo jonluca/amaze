@@ -11,10 +11,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Feel every move") {
+                Section {
+                    Toggle("Sound", isOn: Binding(get: { store.progress.soundEnabled }, set: store.setSound))
+                        .accessibilityIdentifier("soundToggle")
                     Toggle("Haptics", isOn: Binding(get: { store.progress.hapticsEnabled }, set: store.setHaptics))
                         .accessibilityIdentifier("hapticsToggle")
-                    Toggle("Move sounds", isOn: Binding(get: { store.progress.soundEnabled }, set: store.setSound))
+                } header: {
+                    Text("Sound & haptics")
+                } footer: {
+                    Text("Turn both off to play without game sounds or vibrations.")
                 }
                 Section("Controls") {
                     Toggle("Direction buttons", isOn: Binding(

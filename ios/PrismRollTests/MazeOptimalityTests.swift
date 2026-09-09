@@ -14,17 +14,21 @@ final class MazeOptimalityTests: XCTestCase {
     func testClassicLevelSixteenHasVerifiedMinimumBelowItsGeneratedRoute() {
         let level = MazeLevel.generate(number: 16, mode: .endless)
         XCTAssertEqual(level.solution.count, 46)
-        XCTAssertEqual(MazeOptimality.minimumMoves(for: level, timeLimit: .seconds(5)), 38)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: level), 38)
     }
 
-    func testMinimumCountRespectsSearchBudgetsAndCancellation() {
-        let level = squareLevel()
-        XCTAssertNil(MazeOptimality.minimumMoves(for: level, stateLimit: 1))
-        XCTAssertNil(MazeOptimality.minimumMoves(for: level, stateLimit: 0))
-        XCTAssertNil(MazeOptimality.minimumMoves(for: level, stateLimit: -1))
-        XCTAssertNil(MazeOptimality.minimumMoves(for: level, timeLimit: .zero))
-        XCTAssertNil(MazeOptimality.minimumMoves(for: level, timeLimit: .milliseconds(-1)))
-        XCTAssertNil(MazeOptimality.minimumMoves(for: level, isCancelled: { true }))
+    func testLargerMazesMatchIndependentlyProvedFlowOptima() {
+        // These minima were proved by a separate integer-flow model; its Euler
+        // routes were replayed against the raw grids, independently of A*.
+        for (number, expected) in [(17, 39), (25, 42), (50, 58)] {
+            let level = MazeLevel.generate(number: number, mode: .endless)
+            XCTAssertEqual(MazeOptimality.minimumMoves(for: level), expected,
+                           "Classic level \(number)")
+        }
+    }
+
+    func testMinimumCountRespectsCancellation() {
+        XCTAssertNil(MazeOptimality.minimumMoves(for: squareLevel(), isCancelled: { true }))
     }
 
     func testMinimumCountHandlesAlreadyCompleteAndSingleMoveBoards() {
@@ -35,7 +39,7 @@ final class MazeOptimalityTests: XCTestCase {
         let corridor = MazeLevel(number: 1, mode: .endless, width: 16, height: 1,
                                  openCells: Set((0..<16).map { GridCell(row: 0, column: $0) }),
                                  start: start, solution: [], moveLimit: nil)
-        XCTAssertEqual(MazeOptimality.minimumMoves(for: corridor, stateLimit: 1), 1)
+        XCTAssertEqual(MazeOptimality.minimumMoves(for: corridor), 1)
     }
 
     func testMinimumCountRejectsUnsupportedOrUnreachableBoards() {
@@ -92,12 +96,9 @@ final class MazeOptimalityTests: XCTestCase {
         XCTAssertEqual(MazeOptimality.verify(MazeRun(level: squareLevel())), .incomplete)
     }
 
-    func testExhaustedBudgetAndCancellationDoNotClaimOptimality() {
-        var run = MazeRun(level: squareLevel(solution: [.right, .left, .right, .down, .left]))
+    func testCancellationDoesNotClaimOptimality() {
+        var run = MazeRun(level: squareLevel())
         for direction in run.level.solution { run.move(direction) }
-        XCTAssertEqual(MazeOptimality.verify(run, stateLimit: 1), .undetermined)
-        XCTAssertEqual(MazeOptimality.verify(run, stateLimit: 0), .undetermined)
-        XCTAssertEqual(MazeOptimality.verify(run, timeLimit: .zero), .undetermined)
         XCTAssertEqual(MazeOptimality.verify(run, isCancelled: { true }), .undetermined)
     }
 
@@ -131,33 +132,34 @@ final class MazeOptimalityTests: XCTestCase {
             let cells = Set(allCells.enumerated().compactMap { index, cell in
                 boardMask & (1 << index) == 0 ? nil : cell
             })
-            let start = cells.min()!
-            let level = MazeLevel(number: 1, mode: .endless, width: 3, height: 3,
-                                  openCells: cells, start: start, solution: [], moveLimit: nil)
-            let shortest = shortestCompletedRun(level)
-            XCTAssertEqual(MazeOptimality.minimumMoves(for: level), shortest?.moves, "Minimum on board \(boardMask)")
-            guard let shortest else { continue }
-            XCTAssertEqual(MazeOptimality.verify(shortest), .optimal, "Board \(boardMask)")
-            // A return trip before solving must fail, even with no stored route.
-            guard let direction = MoveDirection.allCases.first(where: {
-                !MazeSolver.path(from: start, direction: $0, in: cells).isEmpty
-            }) else { continue }
-            var detour = MazeRun(level: level)
-            detour.move(direction)
-            let reverse: MoveDirection = switch direction {
-            case .up: .down
-            case .down: .up
-            case .left: .right
-            case .right: .left
+            for start in cells.sorted() {
+                let level = MazeLevel(number: 1, mode: .endless, width: 3, height: 3,
+                                      openCells: cells, start: start, solution: [], moveLimit: nil)
+                let shortest = shortestCompletedRun(level)
+                XCTAssertEqual(MazeOptimality.minimumMoves(for: level), shortest?.moves, "Minimum on board \(boardMask)")
+                guard let shortest else { continue }
+                XCTAssertEqual(MazeOptimality.verify(shortest), .optimal, "Board \(boardMask)")
+                // A return trip before solving must fail, even with no stored route.
+                guard let direction = MoveDirection.allCases.first(where: {
+                    !MazeSolver.path(from: start, direction: $0, in: cells).isEmpty
+                }) else { continue }
+                var detour = MazeRun(level: level)
+                detour.move(direction)
+                let reverse: MoveDirection = switch direction {
+                case .up: .down
+                case .down: .up
+                case .left: .right
+                case .right: .left
+                }
+                detour.move(reverse)
+                guard !detour.isComplete,
+                      let route = MazeSolver.coveringRoute(openCells: cells, position: detour.position, painted: detour.painted)
+                else { continue }
+                for move in route { detour.move(move) }
+                XCTAssertTrue(detour.isComplete)
+                let expected: MazeOptimality.Result = detour.moves == shortest.moves ? .optimal : .notOptimal
+                XCTAssertEqual(MazeOptimality.verify(detour), expected, "Detour on board \(boardMask)")
             }
-            detour.move(reverse)
-            guard !detour.isComplete,
-                  let route = MazeSolver.coveringRoute(openCells: cells, position: detour.position, painted: detour.painted)
-            else { continue }
-            for move in route { detour.move(move) }
-            XCTAssertTrue(detour.isComplete)
-            let expected: MazeOptimality.Result = detour.moves == shortest.moves ? .optimal : .notOptimal
-            XCTAssertEqual(MazeOptimality.verify(detour), expected, "Detour on board \(boardMask)")
         }
     }
 

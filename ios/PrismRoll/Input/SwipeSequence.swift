@@ -3,13 +3,12 @@ import Foundation
 /// Tracks each finger independently, including overlapping short flicks.
 struct SwipeSequence<ContactID: Hashable> {
     private var strokes: [ContactID: SwipeStroke] = [:]
+    private var latestSampleTimestamps: [ContactID: TimeInterval] = [:]
     private(set) var hasEmitted = false
 
     var hasActiveContacts: Bool { !strokes.isEmpty }
 
     func contains(_ contact: ContactID) -> Bool { strokes[contact] != nil }
-
-    func needsDirection(for contact: ContactID) -> Bool { strokes[contact]?.hasEmitted == false }
 
     @discardableResult
     mutating func begin(_ contact: ContactID, at point: CGPoint) -> Bool {
@@ -29,6 +28,7 @@ struct SwipeSequence<ContactID: Hashable> {
         let direction = strokes[contact]?.finish(at: point)
         if direction != nil { hasEmitted = true }
         strokes[contact] = nil
+        latestSampleTimestamps[contact] = nil
         return direction
     }
 
@@ -37,7 +37,24 @@ struct SwipeSequence<ContactID: Hashable> {
         for (contact, history) in Dictionary(grouping: samples, by: \.contact) {
             guard var stroke = strokes[contact] else { continue }
             let original = stroke
-            let ordered = history.sorted { $0.timestamp < $1.timestamp }
+            let ordered = history.filter {
+                guard stroke.hasEmitted else { return true }
+                guard let latest = latestSampleTimestamps[contact] else { return true }
+                return $0.timestamp > latest
+            }.sorted { $0.timestamp < $1.timestamp }
+            if let latest = ordered.last { latestSampleTimestamps[contact] = latest.timestamp }
+            if stroke.hasEmitted {
+                // A held finger can turn several times in one delivered event.
+                // Process real history in order and never replay older samples.
+                for sample in ordered {
+                    if let direction = stroke.direction(at: sample.point) {
+                        recognized.append((direction, sample.timestamp))
+                    }
+                }
+                strokes[contact] = ending ? nil : stroke
+                if ending { latestSampleTimestamps[contact] = nil }
+                continue
+            }
             var recognition: (direction: MoveDirection, timestamp: TimeInterval)?
             // At lift-off the complete displacement is available. Do not let
             // an earlier coalesced wobble override that final direction.
@@ -65,8 +82,12 @@ struct SwipeSequence<ContactID: Hashable> {
                     return probe.direction(at: sample.point) == recognition.direction
                 }
                 recognized.append((recognition.direction, firstSupportingSample?.timestamp ?? recognition.timestamp))
+                // Initial flick selection above deliberately ignores obsolete
+                // drift. Start continuous turns at this event's current position.
+                if let latest = ordered.last { stroke.continueTracking(at: latest.point) }
             }
             strokes[contact] = ending ? nil : stroke
+            if ending { latestSampleTimestamps[contact] = nil }
         }
         if !recognized.isEmpty { hasEmitted = true }
         return recognized.sorted { $0.timestamp < $1.timestamp }.map(\.direction)
@@ -74,5 +95,6 @@ struct SwipeSequence<ContactID: Hashable> {
 
     mutating func cancel(_ contact: ContactID) {
         strokes[contact] = nil
+        latestSampleTimestamps[contact] = nil
     }
 }

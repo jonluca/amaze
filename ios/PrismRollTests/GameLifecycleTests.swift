@@ -133,14 +133,18 @@ final class GameLifecycleTests: XCTestCase {
         }
     }
 
-    func testHintRequiresMatchingPositionAndRewardCallback() throws {
-        try withDefaults { defaults in
+    func testHintRequiresMatchingPositionAndRewardCallback() async throws {
+        try await withAsyncDefaults { defaults in
             let store = GameStore(defaults: defaults)
             quiet(store)
+            let ready = await store.prepareOptimalHint()
+            XCTAssertTrue(ready)
             let stale = try XCTUnwrap(store.rewardRequest(.hint))
             store.move(try XCTUnwrap(store.run.hintDirection))
             store.applyReward(stale)
             XCTAssertNil(store.hint)
+            let nextReady = await store.prepareOptimalHint()
+            XCTAssertTrue(nextReady)
             let request = try XCTUnwrap(store.rewardRequest(.hint))
             store.beginReward()
             XCTAssertNil(store.hint)
@@ -357,6 +361,13 @@ final class GameLifecycleTests: XCTestCase {
     }
 
     private func quiet(_ store: GameStore) { store.setHaptics(false); store.setSound(false) }
+
+    private func withAsyncDefaults(_ body: (UserDefaults) async throws -> Void) async throws {
+        let suite = "PrismRoll.OptimalHintCompatibility.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try await body(defaults)
+    }
 
     private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         let suite = "PrismRoll.GameLifecycleTests.\(UUID().uuidString)"

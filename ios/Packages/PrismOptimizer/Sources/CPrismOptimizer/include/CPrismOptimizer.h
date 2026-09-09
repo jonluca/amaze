@@ -39,8 +39,9 @@ enum { PrismOptimizerMaximumRouteCount = 65280 };
 /// No time, search-node, or difficulty limit is imposed. Cancellation is polled
 /// while preparing the model and through native LP/MIP interrupt callbacks.
 ///
-/// Optimal is returned only after the integer objective and native lower bound
-/// agree and the resulting route replays legally and covers every open cell.
+/// Optimal is returned only after breadth-first search or the native integer
+/// objective/lower bound proves the minimum and an independent route replay
+/// legally covers every open cell.
 /// On Optimal, route_out holds route_count directions and minimum_moves equals
 /// route_count. On InsufficientCapacity, route_count reports the required size;
 /// other failures return -1 for minimum_moves and 0 for route_count.
@@ -49,6 +50,27 @@ PrismOptimizerResult PrismOptimizerSolve(
     int32_t height,
     const uint8_t *open_cells,
     int32_t start_index,
+    const uint8_t *hint_directions,
+    int32_t hint_count,
+    PrismOptimizerCancelCallback cancel,
+    void *context,
+    uint8_t *route_out,
+    int32_t route_capacity
+);
+
+/// Prove the minimum additional slides from the player's current state.
+/// `painted_cells` contains exactly width * height bytes, each 0 or 1; painted
+/// cells must be open and `position_index` must already be painted. Previously
+/// painted cells need not be reachable from the current position. Only the
+/// unpainted cells must be covered by the returned route. An already completed
+/// state returns Optimal with zero moves. Hints are replayed from this state.
+/// All board, direction, proof, cancellation and output rules above apply.
+PrismOptimizerResult PrismOptimizerSolveState(
+    int32_t width,
+    int32_t height,
+    const uint8_t *open_cells,
+    int32_t position_index,
+    const uint8_t *painted_cells,
     const uint8_t *hint_directions,
     int32_t hint_count,
     PrismOptimizerCancelCallback cancel,

@@ -46,6 +46,8 @@ struct Graph {
     int start;
     int openCount = 0;
     std::vector<uint8_t> open;
+    std::vector<uint8_t> initiallyPainted;
+    int remainingCount = 0;
     std::vector<int> nodes;
     std::vector<Edge> edges;
     std::vector<std::vector<int>> outgoing;
@@ -58,6 +60,7 @@ PrismOptimizerResult failure(PrismOptimizerStatus status) {
 }
 
 Graph makeGraph(int width, int height, const uint8_t *open, int start,
+                const uint8_t *initiallyPainted,
                 Cancellation &cancellation) {
     Graph graph{};
     graph.width = width;
@@ -65,6 +68,13 @@ Graph makeGraph(int width, int height, const uint8_t *open, int start,
     graph.start = start;
     graph.open.assign(open, open + width * height);
     graph.openCount = static_cast<int>(std::count(graph.open.begin(), graph.open.end(), 1));
+    graph.initiallyPainted.assign(width * height, 0);
+    if (initiallyPainted)
+        std::copy(initiallyPainted, initiallyPainted + width * height, graph.initiallyPainted.begin());
+    else
+        graph.initiallyPainted[start] = 1;
+    graph.remainingCount = graph.openCount - static_cast<int>(
+        std::count(graph.initiallyPainted.begin(), graph.initiallyPainted.end(), 1));
     graph.nodes.push_back(start);
     std::vector<int> index(width * height, -1);
     index[start] = 0;
@@ -110,7 +120,8 @@ Graph makeGraph(int width, int height, const uint8_t *open, int start,
     }
 
     for (int cell = 0; cell < width * height; ++cell) {
-        if (graph.open[cell] && cell != start) graph.requirements.push_back(coveringEdges[cell]);
+        if (graph.open[cell] && !graph.initiallyPainted[cell])
+            graph.requirements.push_back(coveringEdges[cell]);
     }
     // If every edge painting A also paints B, satisfying A satisfies B. Keep
     // only inclusion-minimal requirements. This changes no feasible route.
@@ -137,9 +148,8 @@ Graph makeGraph(int width, int height, const uint8_t *open, int start,
 std::vector<int> verifiedHint(const Graph &graph, const uint8_t *directions,
                               int count, Cancellation &cancellation) {
     if (!directions || count <= 0) return {};
-    std::vector<uint8_t> painted(graph.open.size(), 0);
-    painted[graph.start] = 1;
-    int remaining = graph.openCount - 1;
+    auto painted = graph.initiallyPainted;
+    int remaining = graph.remainingCount;
     int position = 0;
     std::vector<int> route;
     for (int index = 0; index < count && remaining > 0; ++index) {
@@ -162,6 +172,110 @@ std::vector<int> verifiedHint(const Graph &graph, const uint8_t *directions,
     return remaining == 0 ? route : std::vector<int>{};
 }
 
+// Paint history matters only through the inclusion-minimal requirements. For
+// small remaining problems, a compact breadth-first search proves the shortest
+// route directly, avoiding LP/MIP setup altogether. The allocation cap selects
+// an algorithm; it never limits the exact solver, which falls through to MIP.
+bool solveSmallGraph(const Graph &graph, std::vector<int> &route,
+                     bool &infeasible, Cancellation &cancellation) {
+    constexpr uint32_t kMaximumStates = 1u << 20;
+    const auto requirementCount = graph.requirements.size();
+    const uint32_t nodeCount = static_cast<uint32_t>(graph.nodes.size());
+    if (requirementCount >= 20 || (uint64_t{1} << requirementCount) * nodeCount > kMaximumStates)
+        return false;
+    const uint32_t complete = (uint32_t{1} << requirementCount) - 1;
+    std::vector<uint32_t> edgeMasks(graph.edges.size(), 0);
+    for (size_t requirement = 0; requirement < requirementCount; ++requirement) {
+        for (int edge : graph.requirements[requirement])
+            edgeMasks[edge] |= uint32_t{1} << requirement;
+    }
+    const auto stateCount = (complete + 1) * nodeCount;
+    std::vector<int> parent(stateCount, -1);
+    std::vector<int> parentEdge(stateCount, -1);
+    std::vector<uint32_t> queue{0};
+    parent[0] = 0;
+    for (size_t head = 0; head < queue.size(); ++head) {
+        if ((head & 255) == 0) cancellation.poll();
+        const uint32_t state = queue[head];
+        const uint32_t mask = state / nodeCount;
+        const uint32_t node = state % nodeCount;
+        for (int edge : graph.outgoing[node]) {
+            const uint32_t nextMask = mask | edgeMasks[edge];
+            const uint32_t next = nextMask * nodeCount + graph.edges[edge].destination;
+            if (parent[next] != -1) continue;
+            parent[next] = static_cast<int>(state);
+            parentEdge[next] = edge;
+            if (nextMask == complete) {
+                for (uint32_t cursor = next; cursor != 0; cursor = parent[cursor])
+                    route.push_back(parentEdge[cursor]);
+                std::reverse(route.begin(), route.end());
+                cancellation.poll();
+                return true;
+            }
+            queue.push_back(next);
+        }
+    }
+    infeasible = true;
+    return true;
+}
+
+// Repeatedly take a shortest path that paints a new cell. This cheaply supplies
+// a feasible incumbent and substantially tightens the commodity-flow bounds.
+// Directed mazes can trap this heuristic, so a failed attempt supplies no bound.
+std::vector<int> greedyRoute(const Graph &graph, int directionOffset,
+                             Cancellation &cancellation) {
+    auto painted = graph.initiallyPainted;
+    int remaining = graph.remainingCount;
+    int position = 0;
+    std::vector<int> route;
+    while (remaining > 0) {
+        cancellation.poll();
+        std::vector<int> parentEdge(graph.nodes.size(), -1);
+        std::vector<int> queue{position};
+        parentEdge[position] = -2;
+        int paintingEdge = -1;
+        for (size_t head = 0; head < queue.size() && paintingEdge < 0; ++head) {
+            const int node = queue[head];
+            // Rotating tie breaks cheaply diversifies the incumbent candidates.
+            for (int offset = 0; offset < 4 && paintingEdge < 0; ++offset) {
+                const int direction = (offset + directionOffset) % 4;
+                for (int edge : graph.outgoing[node]) {
+                    const auto &value = graph.edges[edge];
+                    if (value.direction != direction) continue;
+                    if (std::any_of(value.painted.begin(), value.painted.end(),
+                                    [&painted](int cell) { return !painted[cell]; })) {
+                        paintingEdge = edge;
+                        break;
+                    }
+                    if (parentEdge[value.destination] == -1) {
+                        parentEdge[value.destination] = edge;
+                        queue.push_back(value.destination);
+                    }
+                }
+            }
+        }
+        if (paintingEdge < 0) return {};
+        std::vector<int> segment{paintingEdge};
+        for (int node = graph.edges[paintingEdge].source; node != position;) {
+            const int edge = parentEdge[node];
+            segment.push_back(edge);
+            node = graph.edges[edge].source;
+        }
+        for (auto iterator = segment.rbegin(); iterator != segment.rend(); ++iterator) {
+            const auto &value = graph.edges[*iterator];
+            route.push_back(*iterator);
+            position = value.destination;
+            for (int cell : value.painted) {
+                if (!painted[cell]) {
+                    painted[cell] = 1;
+                    --remaining;
+                }
+            }
+        }
+    }
+    return route;
+}
+
 struct MatrixBuilder {
     HighsLp lp;
 
@@ -176,12 +290,18 @@ struct MatrixBuilder {
     void row(const std::vector<std::pair<int, double>> &terms, double lower, double upper) {
         // Several contributions can target the same variable (flow balance),
         // so consolidate before passing a sparse matrix to HiGHS.
-        std::vector<double> values(lp.num_col_, 0);
-        for (const auto &term : terms) values[term.first] += term.second;
-        for (int column = 0; column < lp.num_col_; ++column) {
-            if (values[column] == 0) continue;
+        auto sorted = terms;
+        std::sort(sorted.begin(), sorted.end(), [](const auto &left, const auto &right) {
+            return left.first < right.first;
+        });
+        for (size_t index = 0; index < sorted.size();) {
+            const int column = sorted[index].first;
+            double value = 0;
+            do { value += sorted[index++].second; }
+            while (index < sorted.size() && sorted[index].first == column);
+            if (value == 0) continue;
             lp.a_matrix_.index_.push_back(column);
-            lp.a_matrix_.value_.push_back(values[column]);
+            lp.a_matrix_.value_.push_back(value);
         }
         lp.a_matrix_.start_.push_back(static_cast<HighsInt>(lp.a_matrix_.index_.size()));
         lp.row_lower_.push_back(lower);
@@ -310,8 +430,7 @@ bool reconstruct(const Graph &graph, const std::vector<double> &solution, int up
     if (static_cast<int>(reverseRoute.size()) != total) return false;
 
     int position = 0;
-    std::vector<uint8_t> painted(graph.open.size(), 0);
-    painted[graph.start] = 1;
+    auto painted = graph.initiallyPainted;
     for (auto iterator = reverseRoute.rbegin(); iterator != reverseRoute.rend(); ++iterator) {
         cancellation.poll();
         const auto &edge = graph.edges[*iterator];
@@ -324,6 +443,7 @@ bool reconstruct(const Graph &graph, const std::vector<double> &solution, int up
 }
 
 PrismOptimizerResult solve(int width, int height, const uint8_t *open, int start,
+                           const uint8_t *initiallyPainted,
                            const uint8_t *hint, int hintCount, Cancellation &cancellation,
                            uint8_t *output, int capacity) {
     if (width < 1 || height < 1 || width > 16 || height > 16 || !open ||
@@ -331,21 +451,45 @@ PrismOptimizerResult solve(int width, int height, const uint8_t *open, int start
         (hintCount > 0 && !hint) || capacity < 0 || (capacity > 0 && !output))
         return failure(PrismOptimizerStatusInvalidInput);
     for (int cell = 0; cell < width * height; ++cell) {
-        if (open[cell] > 1) return failure(PrismOptimizerStatusInvalidInput);
+        if (open[cell] > 1 || (initiallyPainted && initiallyPainted[cell] > open[cell]))
+            return failure(PrismOptimizerStatusInvalidInput);
     }
-    if (!open[start]) return failure(PrismOptimizerStatusInvalidInput);
+    if (!open[start] || (initiallyPainted && !initiallyPainted[start]))
+        return failure(PrismOptimizerStatusInvalidInput);
     cancellation.poll();
-    const Graph graph = makeGraph(width, height, open, start, cancellation);
-    if (graph.openCount == 1) return {PrismOptimizerStatusOptimal, 0, 0, 0};
+    const Graph graph = makeGraph(width, height, open, start, initiallyPainted, cancellation);
+    if (graph.remainingCount == 0) return {PrismOptimizerStatusOptimal, 0, 0, 0};
     if (graph.requirements.empty() || graph.requirements.front().empty())
         return failure(PrismOptimizerStatusInfeasible);
 
-    const auto route = verifiedHint(graph, hint, hintCount, cancellation);
-    // Without a valid hint, a shortest covering walk has at most T-1 first-paint
+    std::vector<int> smallRoute;
+    bool smallInfeasible = false;
+    if (solveSmallGraph(graph, smallRoute, smallInfeasible, cancellation)) {
+        if (smallInfeasible) return failure(PrismOptimizerStatusInfeasible);
+        std::vector<uint8_t> directions;
+        for (int edge : smallRoute) directions.push_back(graph.edges[edge].direction);
+        if (verifiedHint(graph, directions.data(), static_cast<int>(directions.size()),
+                         cancellation) != smallRoute)
+            return failure(PrismOptimizerStatusUnproven);
+        const int minimum = static_cast<int>(directions.size());
+        cancellation.poll();
+        if (capacity < minimum)
+            return {PrismOptimizerStatusInsufficientCapacity, -1, minimum, static_cast<double>(minimum)};
+        std::copy(directions.begin(), directions.end(), output);
+        return {PrismOptimizerStatusOptimal, minimum, minimum, static_cast<double>(minimum)};
+    }
+
+    auto route = verifiedHint(graph, hint, hintCount, cancellation);
+    for (int offset = 0; offset < 4; ++offset) {
+        auto candidate = greedyRoute(graph, offset, cancellation);
+        if (!candidate.empty() && (route.empty() || candidate.size() < route.size()))
+            route = std::move(candidate);
+    }
+    // Without a valid hint, a shortest covering walk has at most R first-paint
     // events. Between consecutive events, delete repeated-position loops (they
-    // paint nothing new): each segment then has at most N edges. N*(T-1) is a
+    // paint nothing new): each segment then has at most N edges. N*R is a
     // finite, valid bound on some optimum, even on non-strongly-connected graphs.
-    const int universalBound = static_cast<int>(graph.nodes.size()) * (graph.openCount - 1);
+    const int universalBound = static_cast<int>(graph.nodes.size()) * graph.remainingCount;
     const int upperBound = route.empty() ? universalBound
         : std::min(universalBound, static_cast<int>(route.size()));
 
@@ -417,12 +561,30 @@ extern "C" PrismOptimizerResult PrismOptimizerSolve(
 ) {
     try {
         Cancellation cancellation{cancel, context};
-        return solve(width, height, open_cells, start_index, hint_directions, hint_count,
+        return solve(width, height, open_cells, start_index, nullptr, hint_directions, hint_count,
                      cancellation, route_out, route_capacity);
     } catch (const Cancelled &) {
         return failure(PrismOptimizerStatusCancelled);
     } catch (...) {
         // Includes allocation failures. No C++ exception may cross into Swift.
+        return failure(PrismOptimizerStatusInternalError);
+    }
+}
+
+extern "C" PrismOptimizerResult PrismOptimizerSolveState(
+    int32_t width, int32_t height, const uint8_t *open_cells, int32_t position_index,
+    const uint8_t *painted_cells, const uint8_t *hint_directions, int32_t hint_count,
+    PrismOptimizerCancelCallback cancel, void *context,
+    uint8_t *route_out, int32_t route_capacity
+) {
+    if (!painted_cells) return failure(PrismOptimizerStatusInvalidInput);
+    try {
+        Cancellation cancellation{cancel, context};
+        return solve(width, height, open_cells, position_index, painted_cells,
+                     hint_directions, hint_count, cancellation, route_out, route_capacity);
+    } catch (const Cancelled &) {
+        return failure(PrismOptimizerStatusCancelled);
+    } catch (...) {
         return failure(PrismOptimizerStatusInternalError);
     }
 }

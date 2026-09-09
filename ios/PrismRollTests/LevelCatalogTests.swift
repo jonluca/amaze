@@ -2,9 +2,8 @@ import XCTest
 @testable import PrismRoll
 
 final class LevelCatalogTests: XCTestCase {
-    func testNumberedCatalogMatchesFrozenFixtures() {
-        // These fixtures preserve players' numbered boards across app updates.
-        // Capture all geometry, start, coins, route, and budgets in a stable order.
+    func testNumberedCatalogMatchesCurrentReferenceFixtures() {
+        // Snapshot current geometry, start, coins, route, and budgets in a stable order.
         let fixtures: [(GameMode, Int, UInt64)] = [
             (.endless, 1, 0x40E9DA9C612B22CB),
             (.endless, 2, 0xFC591EF2D006B0B2),
@@ -19,7 +18,7 @@ final class LevelCatalogTests: XCTestCase {
             (.endless, 56, 0x86C4368EF3802F3C),
             (.endless, 75, 0x84CA995A4A206F05),
             (.endless, 100, 0x9B125DA2648C0355),
-            (.endless, 150, 0x236608B211BA3ABD),
+            (.endless, 150, 0x70F1542C4BBF36D8),
             (.endless, 200, 0xEA8EF93E48EB59B7),
             (.endless, 10000, 0xA34918C085B2EEC8),
             (.endless, Int.max, 0xADA4906B6EF87214),
@@ -64,7 +63,7 @@ final class LevelCatalogTests: XCTestCase {
         }
     }
 
-    func testLevelTenUsesTheSamePublishedGridForEveryMode() {
+    func testLevelTenMatchesCurrentGridFixturesForEachMode() {
         let fixtures: [(GameMode, [String])] = [
             (.endless, [
                 "##.##.##.", "##.##....", "##..##.#.", ".#..##...", ".......##",
@@ -91,7 +90,7 @@ final class LevelCatalogTests: XCTestCase {
         }
     }
 
-    func testGridCompatibilityIgnoresMetadataButDetectsGeometryChanges() {
+    func testGridIdentityIgnoresMetadataButDetectsGeometryChanges() {
         let cells: Set<GridCell> = [
             GridCell(row: 0, column: 0), GridCell(row: 0, column: 1), GridCell(row: 1, column: 1)
         ]

@@ -10,23 +10,27 @@ struct RewardButton: View {
         if isAvailable {
             Button(action: watch) {
                 VStack(spacing: 4) {
-                    Label(isIntroductoryHint ? "Free hint" : title, systemImage: icon)
-                        .font(.subheadline.weight(.semibold))
-                    Text(isIntroductoryHint ? "First maze" : "Watch ad")
+                    HStack(spacing: 6) {
+                        if isPreparingHint { ProgressView().controlSize(.small) }
+                        Label(isIntroductoryHint ? "Free hint" : title, systemImage: icon)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    Text(isPreparingHint ? "Finding best move" : isIntroductoryHint ? "First maze" : "Watch ad")
                         .font(.caption).foregroundStyle(Palette.ink.opacity(0.8))
                 }
                 .frame(maxWidth: .infinity, minHeight: 36)
             }
             .buttonStyle(.bordered)
             .controlSize(.regular)
-            .disabled(ads.isPresenting || ads.isPrivacyFormPresenting || store.isRewardPending)
+            .disabled(ads.isPresenting || ads.isPrivacyFormPresenting || store.isRewardPending || isPreparingHint)
             .accessibilityLabel(isIntroductoryHint ? "Free hint, first maze" : "\(kind == .hint ? "Show hint" : kind.title), Watch ad")
-            .accessibilityHint(isIntroductoryHint ? "Shows the next direction." : "Watch a video ad to receive this reward.")
+            .accessibilityHint(isPreparingHint ? "Finding the shortest route from your current position." : isIntroductoryHint ? "Shows the next direction on a shortest route." : "Watch a video ad to receive this reward.")
             .accessibilityIdentifier("reward_\(kind.rawValue)")
         }
     }
 
     private var isIntroductoryHint: Bool { kind == .hint && store.offersIntroductoryHints }
+    private var isPreparingHint: Bool { kind == .hint && store.isPreparingOptimalHint }
 
     private var isAvailable: Bool {
         if isIntroductoryHint { return true }
@@ -48,6 +52,10 @@ struct RewardButton: View {
 #if DEBUG
         if isTestHint { store.showHint(); return }
 #endif
+        if kind == .hint, !store.hasOptimalHint {
+            Task { await store.prepareOptimalHint() }
+            return
+        }
         guard ads.canShowRewarded else {
             ads.prepare()
             return

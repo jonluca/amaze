@@ -16,7 +16,7 @@ struct TutorialTipView: View {
                     .font(.subheadline.weight(.semibold))
                 Text(instruction ?? (hasMoved
                      ? "Fill every path to finish. Blocked swipes don’t use a move."
-                     : "Swipe up, down, left or right. The ball stops at a wall."))
+                     : "Swipe to roll to a wall. Keep your finger down and drag to change direction."))
                     .font(.caption).foregroundStyle(Palette.ink.opacity(0.8))
                     .accessibilityIdentifier("playInstructions")
             }

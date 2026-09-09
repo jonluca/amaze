@@ -39,6 +39,8 @@ final class GameLevelProgressTests: XCTestCase {
         store.move(first)
         store.move(reverse)
         store.move(first)
+        let hintReady = await store.prepareOptimalHint()
+        XCTAssertTrue(hintReady)
         try complete(store)
         let slowerMoves = store.run.moves
         let result = await store.completedRunOptimality(for: store.runID)
@@ -80,22 +82,23 @@ final class GameLevelProgressTests: XCTestCase {
         })
         store.setHaptics(false)
         store.setSound(false)
+        store.switchMode(.challenge) // Exercise a mode without bundled minimum counts.
         let crowned = expectation(description: "Delayed proof crowns the original level")
-        let observation = store.$progress.first { $0.hasOptimalCompletion(number: 1, mode: .endless) }
+        let observation = store.$progress.first { $0.hasOptimalCompletion(number: 1, mode: .challenge) }
             .sink { _ in crowned.fulfill() }
         try complete(store)
         let completedRunID = store.runID
         XCTAssertNil(store.completedRunOptimalityIfReady(for: completedRunID))
         XCTAssertTrue(store.advanceCompletedLevel(for: completedRunID))
         XCTAssertEqual(store.run.level.number, 2)
-        XCTAssertFalse(store.progress.hasOptimalCompletion(number: 1, mode: .endless))
+        XCTAssertFalse(store.progress.hasOptimalCompletion(number: 1, mode: .challenge))
 
         proof.continuation.yield(.optimal)
         await fulfillment(of: [crowned], timeout: 5)
         withExtendedLifetime(observation) {}
         XCTAssertNil(store.completedRunOptimalityIfReady(for: completedRunID))
         XCTAssertNil(store.completedRunOptimalityIfReady(for: store.runID))
-        XCTAssertTrue(makeStore(defaults).progress.hasOptimalCompletion(number: 1, mode: .endless))
+        XCTAssertTrue(makeStore(defaults).progress.hasOptimalCompletion(number: 1, mode: .challenge))
     }
 
     func testPendingProofAllowsNextTimeRushMaze() throws {
@@ -137,6 +140,7 @@ final class GameLevelProgressTests: XCTestCase {
         })
         store?.setHaptics(false)
         store?.setSound(false)
+        store?.switchMode(.challenge)
         try complete(try XCTUnwrap(store))
         XCTAssertTrue(store!.advanceCompletedLevel(for: store!.runID))
         try complete(try XCTUnwrap(store))
@@ -159,7 +163,9 @@ final class GameLevelProgressTests: XCTestCase {
         })
         original?.setHaptics(false)
         original?.setSound(false)
+        original?.switchMode(.challenge)
         try complete(try XCTUnwrap(original))
+        let originalMoves = try XCTUnwrap(original).run.moves
         XCTAssertTrue(original!.advanceCompletedLevel(for: original!.runID))
         await fulfillment(of: [started], timeout: 5)
         XCTAssertEqual(try snapshot(defaults).pendingCompletions?.count, 1)
@@ -170,12 +176,12 @@ final class GameLevelProgressTests: XCTestCase {
         let resumed = expectation(description: "Original board proof resumed")
         let restored = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { run in
             XCTAssertEqual(run.level.number, 1)
-            XCTAssertEqual(run.moves, 8)
+            XCTAssertEqual(run.moves, originalMoves)
             resumed.fulfill()
             return .optimal
         })
         let crowned = expectation(description: "Restored proof awarded the original crown")
-        let observation = restored.$progress.first { $0.hasOptimalCompletion(number: 1, mode: .endless) }
+        let observation = restored.$progress.first { $0.hasOptimalCompletion(number: 1, mode: .challenge) }
             .sink { _ in crowned.fulfill() }
         await fulfillment(of: [resumed, crowned], timeout: 5)
         withExtendedLifetime(observation) {}
@@ -191,6 +197,7 @@ final class GameLevelProgressTests: XCTestCase {
         var original: GameStore? = GameStore(defaults: defaults, uptime: { 0 }, completionVerifier: { _ in .undetermined })
         original?.setHaptics(false)
         original?.setSound(false)
+        original?.switchMode(.challenge)
         try complete(try XCTUnwrap(original))
         let failed = await original!.completedRunOptimality(for: original!.runID)
         XCTAssertEqual(failed, .undetermined)
@@ -207,7 +214,7 @@ final class GameLevelProgressTests: XCTestCase {
         await fulfillment(of: [resumed], timeout: 5)
         XCTAssertEqual(result, .optimal)
         XCTAssertEqual(restored.completedRunOptimalityIfReady(for: restored.runID), .optimal)
-        XCTAssertTrue(restored.progress.hasOptimalCompletion(number: 1, mode: .endless))
+        XCTAssertTrue(restored.progress.hasOptimalCompletion(number: 1, mode: .challenge))
         XCTAssertNil(try snapshot(defaults).pendingCompletions)
     }
 

@@ -27,6 +27,30 @@ struct ProgressData: Codable, Equatable, Sendable {
     private struct LevelRecord: Codable, Equatable, Sendable {
         var bestMoves: Int
         var hasOptimalCompletion: Bool
+        var board: RecordedBoard?
+    }
+
+    private struct RecordedBoard: Codable, Equatable, Sendable {
+        let width: Int
+        let height: Int
+        let startIndex: Int
+        let masks: [UInt64]
+
+        init?(_ level: MazeLevel) {
+            guard (1...16).contains(level.width), (1...16).contains(level.height),
+                  (0..<level.height).contains(level.start.row),
+                  (0..<level.width).contains(level.start.column) else { return nil }
+            width = level.width
+            height = level.height
+            startIndex = level.start.row * 16 + level.start.column
+            var occupancy = [UInt64](repeating: 0, count: 4)
+            for cell in level.openCells {
+                guard (0..<height).contains(cell.row), (0..<width).contains(cell.column) else { return nil }
+                let index = cell.row * 16 + cell.column
+                occupancy[index / 64] |= UInt64(1) << (index % 64)
+            }
+            masks = occupancy
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -123,6 +147,14 @@ struct ProgressData: Codable, Equatable, Sendable {
         return levelRecords[key]?.hasOptimalCompletion == true
     }
 
+    /// A proof belongs to its exact board, including the starting position.
+    func optimalMoves(for level: MazeLevel) -> Int? {
+        guard hasCompleted(level), let board = RecordedBoard(level),
+              let record = levelRecords[completionKey(for: level)],
+              record.hasOptimalCompletion, record.board == board else { return nil }
+        return record.bestMoves
+    }
+
     /// Save evidence from a completed run without awarding completion coins.
     /// Time Rush records each of its five mazes by its zero-based stage index.
     mutating func recordCompletedRun(
@@ -134,8 +166,14 @@ struct ProgressData: Codable, Equatable, Sendable {
             guard let stageIndex, (0..<5).contains(stageIndex) else { return }
             key += ":stage:\(stageIndex)"
         }
-        var record = levelRecords[key] ?? LevelRecord(bestMoves: run.moves, hasOptimalCompletion: false)
-        record.bestMoves = min(record.bestMoves, run.moves)
+        let board = RecordedBoard(run.level)
+        var record = levelRecords[key].flatMap { $0.board == board ? $0 : nil }
+            ?? LevelRecord(bestMoves: run.moves, hasOptimalCompletion: false, board: board)
+        if optimality == .optimal {
+            record.bestMoves = run.moves
+        } else if !record.hasOptimalCompletion {
+            record.bestMoves = min(record.bestMoves, run.moves)
+        }
         record.hasOptimalCompletion = record.hasOptimalCompletion || optimality == .optimal
         levelRecords[key] = record
     }

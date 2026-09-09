@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class GameDifficultyCompatibilityTests: XCTestCase {
-    func testExistingRunsKeepExactGeometryHintsAndExtensionsUntilNextLevel() throws {
+    func testDifferingSoloGridsRefreshWhileKeepingExtensionsWalletAndUnlocks() throws {
         let suite = "PrismRoll.DifficultyCompatibility.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -26,25 +26,28 @@ final class GameDifficultyCompatibilityTests: XCTestCase {
                                     clocks: [:], mode: .endless, dailyRun: nil, dailyID: nil,
                                     dailyActive: false, themeID: "aurora")
         defaults.set(try JSONEncoder().encode(snapshot), forKey: "prism.snapshot.v2")
+        let canonicalClassic = MazeLevel.generate(number: 5, mode: .endless)
+        var canonicalChallenge = MazeRun(level: .generate(number: 5, mode: .challenge))
+        canonicalChallenge.grantExtraMoves(count: 3)
         let store = GameStore(defaults: defaults, uptime: { 0 })
-        XCTAssertEqual(store.run, classic)
+        XCTAssertEqual(store.run, MazeRun(level: canonicalClassic))
         XCTAssertEqual(store.progress, progress)
         store.switchMode(.challenge)
-        XCTAssertEqual(store.run, challenge)
+        XCTAssertEqual(store.run, canonicalChallenge)
         XCTAssertEqual(store.run.extraMovesGranted, 3)
         store.openLevel(5)
-        XCTAssertEqual(store.run, challenge)
+        XCTAssertEqual(store.run, canonicalChallenge)
         store.switchMode(.endless)
-        XCTAssertEqual(store.run, classic)
+        XCTAssertEqual(store.run, MazeRun(level: canonicalClassic))
         store.replay()
-        XCTAssertEqual(store.run.level, classic.level)
+        XCTAssertEqual(store.run.level, canonicalClassic)
         XCTAssertEqual(store.run.moves, 0)
-        XCTAssertEqual(store.run.hintDirection, .right)
+        XCTAssertEqual(store.run.hintDirection, canonicalClassic.solution.first)
         for direction in store.run.level.solution { store.move(direction) }
         XCTAssertTrue(store.advanceCompletedLevel(for: store.runID))
         XCTAssertEqual(store.run.level.number, 6)
         XCTAssertGreaterThan(store.run.level.width, classic.level.width)
-        XCTAssertEqual(store.progress.points, 425)
+        XCTAssertEqual(store.progress.points, 375 + 50 + canonicalClassic.coinCells.count * MazeLevel.coinValue)
         XCTAssertEqual(store.progress.selectedSkinID, "mint")
         let restored = GameStore(defaults: defaults, uptime: { 0 })
         XCTAssertEqual(restored.run, store.run)
@@ -81,7 +84,7 @@ final class GameDifficultyCompatibilityTests: XCTestCase {
         XCTAssertTrue(store.progress.hasCompletedDailyChallenge(daily))
     }
 
-    func testExistingTimeRushCourseKeepsItsGeometryStageAndOriginalClockUntilRestart() throws {
+    func testDifferingTimeRushCourseRefreshesWithEarnedTimeAndWalletPreserved() throws {
         let suite = "PrismRoll.CourseDifficultyCompatibility.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -100,26 +103,31 @@ final class GameDifficultyCompatibilityTests: XCTestCase {
             mode: .timed, dailyRun: nil, dailyID: nil, dailyActive: false, themeID: "aurora", timeRushSession: session)
         defaults.set(try JSONEncoder().encode(snapshot), forKey: "prism.snapshot.v2")
 
+        let canonicalCourse = TimeRushCourse.generate(number: 5)
+        let extendedClock = TimedRunState(remainingSeconds: canonicalCourse.timeLimit + 60, rewardedExtensions: 2)
         let restored = GameStore(defaults: defaults, uptime: { 0 })
-        XCTAssertEqual(restored.run, run)
-        XCTAssertEqual(restored.timeRushSession, session)
-        XCTAssertEqual(restored.clock, clock)
+        XCTAssertEqual(restored.run, MazeRun(level: canonicalCourse.levels[0]))
+        XCTAssertEqual(restored.timeRushSession, TimeRushSession(course: canonicalCourse))
+        XCTAssertEqual(restored.clock, extendedClock)
         XCTAssertEqual(restored.progress, progress)
-        restored.move(.down)
-        restored.move(.left)
+        for direction in restored.run.level.solution { restored.move(direction) }
         XCTAssertTrue(restored.advanceTimeRushMaze(after: restored.runID))
-        XCTAssertEqual(restored.timeRushMazeNumber, 4)
-        XCTAssertEqual(restored.run.level, oldLevel)
-        XCTAssertEqual(restored.clock, clock)
+        XCTAssertEqual(restored.timeRushMazeNumber, 2)
+        XCTAssertEqual(restored.run.level, canonicalCourse.levels[1])
+        XCTAssertEqual(restored.clock?.remainingSeconds, extendedClock.remainingSeconds)
+        XCTAssertEqual(restored.clock?.rewardedExtensions, 2)
+        let progressAfterMaze = restored.progress
+        XCTAssertEqual(progressAfterMaze.points, progress.points)
+        XCTAssertEqual(progressAfterMaze.timedLevel, progress.timedLevel)
+        let relaunched = GameStore(defaults: defaults, uptime: { 0 })
+        XCTAssertEqual(relaunched.run, restored.run)
+        XCTAssertEqual(relaunched.timeRushSession, restored.timeRushSession)
+        XCTAssertEqual(relaunched.clock, restored.clock)
         restored.replay()
-        let retimedCourse = oldCourse.retimed()
         XCTAssertEqual(restored.timeRushMazeNumber, 1)
-        XCTAssertEqual(restored.run.level, retimedCourse.levels[0])
-        XCTAssertEqual(restored.run.level.openCells, oldLevel.openCells)
-        XCTAssertEqual(restored.run.level.solution, oldLevel.solution)
-        XCTAssertEqual(restored.clock?.remainingSeconds, retimedCourse.timeLimit)
-        XCTAssertLessThan(retimedCourse.timeLimit, 60)
-        XCTAssertEqual(restored.progress, progress)
+        XCTAssertEqual(restored.run.level, canonicalCourse.levels[0])
+        XCTAssertEqual(restored.clock?.remainingSeconds, canonicalCourse.timeLimit)
+        XCTAssertEqual(restored.progress, progressAfterMaze)
     }
 
     private func legacyLevel(mode: GameMode, number: Int = 5) -> MazeLevel {

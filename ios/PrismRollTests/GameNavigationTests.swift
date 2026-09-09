@@ -4,12 +4,14 @@ import XCTest
 
 @MainActor
 final class GameNavigationTests: XCTestCase {
-    func testJourneyResumesEveryModeWithoutLosingMovesPaintOrRewards() throws {
-        try withDefaults { defaults in
+    func testJourneyResumesEveryModeWithoutLosingMovesPaintOrRewards() async throws {
+        try await withAsyncDefaults { defaults in
             let store = makeStore(defaults: defaults)
             for mode in GameMode.allCases {
                 store.switchMode(mode)
                 store.move(try XCTUnwrap(store.run.hintDirection))
+                let ready = await store.prepareOptimalHint()
+                XCTAssertTrue(ready)
                 let before = store.run
                 let balance = store.progress.points
                 let oldInputID = store.inputID
@@ -310,6 +312,13 @@ final class GameNavigationTests: XCTestCase {
         store.setHaptics(false)
         store.setSound(false)
         return store
+    }
+
+    private func withAsyncDefaults(_ body: (UserDefaults) async throws -> Void) async throws {
+        let suite = "PrismRoll.OptimalHintCompatibility.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try await body(defaults)
     }
 
     private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {

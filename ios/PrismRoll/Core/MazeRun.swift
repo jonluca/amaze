@@ -5,6 +5,7 @@ struct MazeRun: Codable, Equatable, Sendable {
     private(set) var moves: Int
     private(set) var extraMovesGranted: Int
     private var hintRoute: [MoveDirection]
+    private(set) var hintIsOptimal = false
 
     private enum CodingKeys: String, CodingKey {
         case level, position, painted, moves, extraMovesGranted, hintRoute
@@ -59,7 +60,7 @@ struct MazeRun: Codable, Equatable, Sendable {
     }
 
     @discardableResult
-    mutating func move(_ direction: MoveDirection) -> [GridCell] {
+    mutating func move(_ direction: MoveDirection, recomputeFallbackHint: Bool = true) -> [GridCell] {
         guard !isComplete, !isFailed else { return [] }
         let cells = MazeSolver.path(from: position, direction: direction, in: level.openCells)
         guard let destination = cells.last else { return [] }
@@ -69,12 +70,40 @@ struct MazeRun: Codable, Equatable, Sendable {
         if hintRoute.first == direction {
             hintRoute.removeFirst()
         } else {
-            hintRoute = MazeSolver.coveringRoute(
+            hintIsOptimal = false
+            hintRoute = recomputeFallbackHint ? (MazeSolver.coveringRoute(
                 openCells: level.openCells, position: position, painted: painted
-            ) ?? []
+            ) ?? []) : []
         }
         if isComplete { hintRoute.removeAll() }
         return cells
+    }
+
+    /// Install only routes returned by a proved optimizer result. Legality is
+    /// checked here; proving minimality remains the native solver's responsibility.
+    @discardableResult
+    mutating func installOptimalRoute(_ route: [MoveDirection]) -> Bool {
+        var cursor = position
+        var covered = painted
+        for direction in route {
+            guard covered != level.openCells else { return false }
+            let cells = MazeSolver.path(from: cursor, direction: direction, in: level.openCells)
+            guard let destination = cells.last else { return false }
+            covered.formUnion(cells)
+            cursor = destination
+        }
+        guard covered == level.openCells else { return false }
+        hintRoute = route
+        hintIsOptimal = true
+        return true
+    }
+
+    // Proof availability is ephemeral and is deliberately not trusted on decode.
+    // Equality continues to describe persisted gameplay state.
+    static func == (lhs: MazeRun, rhs: MazeRun) -> Bool {
+        lhs.level == rhs.level && lhs.position == rhs.position && lhs.painted == rhs.painted
+            && lhs.moves == rhs.moves && lhs.extraMovesGranted == rhs.extraMovesGranted
+            && lhs.hintRoute == rhs.hintRoute
     }
 
     mutating func reset() { self = MazeRun(level: level) }

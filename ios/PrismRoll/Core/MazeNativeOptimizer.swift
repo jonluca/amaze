@@ -19,16 +19,29 @@ enum MazeNativeOptimizer {
         level: MazeLevel,
         isCancelled: @escaping @Sendable () -> Bool = { false }
     ) -> Result {
+        solve(level: level, position: level.start, painted: [level.start], isCancelled: isCancelled)
+    }
+
+    /// Returns the exact number of additional swipes from this paint state.
+    static func solve(
+        level: MazeLevel,
+        position: GridCell,
+        painted: Set<GridCell>,
+        isCancelled: @escaping @Sendable () -> Bool = { false }
+    ) -> Result {
         guard !isCancelled() else { return .cancelled }
         guard (1...16).contains(level.width), (1...16).contains(level.height),
-              !level.openCells.isEmpty, level.openCells.contains(level.start),
+              !level.openCells.isEmpty, level.openCells.contains(position),
+              painted.contains(position), painted.isSubset(of: level.openCells),
               level.openCells.allSatisfy({
                   (0..<level.height).contains($0.row) && (0..<level.width).contains($0.column)
               }) else { return .failure }
 
         var cells = [UInt8](repeating: 0, count: level.width * level.height)
         for cell in level.openCells { cells[cell.row * level.width + cell.column] = 1 }
-        let hint = level.solution.map(encode)
+        var initialPaint = [UInt8](repeating: 0, count: cells.count)
+        for cell in painted { initialPaint[cell.row * level.width + cell.column] = 1 }
+        let hint = position == level.start ? level.solution.map(encode) : []
         guard hint.count <= Int(Int32.max) else { return .failure }
         var nativeRoute = [UInt8](repeating: 0, count: Int(PrismOptimizerMaximumRouteCount))
         let context = CallbackContext(isCancelled: isCancelled)
@@ -38,17 +51,19 @@ enum MazeNativeOptimizer {
             cells.withUnsafeBufferPointer { cells in
                 hint.withUnsafeBufferPointer { hint in
                     nativeRoute.withUnsafeMutableBufferPointer { route in
-                        PrismOptimizerSolve(
-                            Int32(level.width), Int32(level.height), cells.baseAddress,
-                            Int32(level.start.row * level.width + level.start.column),
-                            hint.baseAddress, Int32(hint.count),
-                            { pointer in
-                                guard let pointer else { return 1 }
-                                let context = Unmanaged<CallbackContext>.fromOpaque(pointer).takeUnretainedValue()
-                                return context.isCancelled() ? 1 : 0
-                            }, Unmanaged.passUnretained(context).toOpaque(),
-                            route.baseAddress, Int32(route.count)
-                        )
+                        initialPaint.withUnsafeBufferPointer { paint in
+                            PrismOptimizerSolveState(
+                                Int32(level.width), Int32(level.height), cells.baseAddress,
+                                Int32(position.row * level.width + position.column), paint.baseAddress,
+                                hint.baseAddress, Int32(hint.count),
+                                { pointer in
+                                    guard let pointer else { return 1 }
+                                    let context = Unmanaged<CallbackContext>.fromOpaque(pointer).takeUnretainedValue()
+                                    return context.isCancelled() ? 1 : 0
+                                }, Unmanaged.passUnretained(context).toOpaque(),
+                                route.baseAddress, Int32(route.count)
+                            )
+                        }
                     }
                 }
             }
@@ -67,20 +82,18 @@ enum MazeNativeOptimizer {
         // No native incumbent or numerical rounding alone can supply a target.
         let route = nativeRoute.prefix(Int(result.route_count)).compactMap(decode)
         guard route.count == Int(result.route_count) else { return .failure }
-        let replayLevel = MazeLevel(
-            number: level.number, mode: level.mode, width: level.width, height: level.height,
-            openCells: level.openCells, start: level.start, solution: route,
-            moveLimit: nil, timeLimit: nil, coinCells: level.coinCells
-        )
-        // The mathematical minimum depends on geometry, not a mode's allowance.
-        // Supplying the returned route also avoids recomputing hints on each move.
-        var run = MazeRun(level: replayLevel)
+        var cursor = position
+        var covered = painted
         for (index, direction) in route.enumerated() {
             if index.isMultiple(of: 128), isCancelled() { return .cancelled }
-            guard !run.isComplete, !run.move(direction).isEmpty else { return .failure }
+            guard covered != level.openCells else { return .failure }
+            let cells = MazeSolver.path(from: cursor, direction: direction, in: level.openCells)
+            guard let destination = cells.last else { return .failure }
+            covered.formUnion(cells)
+            cursor = destination
         }
-        guard run.isComplete, run.moves == Int(result.minimum_moves) else { return .failure }
-        return .optimal(moves: run.moves, route: route)
+        guard covered == level.openCells else { return .failure }
+        return .optimal(moves: route.count, route: route)
     }
 
     private static func encode(_ direction: MoveDirection) -> UInt8 {

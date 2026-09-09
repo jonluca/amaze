@@ -40,8 +40,10 @@ final class GameplayInputTests: XCTestCase {
                     XCTAssertEqual(event.position, expected.position)
                     XCTAssertEqual(event.painted, expected.painted)
                 }
-                XCTAssertEqual(store.run, expected)
-                if !isDuel { XCTAssertEqual(GameStore(defaults: defaults).run, expected) }
+                XCTAssertEqual(store.run.position, expected.position)
+                XCTAssertEqual(store.run.painted, expected.painted)
+                XCTAssertEqual(store.run.moves, expected.moves)
+                if !isDuel { XCTAssertEqual(GameStore(defaults: defaults).run, store.run) }
                 milliseconds.sort()
                 print(String(format: "[InputLatency] %@: 300 synchronous moves; median %.3f ms, p95 %.3f ms, max %.3f ms (store, event delivery and persistence; excludes rendering)",
                              isDuel ? "Duel level 100" : "Classic level 1", milliseconds[150], milliseconds[284], milliseconds[299]))

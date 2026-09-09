@@ -20,6 +20,8 @@ final class GameStore: ObservableObject {
     @Published private(set) var duelID: String?
     @Published var theme: BoardTheme { didSet { save() } }
     @Published var hint: MoveDirection?
+    @Published private(set) var isPreparingOptimalHint = false
+    @Published private(set) var isHintPending = false
     @Published private(set) var blockedDirection: MoveDirection?
     @Published var notice: String?
     @Published private(set) var earnedPoints = 0
@@ -47,6 +49,9 @@ final class GameStore: ObservableObject {
     private var pendingCompletions: [PendingCompletion] = []
     private var completedOptimality: (runID: UUID, result: MazeOptimality.Result)?
     private let completionVerifier: @Sendable (MazeRun) async -> MazeOptimality.Result
+    private let optimalHintSolver: @Sendable (MazeLevel, GridCell, Set<GridCell>) async -> MazeNativeOptimizer.Result?
+    private var optimalHintTask: Task<Void, Never>?
+    private var optimalHintRequestID = UUID()
     private let feedback = UIImpactFeedbackGenerator(style: .soft)
 
     init(defaults: UserDefaults = .standard, progressFileURL: URL? = nil, now: @escaping () -> Date = Date.init,
@@ -56,8 +61,12 @@ final class GameStore: ObservableObject {
                  return .undetermined
              }
              return run.moves == minimum ? .optimal : .notOptimal
+         },
+         optimalHintSolver: @escaping @Sendable (MazeLevel, GridCell, Set<GridCell>) async -> MazeNativeOptimizer.Result? = { level, position, painted in
+             await MazeMinimumMoveCache.shared.solution(for: level, position: position, painted: painted)
          }) {
         self.defaults = defaults
+        self.optimalHintSolver = optimalHintSolver
         progressPersistence = ProgressPersistence(url: progressFileURL ?? ProgressPersistence.defaultURL(for: defaults))
         dateProvider = now
         uptimeProvider = uptime
@@ -84,6 +93,13 @@ final class GameStore: ObservableObject {
            let coins = Int(arguments[flag + 1]),
            (0...150_000).contains(coins) {
             loadedProgress.points = coins
+        }
+        if arguments.contains("--uitesting"),
+           let flag = arguments.firstIndex(of: "--ui-test-level"),
+           arguments.indices.contains(flag + 1),
+           let number = Int(arguments[flag + 1]),
+           (1...1_000).contains(number) {
+            loadedProgress.endlessLevel = number
         }
 #endif
         var loadedRuns = snapshot?.runs ?? defaults.data(forKey: "prism.runs").flatMap {
@@ -145,9 +161,11 @@ final class GameStore: ObservableObject {
         if refreshedGrid { save() }
         resumeCompletionVerifications()
         startCompletionVerification()
+        startOptimalHintPreparation()
     }
 
     deinit {
+        optimalHintTask?.cancel()
         for task in completionTasks.values { task.cancel() }
     }
 
@@ -242,7 +260,7 @@ final class GameStore: ObservableObject {
         tick()
         guard inputID == self.inputID, originalRun == runID, acceptsGameplayInput else { return }
         let start = run.position
-        let path = run.move(direction)
+        let path = run.move(direction, recomputeFallbackHint: false)
         guard !path.isEmpty else {
             blockedDirection = direction
             hint = nil
@@ -255,6 +273,7 @@ final class GameStore: ObservableObject {
         clock?.hasStarted = true
         lastTick = uptimeProvider()
         hint = nil
+        refreshOptimalHintPreparation()
         if !isDaily && !isDuel { progress.awardCollectedCoins(for: run) }
         if progress.soundEnabled { AudioServicesPlaySystemSound(1104) }
         if run.isComplete {
@@ -357,7 +376,56 @@ final class GameStore: ObservableObject {
     func showHint() {
         guard !hasEnded, !run.isComplete, !isDuel else { return }
         blockedDirection = nil
-        hint = run.hintDirection
+        if hasOptimalHint {
+            hint = run.hintDirection
+        } else {
+            isHintPending = true
+            startOptimalHintPreparation()
+        }
+    }
+
+    var hasOptimalHint: Bool {
+        !hasEnded && !isDuel && run.hintIsOptimal && run.hintDirection != nil
+    }
+
+    /// Await the current board's proof without blocking animation or input.
+    @discardableResult
+    func prepareOptimalHint() async -> Bool {
+        startOptimalHintPreparation()
+        let requestID = optimalHintRequestID
+        await optimalHintTask?.value
+        return requestID == optimalHintRequestID && hasOptimalHint
+    }
+
+    private func refreshOptimalHintPreparation() {
+        optimalHintTask?.cancel()
+        optimalHintTask = nil
+        optimalHintRequestID = UUID()
+        isPreparingOptimalHint = false
+        isHintPending = false
+        startOptimalHintPreparation()
+    }
+
+    private func startOptimalHintPreparation() {
+        guard optimalHintTask == nil, !hasEnded, !run.isComplete, !isDuel, !hasOptimalHint else { return }
+        let requestID = optimalHintRequestID
+        let solvingRunID = runID
+        let snapshot = run
+        let solver = optimalHintSolver
+        isPreparingOptimalHint = true
+        optimalHintTask = Task { [weak self] in
+            let result = await solver(snapshot.level, snapshot.position, snapshot.painted)
+            guard !Task.isCancelled, let self,
+                  self.optimalHintRequestID == requestID, self.runID == solvingRunID,
+                  self.run.position == snapshot.position, self.run.painted == snapshot.painted else { return }
+            self.optimalHintTask = nil
+            self.isPreparingOptimalHint = false
+            if case let .optimal(moves, route) = result, moves == route.count {
+                _ = self.run.installOptimalRoute(route)
+            }
+            if self.isHintPending, self.hasOptimalHint { self.hint = self.run.hintDirection }
+            self.isHintPending = false
+        }
     }
 
     func rewardRequest(_ kind: GameplayReward) -> GameplayRewardRequest? {
@@ -365,7 +433,7 @@ final class GameStore: ObservableObject {
         tick()
         guard originalRun == runID, !isDuel else { return nil }
         switch kind {
-        case .hint: guard !hasEnded, !run.isComplete else { return nil }
+        case .hint: guard hasOptimalHint else { return nil }
         case .extraTime: guard clock != nil, !run.isComplete else { return nil }
         case .extraMoves: guard run.remainingMoves != nil, !run.isComplete else { return nil }
         case .skip: guard !isDaily, !run.isComplete else { return nil }
@@ -440,6 +508,7 @@ final class GameStore: ObservableObject {
             }
             nextLevel()
         }
+        startOptimalHintPreparation()
         lastTick = uptimeProvider(); save()
     }
 
@@ -483,6 +552,7 @@ final class GameStore: ObservableObject {
         isRewardPending = false; coinRewardRequestID = nil; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()
         if tracksPresentationReadiness { presentationReady = false }
         startCompletionVerification()
+        refreshOptimalHintPreparation()
     }
 
     /// A celebration may use an available proof, but progression must never wait.
@@ -524,24 +594,31 @@ final class GameStore: ObservableObject {
     }
 
     private func savedMinimum(for run: MazeRun) -> Int? {
-        guard run.level.mode == .endless,
-              progress.hasOptimalCompletion(number: run.level.number, mode: .endless) else { return nil }
-        return progress.bestMoves(number: run.level.number, mode: .endless)
+        if let minimum = MazePerfectMoveCatalog.minimumMoves(for: run.level) { return minimum }
+        return progress.optimalMoves(for: run.level)
     }
 
     private func resumeCompletionVerifications() {
         var seen: Set<UUID> = []
+        let previousCount = pendingCompletions.count
         pendingCompletions = pendingCompletions.filter {
             $0.run.isComplete && $0.run.moves >= 0 && seen.insert($0.id).inserted
                 && ($0.run.level.mode != .timed || $0.stageIndex.map { (0..<5).contains($0) } == true)
+                && ($0.run.level.mode != .endless || !(1...1_000).contains($0.run.level.number)
+                    || MazePerfectMoveCatalog.minimumMoves(for: $0.run.level) != nil)
         }
+        if pendingCompletions.count != previousCount { save() }
         for completion in pendingCompletions {
+            let minimum = savedMinimum(for: completion.run)
             let result = launchCompletionVerification(completion, savesLevelProgress: true,
-                                                     savedMinimum: savedMinimum(for: completion.run))
+                                                     savedMinimum: minimum)
             // The currently restored completed board shares its persisted proof.
             // Starting a second request here would waste another uncapped solve.
             if !isDaily && !isDuel && run == completion.run,
                completion.stageIndex == (isTimeRush ? timeRushSession?.stageIndex : nil) {
+                if let minimum {
+                    completedOptimality = (runID, completion.run.moves == minimum ? .optimal : .notOptimal)
+                }
                 bindCompletionResult(result, to: runID)
             }
         }
@@ -625,7 +702,8 @@ final class GameStore: ObservableObject {
                 run = saved
                 clock = savedClocks[mode.rawValue] ?? freshClock(limit: session.course.timeLimit)
                 if session.stageIndex == 0, clock?.hasStarted == false,
-                   saved == MazeRun(level: session.currentLevel) {
+                   saved.moves == 0, saved.position == session.currentLevel.start,
+                   saved.painted == [session.currentLevel.start], saved.extraMovesGranted == 0 {
                     // A round that has never started adopts the current pace. Keep
                     // time already earned from ads, even before the first swipe.
                     let course = session.course.retimed()

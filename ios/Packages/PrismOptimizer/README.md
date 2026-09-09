@@ -59,6 +59,24 @@ The optimization proof relies on the maze bridge's model, solver status/bound
 checks and independent integer route replay, rather than treating a feasible
 incumbent as an optimum. Cancellation belongs to that interface.
 
+## Current-state optimization
+
+`PrismOptimizerSolveState` accepts the current position and a row-major painted
+cell array, so its result is the minimum **additional** slides from any valid
+state. Painted cells must be open and include the current position. Already
+painted cells can be disconnected from that position; only the remaining cells
+need to be reachable. `PrismOptimizerSolve` remains the compatible entry point
+for an untouched level. Supplied hints are replayed from the supplied state.
+
+The native bridge removes redundant coverage requirements and uses an exact
+breadth-first search when the requirement masks and reachable stop positions
+have at most 1,048,576 possible states. This makes small boards and endgames
+avoid integer-programming setup. Larger problems use the uncapped HiGHS model.
+Four greedy route candidates tighten its bounds and seed its search, but they
+are never reported as optimal without a proof. Both algorithms independently
+replay the final route with the initial painted cells before returning Optimal.
+Matrix rows are assembled sparsely, and all paths poll cancellation.
+
 ## Build checks
 
 ```sh

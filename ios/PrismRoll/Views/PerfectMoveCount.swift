@@ -15,7 +15,8 @@ struct PerfectMoveCount: View {
 
     private var request: Request { Request(runID: runID, attempt: attempt) }
     private var minimum: Int? {
-        knownMinimum ?? (completedRequest == request ? calculatedMinimum : nil)
+        MazePerfectMoveCatalog.minimumMoves(for: level)
+            ?? knownMinimum ?? (completedRequest == request ? calculatedMinimum : nil)
     }
 
     var body: some View {
@@ -43,7 +44,7 @@ struct PerfectMoveCount: View {
             }
         }
         .task(id: request) {
-            guard knownMinimum == nil, completedRequest != request else { return }
+            guard minimum == nil, completedRequest != request else { return }
             let requested = request
             let minimum = await MazeMinimumMoveCache.shared.minimumMoves(for: level)
             guard !Task.isCancelled else { return }

@@ -6,7 +6,9 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "PrismRoll", targets: ["PrismRoll"]),
-        .executable(name: "MazeOptimalityBenchmark", targets: ["MazeOptimalityBenchmark"])
+        .executable(name: "MazeOptimalityBenchmark", targets: ["MazeOptimalityBenchmark"]),
+        .executable(name: "MazePerfectCountCatalogGenerator", targets: ["MazePerfectCountCatalogGenerator"]),
+        .executable(name: "MazeClassicSeedCatalogGenerator", targets: ["MazeClassicSeedCatalogGenerator"])
     ],
     dependencies: [.package(path: "../Packages/PrismOptimizer")],
     targets: [
@@ -14,6 +16,12 @@ let package = Package(
             .product(name: "CPrismOptimizer", package: "PrismOptimizer")
         ]),
         .executableTarget(name: "MazeOptimalityBenchmark", dependencies: [
+            .product(name: "CPrismOptimizer", package: "PrismOptimizer")
+        ]),
+        .executableTarget(name: "MazePerfectCountCatalogGenerator", dependencies: [
+            .product(name: "CPrismOptimizer", package: "PrismOptimizer")
+        ]),
+        .executableTarget(name: "MazeClassicSeedCatalogGenerator", dependencies: [
             .product(name: "CPrismOptimizer", package: "PrismOptimizer")
         ]),
         .testTarget(name: "PrismRollTests", dependencies: ["PrismRoll"])

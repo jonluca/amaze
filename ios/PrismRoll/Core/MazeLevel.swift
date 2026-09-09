@@ -48,9 +48,8 @@ struct MazeLevel: Codable, Equatable, Sendable {
         coinCells = try values.decodeIfPresent(Set<GridCell>.self, forKey: .coinCells) ?? []
     }
 
-    /// Numbered boards are a shared catalog: a mode and number always identify
-    /// the same grid for every player. Keep the seed, ordering, difficulty curve,
-    /// and fallback layouts compatible with the frozen catalog regression tests.
+    /// Numbered boards are deterministic for every player. Classic seed choices
+    /// are bundled so runtime generation does not scan earlier levels.
     static func generate(number: Int, mode: GameMode) -> MazeLevel {
         generate(number: number, mode: mode, difficultyNumber: number)
     }
@@ -63,6 +62,17 @@ struct MazeLevel: Codable, Equatable, Sendable {
 
     /// Separate the seeded identity from progression for multi-maze courses.
     static func generate(number: Int, mode: GameMode, difficultyNumber: Int) -> MazeLevel {
+        let variation = mode == .endless && number == difficultyNumber
+            ? MazeClassicBoardSeeds.variation(for: number) : 0
+        return generateProcedural(number: number, mode: mode,
+                                  difficultyNumber: difficultyNumber, variation: variation)
+    }
+
+    /// Build one candidate using its level number and a deterministic seed
+    /// variation. The offline catalog chooses variations before runtime.
+    static func generateProcedural(
+        number: Int, mode: GameMode, difficultyNumber: Int, variation: UInt64 = 0
+    ) -> MazeLevel {
         let number = max(1, number)
         let difficultyNumber = max(1, difficultyNumber)
         let difficulty = MazeDifficulty(number: difficultyNumber, mode: mode)
@@ -73,7 +83,9 @@ struct MazeLevel: Codable, Equatable, Sendable {
         case .challenge: salt = 0x4348414C4C454E47
         case .timed: salt = 0x54494D4552555348
         }
-        var random = SeededGenerator(seed: UInt64(number) &* 0x9E3779B97F4A7C15 ^ salt)
+        var seed = UInt64(number) &* 0x9E3779B97F4A7C15 ^ salt
+        if variation != 0 { seed ^= variation &* 0xD1B54A32D192ED03 }
+        var random = SeededGenerator(seed: seed)
         let width = size
         let height = size
         var selected: MazeLayout?

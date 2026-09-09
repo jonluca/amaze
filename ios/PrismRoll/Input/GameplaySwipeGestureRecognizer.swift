@@ -75,7 +75,7 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
         var samples: [SwipeSample<ObjectIdentifier>] = []
         for touch in touches {
             let contact = ObjectIdentifier(touch)
-            guard ending ? sequence.contains(contact) : sequence.needsDirection(for: contact) else { continue }
+            guard sequence.contains(contact) else { continue }
             // Use real recorded samples, never predicted positions that may reverse.
             for sample in event.coalescedTouches(for: touch) ?? [] {
                 samples.append(SwipeSample(contact: contact, point: sample.location(in: view), timestamp: sample.timestamp))

@@ -2,6 +2,46 @@ import XCTest
 
 final class SwipeReliabilityUITests: XCTestCase {
     @MainActor
+    func testLongStraightDragAndHoldProducesOneMove() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+
+        let board = app.otherElements["mazeBoard"]
+        XCTAssertTrue(board.waitForExistence(timeout: 15))
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 1")
+        XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
+        app.buttons["reward_hint"].tap()
+
+        let before = try position(of: board)
+        let distance = min(board.frame.width, board.frame.height) * 0.35
+        let vector: CGVector
+        switch app.staticTexts["playInstructions"].label {
+        case "Swipe up": vector = CGVector(dx: 0, dy: -distance)
+        case "Swipe down": vector = CGVector(dx: 0, dy: distance)
+        case "Swipe left": vector = CGVector(dx: -distance, dy: 0)
+        case "Swipe right": vector = CGVector(dx: distance, dy: 0)
+        default: XCTFail("Missing initial direction"); return
+        }
+
+        let origin = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        origin.press(forDuration: 0.2, thenDragTo: origin.withOffset(vector),
+                     withVelocity: XCUIGestureVelocity(rawValue: 60), thenHoldForDuration: 1)
+
+        let after = try position(of: board)
+        XCTAssertTrue(after.row != before.row || after.column != before.column,
+                      "The slow drag must move the ball")
+        XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move",
+                       "Continued travel and holding in one direction must preserve a single move")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 1")
+
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "long-straight-drag-and-hold-single-move"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
     func testAngledFlicksKeepHorizontalAndVerticalBoardAxes() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]

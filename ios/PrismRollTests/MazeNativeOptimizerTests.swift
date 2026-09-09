@@ -3,23 +3,25 @@ import XCTest
 @testable import PrismRoll
 
 final class MazeNativeOptimizerTests: XCTestCase {
-    func testCatalogMatchesIndependentIntegerFlowProofs() {
-        // Independent SciPy/HiGHS model, with each route replayed against the raw
-        // grid. Include levels that exceeded the previous two-second A* limit.
+    func testCatalogMatchesVerifiedExactReferenceCounts() {
+        // Counts for 8, 72 and 150 come from native proof records with replayed
+        // routes in classic-1-1000.json. The other counts were also checked by
+        // the independent SciPy/HiGHS model. Include hard boards whose proofs
+        // must not depend on a search deadline.
         let firstHundred = [
-            8, 19, 17, 20, 20, 19, 28, 28, 26, 31,
+            8, 19, 17, 20, 20, 19, 28, 26, 26, 31,
             34, 32, 34, 36, 43, 38, 39, 39, 40, 46,
             40, 51, 44, 47, 42, 42, 42, 50, 46, 58,
             51, 53, 52, 51, 48, 55, 57, 56, 54, 52,
             53, 62, 56, 56, 61, 58, 61, 58, 60, 58,
             57, 61, 59, 58, 54, 62, 63, 64, 65, 62,
             65, 67, 68, 66, 65, 63, 65, 60, 75, 68,
-            66, 65, 62, 62, 74, 80, 79, 79, 77, 80,
+            66, 62, 62, 62, 74, 80, 79, 79, 77, 80,
             76, 77, 77, 81, 75, 82, 80, 78, 81, 76,
             71, 80, 80, 79, 73, 80, 80, 77, 74, 90
         ]
         let reference = firstHundred.enumerated().map { ($0.offset + 1, $0.element) }
-            + [(150, 94), (200, 91), (250, 88), (500, 91),
+            + [(150, 84), (200, 91), (250, 88), (500, 91),
                (1_000, 88), (1_001, 85), (10_000, 86), (100_000, 89)]
         for (number, expected) in reference {
             let level = MazeLevel.generate(number: number, mode: .endless)

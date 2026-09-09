@@ -70,8 +70,8 @@ final class GameCoachingTests: XCTestCase {
         }
     }
 
-    func testDismissingTutorialPersistsWithoutRemovingFreeHintsOrChangingTheRun() throws {
-        try withDefaults { defaults in
+    func testDismissingTutorialPersistsWithoutRemovingFreeHintsOrChangingTheRun() async throws {
+        try await withAsyncDefaults { defaults in
             let store = makeStore(defaults: defaults)
             let before = store.run
             store.dismissTutorial()
@@ -84,9 +84,13 @@ final class GameCoachingTests: XCTestCase {
             let restored = makeStore(defaults: defaults)
             XCTAssertFalse(restored.showsTutorial)
             XCTAssertTrue(restored.offersIntroductoryHints)
+            let ready = await restored.prepareOptimalHint()
+            XCTAssertTrue(ready)
             restored.showHint()
-            XCTAssertEqual(restored.hint, try XCTUnwrap(before.hintDirection))
-            XCTAssertEqual(restored.run, before)
+            XCTAssertEqual(restored.hint, try XCTUnwrap(restored.run.hintDirection))
+            XCTAssertEqual(restored.run.position, before.position)
+            XCTAssertEqual(restored.run.painted, before.painted)
+            XCTAssertEqual(restored.run.moves, before.moves)
             XCTAssertEqual(restored.progress.points, 0)
         }
     }
@@ -137,12 +141,14 @@ final class GameCoachingTests: XCTestCase {
         }
     }
 
-    func testSuccessfulMoveHintAndReplayClearBlockedFeedback() throws {
-        try withDefaults { defaults in
+    func testSuccessfulMoveHintAndReplayClearBlockedFeedback() async throws {
+        try await withAsyncDefaults { defaults in
             let store = makeStore(defaults: defaults)
             let initialBlocked = try blockedDirection(in: store)
             store.move(initialBlocked)
             XCTAssertEqual(store.blockedDirection, initialBlocked)
+            let ready = await store.prepareOptimalHint()
+            XCTAssertTrue(ready)
             store.showHint()
             XCTAssertNil(store.blockedDirection)
             XCTAssertNotNil(store.hint)
@@ -223,6 +229,13 @@ final class GameCoachingTests: XCTestCase {
         store.setHaptics(false)
         store.setSound(false)
         return store
+    }
+
+    private func withAsyncDefaults(_ body: (UserDefaults) async throws -> Void) async throws {
+        let suite = "PrismRoll.OptimalHintCompatibility.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try await body(defaults)
     }
 
     private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {

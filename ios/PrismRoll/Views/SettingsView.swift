@@ -31,7 +31,7 @@ struct SettingsView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 Section("How to play") {
-                    Label("Swipe in any direction. The ball rolls until a wall stops it.", systemImage: "hand.draw")
+                    Label("Swipe to roll to a wall. Keep your finger down and drag to change direction.", systemImage: "hand.draw")
                     Label("Cover every open tile in color to complete the maze.", systemImage: "drop")
                     Label("Classic has no clock or move limit. Play at your own pace.", systemImage: "infinity")
                     Label("Time Rush: paint every maze in a round before one shared countdown ends. Your first valid swipe starts the clock. Each completed maze leads straight to the next.", systemImage: "timer")

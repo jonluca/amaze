@@ -1,5 +1,27 @@
 # Validation — September 9, 2026
 
+## Build 12 catalog and input — local verification
+
+Verified **September 9, 2026 at 11:13 AM Pacific**: the final build 12 source passed **49 app/catalog tests**, including exact bundled-count availability on every Classic level 1...1,000. A separate run passed **43 input tests and 7 UI tests** for held-finger turns, reversals, immediate Perfect targets, and legal live hints. The UI sample boards are unchanged by the final catalog regeneration. These are local iOS 26.1 simulator checks, separate from Apple release verification.
+
+The unreleased catalog now uses sequential offline seed selection with one current board and one progress record per level. Historical-board records and preservation policies were removed. Exact board identity still guards saved proofs, so a count cannot apply to different geometry. Tests cover resetting a changed-board record, protecting a proved minimum, discarding obsolete pending Classic completions, and keeping gameplay responsive while hints calculate.
+
+Independent generation and validation confirmed **1,000 unique playable layouts**, all meeting their difficulty gates. There are 141 nonzero seed choices. The final proof table contains 1,000 exact counts and replayable optimal routes totaling **85,693 legal swipes**. The 20 boards changed by removing preservation were solved again; 980 proofs already matched their current geometry. The generator's strict check confirmed exact Swift-table parity.
+
+Targets remain **8**, **26**, **62**, and **88** moves on Classic **1**, **8**, **72**, and **1,000**. Final app/input/UI evidence and inspected screenshots are in `artifacts/NativeOptimizer/CurrentState/Build12/`. The final app result is `/tmp/amaze-optimal-hints-derived/Logs/Test/Test-PrismRoll-2026.09.09_11-13-27--0700.xcresult`.
+
+## Native optimal hints — local verification
+
+Verified **September 9, 2026 at 10:18 AM Pacific** against the final native current-state solver and cache scheduling changes: **87 app tests and 2 UI tests passed**, with no failures. This is local simulator evidence, separate from the released builds below. The run used the iOS 26.1 Rapid Move QA simulator (`7D340B76-8CD2-442F-BDB5-D8FA4AF38F41`), regenerated Xcode project, and isolated `/tmp/amaze-optimal-hints-derived` build products.
+
+The app checks cover proof-only hints and ad eligibility, pending requests, cancellation after moves and replay, reuse of optimal suffixes, progression and crowns, navigation, timer/reward persistence, and preserving earned Time Rush extensions when a fresh run's cached guidance changes. The UI tests verify the fixed whole-level target and a newly computed legal optimal hint after backtracking. The final screenshot shows **3 moves**, **Perfect: 8 moves**, and **Swipe right** from the current board; the following swipe was accepted as move 4.
+
+The rapid-input test delivered 300 synchronous moves per case. Classic level 1 measured **0.269 ms median / 0.393 ms p95**, and Duel level 100 measured **0.081 ms median / 0.126 ms p95**, including store mutation, event delivery, and persistence. These timings exclude rendering and do not claim physical-device solver latency.
+
+Final evidence: `/tmp/amaze-optimal-hints-final.log`, `/tmp/amaze-optimal-hints-derived/Logs/Test/Test-PrismRoll-2026.09.09_10-17-21--0700.xcresult`, and `/tmp/amaze-optimal-hints-final-attachments/025B7401-B8EC-4A91-AA6A-FA735F4BE214.png`. The passing app suites were `GameAutoAdvanceTests`, `GameCoachingTests`, `GameLevelProgressTests`, `GameLifecycleTests`, `GameNavigationTests`, `GameOptimalHintTests`, `GameStoreTests`, `GameplayInputTests`, and `TimeRushSessionTests`; the UI suite was `PerfectMoveCountUITests`.
+
+The initial compatibility audit reproduced two stale `GameDifficultyCompatibilityTests` expectations against unchanged HEAD `aedee5d781a821ceac21d05435922673b61d33f0`: they expected differing legacy grids to survive even though the existing initializer refreshes them. The unique-catalog work updates those tests to assert canonical solo/Time Rush refresh, preserved paid extensions and wallet/unlocks, and persistence after refresh. The daily legacy-board preservation case remains unchanged. Original audit evidence is retained in `/tmp/amaze-optimal-hints-baseline.log` and `/tmp/amaze-optimal-hints-compatibility.log`.
+
 ## Current App Store review — build 11
 
 Verified **September 9, 2026 at 9:27 AM Pacific**: **1.0.0 (11)** and all four purchases (**No Ads**, **1,000 Coins**, **5,500 Coins**, and **15,000 Coins**) are **WAITING_FOR_REVIEW** in submission `f16ce497-6a80-4818-a6b4-749180fb5b5b`. The queued build 8 submission was withdrawn and replaced. Version `58e945d7-8274-42fa-8b2e-e1b47e328107` is attached to build `13e10acb-818e-491f-b2ab-6716457f5e2c`, which Apple processed as **VALID** and **APP_STORE_ELIGIBLE**. Release remains **MANUAL** after approval.

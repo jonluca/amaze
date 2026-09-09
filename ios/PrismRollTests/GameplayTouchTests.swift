@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class GameplayTouchTests: XCTestCase {
-    func testDirectionEmitsWithClearAxisLeadBeforeLiftAndOnlyOncePerStroke() {
+    func testDirectionEmitsBeforeLiftAndCanReverseWithoutRepeatingStraightTravel() {
         for (point, expected) in [(CGPoint(x: 9, y: 1), MoveDirection.right),
                                   (CGPoint(x: -9, y: 1), .left),
                                   (CGPoint(x: 1, y: 9), .down),
@@ -14,7 +14,14 @@ final class GameplayTouchTests: XCTestCase {
             XCTAssertEqual(stroke.direction(at: point), expected)
             XCTAssertTrue(stroke.hasEmitted)
             XCTAssertNil(stroke.direction(at: CGPoint(x: point.x * 10, y: point.y * 10)))
-            XCTAssertNil(stroke.direction(at: CGPoint(x: -point.x, y: -point.y)))
+            let reverse: MoveDirection
+            switch expected {
+            case .right: reverse = .left
+            case .left: reverse = .right
+            case .up: reverse = .down
+            case .down: reverse = .up
+            }
+            XCTAssertEqual(stroke.direction(at: CGPoint(x: -point.x, y: -point.y)), reverse)
         }
     }
 

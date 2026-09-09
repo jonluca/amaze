@@ -432,6 +432,28 @@ final class TimeRushSessionTests: XCTestCase {
         }
     }
 
+    func testUnstartedLegacyCourseRetimesWhenSavedHintRouteWasReplaced() throws {
+        try withDefaults { defaults in
+            let course = legacyCourse()
+            let initial = MazeRun(level: course.levels[0])
+            var encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(initial)) as? [String: Any])
+            encoded["hintRoute"] = []
+            let saved = try JSONDecoder().decode(MazeRun.self, from: JSONSerialization.data(withJSONObject: encoded))
+            XCTAssertNotEqual(saved, initial, "Cached guidance must not define whether gameplay has started")
+            try saveTimedSnapshot(defaults, session: TimeRushSession(course: course), run: saved,
+                                  clock: TimedRunState(remainingSeconds: course.timeLimit + 60, rewardedExtensions: 2))
+
+            let restored = makeStore(defaults)
+
+            XCTAssertEqual(restored.timeRushSession?.course, course.retimed())
+            XCTAssertEqual(restored.run.moves, 0)
+            XCTAssertEqual(restored.run.position, initial.position)
+            XCTAssertEqual(restored.run.painted, initial.painted)
+            XCTAssertEqual(restored.clock, TimedRunState(remainingSeconds: course.retimed().timeLimit + 60,
+                                                       rewardedExtensions: 2))
+        }
+    }
+
     func testSwitchingModesDailyAndDuelPreservesTimedCourseWithoutChargingAwayTime() throws {
         try withDefaults { defaults in
             var uptime = 0.0

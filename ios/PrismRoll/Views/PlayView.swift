@@ -158,7 +158,7 @@ struct PlayView: View {
     private var instructions: some View {
         if tutorialRunID == store.runID && !store.progress.tutorialDismissed {
             TutorialTipView(hasMoved: store.run.moves > 0,
-                            instruction: store.hint != nil || store.blockedDirection != nil ? hintText : nil,
+                            instruction: store.hint != nil || store.isHintPending || store.blockedDirection != nil ? hintText : nil,
                             onDismiss: store.dismissTutorial)
         } else {
             Label(hintText, systemImage: store.hint != nil ? "sparkles" : store.blockedDirection != nil ? "arrow.triangle.turn.up.right.diamond" : "hand.draw")
@@ -214,6 +214,7 @@ struct PlayView: View {
 
     private var hintText: String {
         if let hint = store.hint { return "Swipe \(hint.rawValue)" }
+        if store.isHintPending { return "Finding the shortest route…" }
         if store.blockedDirection != nil { return "Wall ahead. Try another direction." }
         if store.isTimeRush {
             if store.clock?.hasStarted == false {
@@ -291,8 +292,7 @@ struct PlayView: View {
             }
             if store.mode == .endless && !store.isDaily && !store.isDuel {
                 PerfectMoveCount(level: store.run.level, runID: store.runID,
-                                 knownMinimum: store.progress.hasOptimalCompletion(number: store.run.level.number, mode: .endless)
-                                     ? store.progress.bestMoves(number: store.run.level.number, mode: .endless) : nil)
+                                 knownMinimum: store.progress.optimalMoves(for: store.run.level))
             }
         }
         .font(.caption)

@@ -1,12 +1,26 @@
-# Validation — September 8, 2026
+# Validation — September 9, 2026
 
-## Current App Store review — build 8
+## Current App Store review — build 11
+
+Verified **September 9, 2026 at 9:27 AM Pacific**: **1.0.0 (11)** and all four purchases (**No Ads**, **1,000 Coins**, **5,500 Coins**, and **15,000 Coins**) are **WAITING_FOR_REVIEW** in submission `f16ce497-6a80-4818-a6b4-749180fb5b5b`. The queued build 8 submission was withdrawn and replaced. Version `58e945d7-8274-42fa-8b2e-e1b47e328107` is attached to build `13e10acb-818e-491f-b2ab-6716457f5e2c`, which Apple processed as **VALID** and **APP_STORE_ELIGIBLE**. Release remains **MANUAL** after approval.
+
+Build 11 includes the Coin Shop and durable consumable delivery, optional 50-coin videos, advancing milestones, spacing fixes, removal of the Duel entry, and Classic minimum-move targets. It retains build 10’s 18-ball collection, six rarities, and higher prices. The [production archive](https://github.com/jonluca/amaze/actions/runs/34374961797) compiled frozen source `36b9f48f1a91127c6f3647919d3062d03e69e7d1` with **Xcode 26.6 (17F113)** and **iphoneos26.5**. Subsequent solver research in the checkout is outside this release.
+
+Primary and independent IPA checks verified the signature, distribution entitlements, production ad configuration, all three coin product IDs, three privacy manifests, and absence of test resources and Debug overrides. The executable and archive dSYM UUIDs match. IPA SHA-256: `2608bc444981ee8d6f9277fdd727067be198e83b6ea8eef1958ce76f7ce08f8a`; size **6,344,852 bytes**. Feature evidence is recorded in [COINS_MILESTONES.md](COINS_MILESTONES.md) and the build’s private validation artifacts.
+
+All twelve App Store screenshots were replaced with native iPhone/iPad captures from the frozen Release source. Their delivery states, order, dimensions, and server MD5s match the uploaded files. The No Ads review image was also replaced with the normal Release app’s live $2.99 offer. A separate local StoreKit UI capture attempt encountered an Apple Account sign-in prompt; no account or payment was entered, and that attempt is not a passing purchase test. Prior native purchase/delivery verification remains documented; production purchases and production ad serving are not claimed tested.
+
+The description now reflects 18 balls, six rarities, five-maze Time Rush rounds, advancing milestones, and coin purchases. The 2,929-character review notes describe access to each feature and the local consumable balance. Other localization fields and reviewer contacts were preserved. Public privacy/support pages were updated and verified at the existing URLs. App Privacy’s earlier publication evidence remains recorded; a fresh browser session was unavailable, and no new privacy publication is claimed.
+
+The final submission contains exactly the app version and four IAP versions; all four products independently read back **WAITING_FOR_REVIEW**. Private evidence is in `release/build11/` and `release/build11-review/`, including `final-verification.json`, `independent-ipa-verification.json`, screenshot checksums, and website deployment verification. The build and review actions leave existing TestFlight group membership unchanged.
+
+## Previous App Store review — build 8
 
 Verified **September 7, 2026 at 3:08 PM Pacific**: **1.0.0 (8)** and the existing **No Ads** purchase are **WAITING_FOR_REVIEW** in submission `921ad12d-9cb5-4859-8a89-b866ca4c932d`. The prior build 3 review submission was withdrawn and replaced. App Store version `58e945d7-8274-42fa-8b2e-e1b47e328107` is attached to build `7ce575ab-2e76-4af4-8d5e-39b1c68e992e`; the submission includes the same No Ads IAP version `0df21e7d-4a35-4943-958a-9feba8346432`. Release remains **MANUAL**.
 
 Localization metadata was preserved, and the 2,128-character reviewer notes describe the current controls and optional ads. Validation reported no blocking app errors; the No Ads reminder was addressed by including its IAP version in the replacement submission. Final state, exact review items, build attachment, and metadata preservation are recorded in `release/build8-review/final-verification.json`. The live marketing URL remains `https://thoughtahead.com/prism-roll/support.html`; current ad prerequisites and their verification limits are recorded in [Advertising setup](README.md#advertising-setup).
 
-The release checkpoints below describe the state at their recorded times. Their earlier build 3 App Store attachments were superseded by this submission.
+The release checkpoints below describe the state at their recorded times. Their earlier App Store attachments were superseded by the build 11 submission above.
 
 ## Build 10 TestFlight release
 

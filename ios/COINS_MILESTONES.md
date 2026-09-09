@@ -1,6 +1,6 @@
 # Coins, milestones, and spacing — September 8, 2026
 
-The current source adds a Coin Shop from the wallet and Collection, advancing milestone goals, and a spacing pass across the app. These changes follow TestFlight build 10.
+Build **1.0.0 (11)** includes a Coin Shop from the wallet and Collection, advancing milestone goals, and a spacing pass across the app. The app and all four purchases were submitted and verified **Waiting for Review on September 9, 2026 at 9:27 AM Pacific**. Release remains manual; see [the submission record](VALIDATION.md#current-app-store-review--build-11).
 
 ## Coin Shop
 
@@ -12,7 +12,7 @@ The wallet opens a sheet showing the exact balance, optional 50-coin videos, and
 | 5,500 | `com.jonluca.prismroll.coins.5500` | $4.99 |
 | 15,000 | `com.jonluca.prismroll.coins.15000` | $9.99 |
 
-App Store Connect has these three consumable records, prices, en-US metadata, US availability matching the app, and a screenshot of the implemented shop. All three were verified **READY_TO_SUBMIT** at **10:22 PM Pacific**, with exact prices and matching completed screenshot checksums. They still require [App Review before production sale](https://developer.apple.com/help/app-store-connect/configure-in-app-purchase-settings/overview-for-configuring-in-app-purchases/). Existing App Store build 8 and No Ads remain waiting for review; the app version still uses manual release. Exact provisioning readbacks are in `release/coin-packs/verification.json`.
+On September 8, App Store Connect had these three consumable records, prices, en-US metadata, US availability matching the app, and a screenshot of the implemented shop. All three were verified **READY_TO_SUBMIT** at **10:22 PM Pacific**, with exact prices and matching completed screenshot checksums. They still require [App Review before production sale](https://developer.apple.com/help/app-store-connect/configure-in-app-purchase-settings/overview-for-configuring-in-app-purchases/). Build 8 and No Ads were waiting for review at that checkpoint; build 11 and all four purchases superseded it on September 9. The app version still uses manual release. Exact provisioning readbacks are in `release/coin-packs/verification.json`.
 
 Verified transactions deliver through `GameStore.deliverCoinPurchase`. The balance and received transaction IDs are written together to an atomic Application Support file before StoreKit finishes the transaction. Run snapshots remain in UserDefaults; the durable progress file takes precedence on launch and is written only when progress changes. Failed writes leave purchases unfinished for launch/shop recovery. A corrupt file is preserved and blocks purchase acknowledgment. Cancellation, pending approval, failed verification, and revoked transactions do not add coins. Replay of a delivered receipt does not add another credit. See [purchase implementation and limits](PrismRoll/Services/PURCHASES.md).
 

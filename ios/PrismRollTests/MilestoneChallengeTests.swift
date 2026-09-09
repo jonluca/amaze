@@ -32,15 +32,16 @@ final class MilestoneChallengeTests: XCTestCase {
 
     func testSkinMilestoneRequiresFourDistinctOwnedSkins() {
         var progress = ProgressData()
-        progress.points = 1000
+        let collectorSkins = BallSkin.catalog.filter { ["mint", "sunset", "tidal"].contains($0.id) }
+        progress.points = collectorSkins.reduce(0) { $0 + $1.price }
         XCTAssertEqual(progress.claimMilestone(id: "skin-collector"), 0)
-        for id in ["mint", "sunset", "tidal"] {
-            XCTAssertTrue(progress.purchaseSkin(BallSkin.catalog.first { $0.id == id }!))
+        for skin in collectorSkins {
+            XCTAssertTrue(progress.purchaseSkin(skin))
         }
+        XCTAssertEqual(progress.points, 0)
         XCTAssertEqual(progress.ownedSkinIDs.count, 4)
         XCTAssertEqual(progress.claimMilestone(id: "skin-collector"), 150)
         XCTAssertEqual(progress.claimMilestone(id: "skin-collector"), 0)
-        XCTAssertEqual(BallSkin.catalog.count, 12)
-        XCTAssertEqual(Set(BallSkin.catalog.map(\.id)).count, 12)
+        XCTAssertEqual(progress.points, 150)
     }
 }

@@ -27,13 +27,15 @@ final class ProgressDataTests: XCTestCase {
         XCTAssertEqual(restored.claimAdBonus(level: endless), 0)
     }
 
-    func testPurchasesRequirePointsAndOnlyChargeOnce() {
+    func testPurchasesRequirePointsAndOnlyChargeOnceAcrossRelaunch() throws {
         var progress = ProgressData()
         let mint = BallSkin.catalog.first { $0.id == "mint" }!
         XCTAssertFalse(progress.purchaseSkin(mint))
         XCTAssertEqual(progress.selectedSkinID, "coral")
         XCTAssertFalse(progress.selectSkin(id: "mint"))
-        for number in 1...2 { progress.completeLevel(.generate(number: number, mode: .endless)) }
+        for number in 1...(mint.price / 50) {
+            progress.completeLevel(.generate(number: number, mode: .endless))
+        }
         XCTAssertTrue(progress.purchaseSkin(mint))
         XCTAssertEqual(progress.points, 0)
         XCTAssertTrue(progress.ownedSkinIDs.contains("mint"))
@@ -42,15 +44,37 @@ final class ProgressDataTests: XCTestCase {
         XCTAssertEqual(progress.ownedSkinIDs.filter { $0 == "mint" }.count, 1)
         XCTAssertTrue(progress.selectSkin(id: "coral"))
         XCTAssertEqual(progress.selectedSkinID, "coral")
+        let saved = try JSONEncoder().encode(progress)
+        var restored = try JSONDecoder().decode(ProgressData.self, from: saved)
+        XCTAssertTrue(restored.purchaseSkin(mint))
+        XCTAssertEqual(restored.selectedSkinID, "mint")
+        XCTAssertEqual(restored.points, 0)
+        XCTAssertEqual(restored.ownedSkinIDs.filter { $0 == "mint" }.count, 1)
     }
 
     func testForgedSkinCannotAlterCatalogPrice() {
+        for skin in BallSkin.catalog where skin.price > 0 {
+            var progress = ProgressData()
+            let forged = BallSkin(
+                id: skin.id, name: "Discounted", price: 0, rarity: .common,
+                hex: "000000", accentHex: "000000", pattern: "plain"
+            )
+            progress.points = skin.price - 1
+            let before = progress
+            XCTAssertFalse(progress.purchaseSkin(forged), skin.id)
+            XCTAssertEqual(progress, before, skin.id)
+            progress.points = skin.price + 7
+            XCTAssertTrue(progress.purchaseSkin(forged), skin.id)
+            XCTAssertEqual(progress.points, 7, skin.id)
+            XCTAssertEqual(progress.selectedSkinID, skin.id)
+        }
         var progress = ProgressData()
-        let forged = BallSkin(id: "mint", name: "Free mint", price: 0, hex: "000000", accentHex: "000000", pattern: "plain")
-        XCTAssertFalse(progress.purchaseSkin(forged))
-        XCTAssertEqual(progress.points, 0)
-        let unknown = BallSkin(id: "unknown", name: "Unknown", price: 0, hex: "000000", accentHex: "000000", pattern: "plain")
+        let unknown = BallSkin(
+            id: "unknown", name: "Unknown", price: 0, rarity: .mythic,
+            hex: "000000", accentHex: "000000", pattern: "plain"
+        )
         XCTAssertFalse(progress.purchaseSkin(unknown))
+        XCTAssertEqual(progress, ProgressData())
     }
 
     func testProgressNeverMovesBackwardOnReplay() {

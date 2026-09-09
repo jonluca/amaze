@@ -82,7 +82,7 @@ final class LevelBrowserUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["journeyRange"].label, "Levels 1–20")
         XCTAssertTrue(app.buttons["journeyLevel_1"].isEnabled)
         app.buttons["journeyLevel_1"].tap()
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 001")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 1")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
     }
 
@@ -110,9 +110,9 @@ final class LevelBrowserUITests: XCTestCase {
             swipe(app, app.staticTexts["playInstructions"].label)
             moves += 1
             let title = app.staticTexts["levelTitle"]
-            if app.mazeIsFullyPainted || app.otherElements["perfectSolveAward"].exists || title.label == "Level 002" {
+            if app.mazeIsFullyPainted || app.otherElements["perfectSolveAward"].exists || title.label == "Level 2" {
                 let nextLevel = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                    title.exists && title.label == "Level 002"
+                    title.exists && title.label == "Level 2"
                 }, object: nil)
                 XCTAssertEqual(XCTWaiter.wait(for: [nextLevel], timeout: 8), .completed)
                 return moves

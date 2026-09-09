@@ -23,6 +23,34 @@ enum BallMaterialFactory {
         material.reflective.intensity = skin.pattern == "rings" ? 0.4 : 0.18
         material.emission.contents = material.diffuse.contents
         material.emission.intensity = 0.075
+        switch skin.pattern {
+        case "solar":
+            material.emission.intensity = 0.20
+            material.shininess = 0.68
+            material.reflective.intensity = 0.12
+        case "plasma":
+            material.emission.intensity = 0.24
+            material.shininess = 0.94
+            material.reflective.intensity = 0.24
+        case "supernova":
+            material.emission.intensity = 0.22
+            material.shininess = 0.78
+            material.reflective.intensity = 0.16
+        case "singularity":
+            material.emission.intensity = 0.26
+            material.shininess = 0.98
+            material.reflective.intensity = 0.11
+        case "tesseract":
+            material.emission.intensity = 0.24
+            material.shininess = 0.96
+            material.reflective.intensity = 0.29
+        case "genesis":
+            material.emission.intensity = 0.19
+            material.shininess = 0.92
+            material.reflective.intensity = 0.32
+        default:
+            break
+        }
         return material
     }
 

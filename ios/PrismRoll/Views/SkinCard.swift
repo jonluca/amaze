@@ -6,15 +6,20 @@ struct SkinCard: View {
     let selected: Bool
     let coinBalance: Int
     let action: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 16) {
+            cardLayout {
                 BallPreview(skin: skin)
-                    .frame(width: 76, height: 76)
+                    .frame(width: dynamicTypeSize.isAccessibilitySize ? 52 : 76,
+                           height: dynamicTypeSize.isAccessibilitySize ? 52 : 76)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(skin.name).font(.headline).foregroundStyle(Color.primary)
+                    Label(skin.rarity.name, systemImage: skin.rarity.symbol)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(hex: skin.rarity.hex))
                     Text(selected ? "Equipped" : owned ? "Tap to equip" : "Unlock · \(skin.price.formatted()) coins")
                         .font(.subheadline).foregroundStyle(Color.secondary)
                     if !owned, coinsNeeded > 0 {
@@ -22,9 +27,12 @@ struct SkinCard: View {
                             .font(.caption).foregroundStyle(Color.secondary)
                     }
                 }
-                Spacer(minLength: 8)
-                Image(systemName: selected ? "checkmark.circle.fill" : owned ? "circle" : "circle.inset.filled")
-                    .foregroundStyle(selected ? Palette.violet : owned ? Palette.secondary : Palette.gold)
+                .fixedSize(horizontal: false, vertical: true)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Spacer(minLength: 8)
+                    Image(systemName: selected ? "checkmark.circle.fill" : owned ? "circle" : "lock.fill")
+                        .foregroundStyle(selected ? Palette.violet : owned ? Palette.secondary : Palette.gold)
+                }
             }
         }
         .disabled(!owned && coinsNeeded > 0)
@@ -35,10 +43,17 @@ struct SkinCard: View {
 
     private var coinsNeeded: Int { max(0, skin.price - max(0, coinBalance)) }
 
+    private var cardLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 16))
+    }
+
     private var accessibilityLabel: String {
-        if selected { return "\(skin.name), equipped" }
-        if owned { return "\(skin.name), owned, tap to equip" }
-        let offer = "\(skin.name), unlock for \(skin.price.formatted()) coins"
+        let name = "\(skin.name), \(skin.rarity.name)"
+        if selected { return "\(name), equipped" }
+        if owned { return "\(name), owned, tap to equip" }
+        let offer = "\(name), unlock for \(skin.price.formatted()) coins"
         return coinsNeeded == 0 ? offer : "\(offer), \(coinsNeeded.formatted()) more coins needed"
     }
 }

@@ -13,7 +13,7 @@ final class TimeRushUITests: XCTestCase {
         XCTAssertFalse(app.progressIndicators["Maze painted"].exists)
         app.segmentedControls["modePicker"].buttons["Time Rush"].tap()
         assertStage(app, "Maze 1 of 5")
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 1")
         let initialBudget = remainingSeconds(app)
         XCTAssertEqual(initialBudget, 55, "A fresh round uses the tighter clock")
 
@@ -29,7 +29,7 @@ final class TimeRushUITests: XCTestCase {
         flick(board, openingRoute.last!)
 
         assertStage(app, "Maze 2 of 5")
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 1")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
         XCTAssertGreaterThan(remainingSeconds(app), 0)
         XCTAssertLessThanOrEqual(remainingSeconds(app), secondsBeforeFinalSlide,
@@ -77,7 +77,7 @@ final class TimeRushUITests: XCTestCase {
         XCTAssertEqual(sameRound.label, "Round 1, unlocked, not solved")
         sameRound.tap()
         assertStage(app, "Maze 2 of 5")
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 1")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "1 move")
         XCTAssertEqual(board.value as? String, paintedBoard)
         XCTAssertLessThanOrEqual(remainingSeconds(app), secondsBeforeJourney)
@@ -94,7 +94,7 @@ final class TimeRushUITests: XCTestCase {
         XCTAssertTrue(restart.waitForExistence(timeout: 3))
         restart.tap()
         assertStage(app, "Maze 1 of 5")
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 001")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Round 1")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
         XCTAssertEqual(remainingSeconds(app), initialBudget)
         XCTAssertFalse(app.buttons["retryLevel"].exists)

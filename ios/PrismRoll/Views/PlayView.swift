@@ -238,7 +238,7 @@ struct PlayView: View {
                     Label("Coin Rush", systemImage: "circle.inset.filled")
                         .font(.caption).foregroundStyle(Palette.gold)
                 }
-                Text(store.isDuel ? "Race to paint" : store.isDaily ? "Today’s maze" : String(format: store.isTimeRush ? "Round %03d" : "Level %03d", store.run.level.number))
+                Text(store.isDuel ? "Race to paint" : store.isDaily ? "Today’s maze" : (store.isTimeRush ? "Round \(store.run.level.number)" : "Level \(store.run.level.number)"))
                     .font(compact ? .title2.bold() : .title.bold())
                     .lineLimit(1).minimumScaleFactor(0.8)
                     .accessibilityIdentifier("levelTitle")

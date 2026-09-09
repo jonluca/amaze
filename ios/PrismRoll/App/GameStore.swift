@@ -53,9 +53,21 @@ final class GameStore: ObservableObject {
 #endif
         let decoder = JSONDecoder()
         let snapshot = defaults.data(forKey: "prism.snapshot.v2").flatMap { try? decoder.decode(GameSnapshot.self, from: $0) }
-        let loadedProgress = snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
+        var loadedProgress = snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
             try? decoder.decode(ProgressData.self, from: $0)
         } ?? ProgressData()
+#if DEBUG
+        // Exercise expensive collection purchases without thousands of UI swipes.
+        // A wallet fixture is accepted only alongside the destructive test reset.
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--uitesting"),
+           let flag = arguments.firstIndex(of: "--ui-test-coins"),
+           arguments.indices.contains(flag + 1),
+           let coins = Int(arguments[flag + 1]),
+           (0...150_000).contains(coins) {
+            loadedProgress.points = coins
+        }
+#endif
         var loadedRuns = snapshot?.runs ?? defaults.data(forKey: "prism.runs").flatMap {
             try? decoder.decode([String: MazeRun].self, from: $0)
         } ?? [:]

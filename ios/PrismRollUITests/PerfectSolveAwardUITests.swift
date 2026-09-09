@@ -7,7 +7,7 @@ final class PerfectSolveAwardUITests: XCTestCase {
         let moves = solveFirstMaze(app)
         assertNextLevel(app)
         XCTAssertFalse(app.buttons["nextLevel"].exists)
-        app.tabBars.buttons["tab_journey"].tap()
+        app.tabBars.buttons["Levels"].tap()
         // The quick medal can finish during XCTest's gesture synchronization.
         // Its lasting award remains inspectable without slowing real gameplay.
         XCTAssertEqual(app.buttons["journeyLevel_1"].label,
@@ -55,7 +55,7 @@ final class PerfectSolveAwardUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["moveCount"].label, "3 moves")
         let moves = solveFirstMaze(app, startingMoves: 3)
         assertNextLevel(app)
-        app.tabBars.buttons["tab_journey"].tap()
+        app.tabBars.buttons["Levels"].tap()
         XCTAssertEqual(app.buttons["journeyLevel_1"].label,
                        "Level 1, unlocked, solved, best \(moves) moves")
     }
@@ -66,7 +66,7 @@ final class PerfectSolveAwardUITests: XCTestCase {
         app.launchArguments = ["--uitesting"]
         app.launch()
         XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 001")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 1")
         return app
     }
 
@@ -80,7 +80,7 @@ final class PerfectSolveAwardUITests: XCTestCase {
             let hint = app.staticTexts["playInstructions"].label
             swipe(app, hint)
             moves += 1
-            if award.exists || app.mazeIsFullyPainted || (title.exists && title.label == "Level 002") {
+            if award.exists || app.mazeIsFullyPainted || (title.exists && title.label == "Level 2") {
                 return moves
             }
         }
@@ -104,7 +104,7 @@ final class PerfectSolveAwardUITests: XCTestCase {
     private func assertNextLevel(_ app: XCUIApplication) {
         let nextLevel = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             let title = app.staticTexts["levelTitle"]
-            return title.exists && title.label == "Level 002"
+            return title.exists && title.label == "Level 2"
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [nextLevel], timeout: 8), .completed)
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")

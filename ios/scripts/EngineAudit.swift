@@ -197,7 +197,10 @@ struct EngineAudit {
         for milestone in MilestoneChallenge.catalog { precondition(progress.claimMilestone(id: milestone.id) == 0) }
         for number in 1...25 { progress.completeLevel(.generate(number: number, mode: .endless)) }
         for number in 1...10 { progress.completeLevel(.generate(number: number, mode: .timed)) }
-        for skin in BallSkin.catalog.prefix(4) { precondition(progress.purchaseSkin(skin)) }
+        let collectorSkins = BallSkin.catalog.prefix(4)
+        progress.points = collectorSkins.reduce(0) { $0 + $1.price }
+        for skin in collectorSkins { precondition(progress.purchaseSkin(skin)) }
+        precondition(progress.points == 0)
         var coins = 0
         for milestone in MilestoneChallenge.catalog {
             precondition(milestone.isComplete(in: progress))

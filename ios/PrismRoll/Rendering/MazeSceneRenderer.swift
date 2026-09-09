@@ -13,10 +13,13 @@ final class MazeSceneRenderer {
     private var boardRoot = SCNNode()
     private let shadowMaterial = SCNMaterial()
     private let ballRoot = SCNNode()
+    private let ballShape = SCNNode()
     private let ball = SCNNode(geometry: SCNSphere(radius: 0.405))
     private let paintEffects = MazePaintEffects()
     private let ballTrail = MazeBallTrailEffects()
-    var preparationResources: [Any] { [scene] + paintEffects.preparationResources + ballTrail.preparationResources }
+    private let completionCoins = MazeCompletionCoinEffects()
+    private var ballImpact = MazeBallImpact()
+    var preparationResources: [Any] { [scene] + paintEffects.preparationResources + ballTrail.preparationResources + completionCoins.preparationResources }
     private var paintTiles: [GridCell: SCNNode] = [:]
     private var pathMarkers: [GridCell: SCNNode] = [:]
     private var coins: [GridCell: SCNNode] = [:]
@@ -150,12 +153,20 @@ final class MazeSceneRenderer {
 
     func advance(by interval: TimeInterval) {
         guard resourcesReady, let level = currentLevel, interval.isFinite, interval > 0,
-              motion.isMoving || ballTrail.hasParticles else { return }
+              motion.isMoving || ballTrail.hasParticles || ballImpact.isPlaying || completionCoins.hasParticles else { return }
+        let step = min(interval, 1.0 / 15)
         SCNTransaction.begin()
         SCNTransaction.disableActions = true
-        ballTrail.advance(by: interval)
+        ballTrail.advance(by: step)
+        ballImpact.advance(by: step)
+        completionCoins.advance(by: step)
         let origin = motion.position
         let frame = motion.advance(by: interval)
+        if !reduceMotion, let direction = frame.wallImpactDirection {
+            ballImpact.begin(direction: direction)
+        }
+        ballShape.simdScale = ballImpact.scale
+        ballShape.simdPosition = SIMD3(0, 0.423, 0) + ballImpact.offset
         if !reduceMotion {
             ballTrail.emit(from: origin, segments: frame.rotations, level: level, root: boardRoot, interval: interval)
         }
@@ -180,7 +191,11 @@ final class MazeSceneRenderer {
         // A fast frame may cross several cells; a bounded, prepared splash pool
         // keeps the wet trail without uploading geometry during movement.
         if let cell = frame.paintedCells.last { paintEffects.splash(at: cell, level: level, root: boardRoot) }
-        if let cell = frame.completedAt { paintEffects.celebrate(at: cell, level: level, root: boardRoot, ball: ball) }
+    }
+
+    func celebrateCompletion() {
+        guard resultReady, isComplete, let level = currentLevel, let cell = lastPosition else { return }
+        completionCoins.celebrate(at: cell, level: level, root: boardRoot, reduceMotion: reduceMotion)
     }
 
     func stop() {
@@ -204,11 +219,15 @@ final class MazeSceneRenderer {
         motion.reset(position: position, painted: painted)
         paintEffects.reset()
         ballTrail.reset()
+        ballImpact.reset()
+        completionCoins.reset()
         ballRoot.removeAllActions()
         ball.removeAllActions()
         boardRoot.enumerateChildNodes { node, _ in node.removeAllActions() }
         ballRoot.position = MazeBoardBuilder.position(of: position, in: level)
-        ball.position.y = 0.423
+        ballShape.simdScale = SIMD3(repeating: 1)
+        ballShape.position = SCNVector3(0, 0.423, 0)
+        ball.position = SCNVector3Zero
         ball.eulerAngles = SCNVector3(0.1, 0.4, -0.2)
         for (cell, tile) in paintTiles { tile.opacity = painted.contains(cell) ? 1 : 0 }
         for (cell, marker) in pathMarkers { marker.isHidden = painted.contains(cell) }
@@ -256,6 +275,7 @@ final class MazeSceneRenderer {
     private func configureScene() {
         MazeStudioLighting.configure(scene: scene, cameraNode: cameraNode)
         ballTrail.setCameraOrientation(cameraNode.simdOrientation)
+        completionCoins.setCameraOrientation(cameraNode.simdOrientation)
         shadowMaterial.lightingModel = .constant
         shadowMaterial.diffuse.contents = UIColor.clear
         shadowMaterial.writesToDepthBuffer = false
@@ -266,9 +286,11 @@ final class MazeSceneRenderer {
         contact.castsShadow = false
         ballRoot.addChildNode(contact)
         (ball.geometry as? SCNSphere)?.segmentCount = 48
-        ball.position.y = 0.423
+        ballShape.name = "ball-impact"
+        ballShape.position.y = 0.423
         ball.castsShadow = true
-        ballRoot.addChildNode(ball)
+        ballShape.addChildNode(ball)
+        ballRoot.addChildNode(ballShape)
         scene.rootNode.addChildNode(ballRoot)
     }
 

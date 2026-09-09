@@ -8,8 +8,10 @@ enum MazeHapticPatterns {
         let vibration = CHHapticEvent(
             eventType: .hapticContinuous,
             parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.75),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.45)
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.90),
+                // Lower sharpness deepens the continuous vibration without
+                // introducing gaps or extra per-frame impact requests.
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.30)
             ],
             relativeTime: 0,
             duration: rollingDuration

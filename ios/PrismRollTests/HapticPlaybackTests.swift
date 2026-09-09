@@ -173,7 +173,7 @@ final class HapticPlaybackTests: XCTestCase {
         XCTAssertEqual(output.calls, ["prepare", "idle", "completion"])
     }
 
-    func testRollingPatternIsStrongConstantHapticsWithoutIntensityDips() throws {
+    func testRollingPatternIsStrongerAndDeeperWithoutIntensityDips() throws {
         let pattern = try MazeHapticPatterns.rolling()
         XCTAssertEqual(pattern.duration, MazeHapticPatterns.rollingDuration, accuracy: 0.0001)
         let entries = try XCTUnwrap(try pattern.exportDictionary()[.pattern] as? [[String: Any]])
@@ -183,7 +183,9 @@ final class HapticPlaybackTests: XCTestCase {
         XCTAssertTrue(entries.compactMap { $0["ParameterCurve"] }.isEmpty)
         let parameters = try XCTUnwrap(events.first?["EventParameters"] as? [[String: Any]])
         let intensity = try XCTUnwrap(parameters.first { ($0["ParameterID"] as? String) == "HapticIntensity" }?["ParameterValue"] as? Double)
-        XCTAssertEqual(intensity, 0.75, accuracy: 0.0001)
+        let sharpness = try XCTUnwrap(parameters.first { ($0["ParameterID"] as? String) == "HapticSharpness" }?["ParameterValue"] as? Double)
+        XCTAssertEqual(intensity, 0.90, accuracy: 0.0001)
+        XCTAssertEqual(sharpness, 0.30, accuracy: 0.0001)
     }
 
     func testCompletionPatternIsBriefRisingSequenceWithoutAudioOrLoop() throws {

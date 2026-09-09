@@ -58,7 +58,7 @@ final class CoreMazeHapticOutput: MazeHapticOutput {
 
     func playStep() {
         guard sessionID != nil else { return }
-        fallbackImpact.impactOccurred(intensity: 0.75)
+        fallbackImpact.impactOccurred(intensity: 0.90)
     }
 
     func stop() {
@@ -79,7 +79,7 @@ final class CoreMazeHapticOutput: MazeHapticOutput {
     private func playFallbackIfRolling() {
         guard sessionID != nil, rolling, !usedFallback else { return }
         usedFallback = true
-        fallbackImpact.impactOccurred(intensity: 0.75)
+        fallbackImpact.impactOccurred(intensity: 0.90)
     }
 
     deinit { worker.shutdown() }

@@ -8,8 +8,11 @@ final class MazeBallTrailEffects {
     static let capacity = 72
     static let maxEmissionsPerFrame = 36
 
+    private enum Kind { case wake, motif }
+
     private struct Particle {
         let node: SCNNode
+        var kind = Kind.wake
         var age: Double = 0
         var lifetime: Double = 0
         var origin = SIMD3<Float>.zero
@@ -17,6 +20,7 @@ final class MazeBallTrailEffects {
         var size: Float = 1
         var angle: Float = 0
         var spin: Float = 0
+        var heading = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
     }
 
     private let root = SCNNode()
@@ -55,18 +59,21 @@ final class MazeBallTrailEffects {
         reset()
         skinID = skin.id
         style = BallTrailStyle(skin: skin)
-        geometries = BallTrailTexture.make(for: style).map { texture in
+        geometries = BallTrailTexture.make(for: style).enumerated().map { index, texture in
             let material = SCNMaterial()
             material.lightingModel = .constant
             material.diffuse.contents = texture
             material.writesToDepthBuffer = false
             material.blendMode = style.additive ? .add : .alpha
             let plane = SCNPlane(width: 1, height: 1)
+            plane.name = index == 2 ? "ball-trail-wake" : "ball-trail-motif"
             plane.materials = [material]
             return plane
         }
         for index in particles.indices {
-            particles[index].node.geometry = geometries[index % geometries.count]
+            let kind: Kind = index.isMultiple(of: 3) ? .motif : .wake
+            particles[index].kind = kind
+            particles[index].node.geometry = geometries[kind == .wake ? 2 : (index / 3) % 2]
         }
     }
 
@@ -137,18 +144,22 @@ final class MazeBallTrailEffects {
         let variation = (Float(sequence) * 0.618034).truncatingRemainder(dividingBy: 1)
         let side: Float = sequence.isMultiple(of: 2) ? 1 : -1
         let lateral = SIMD2(-direction.y, direction.x)
-        let location = point - direction * 0.16 + lateral * (side * 0.07)
+        let isWake = particles[index].kind == .wake
+        let location = point - direction * 0.18 + lateral * (isWake ? 0 : side * 0.045)
         if particles[index].node.isHidden { activeParticleCount += 1 }
         particles[index].node.isHidden = false
         particles[index].age = age
-        particles[index].lifetime = style.lifetime * Double(0.85 + variation * 0.3)
-        particles[index].origin = SIMD3(location.x - Float(level.width - 1) / 2, 0.20,
+        particles[index].lifetime = style.lifetime * Double(isWake ? 0.68 : 0.90 + variation * 0.20)
+        particles[index].origin = SIMD3(location.x - Float(level.width - 1) / 2, isWake ? 0.055 : 0.20,
                                         location.y - Float(level.height - 1) / 2)
-        let drift = lateral * (side * style.spread) - direction * style.drift
-        particles[index].velocity = SIMD3(drift.x, style.rise * (0.8 + variation * 0.4), drift.y)
-        particles[index].size = style.size * (0.8 + variation * 0.4)
+        let drift = isWake ? -direction * 0.035
+            : lateral * (side * style.spread) - direction * style.drift
+        particles[index].velocity = SIMD3(drift.x, isWake ? 0 : style.rise * (0.8 + variation * 0.4), drift.y)
+        particles[index].size = style.size * (isWake ? 1 : 0.85 + variation * 0.30)
         particles[index].angle = variation * .pi * 2
         particles[index].spin = style.spin * side
+        particles[index].heading = simd_quatf(angle: atan2(direction.x, direction.y), axis: SIMD3(0, 1, 0))
+            * simd_quatf(angle: -.pi / 2, axis: SIMD3(1, 0, 0))
         render(index)
     }
 
@@ -156,14 +167,27 @@ final class MazeBallTrailEffects {
         let particle = particles[index]
         let age = Float(particle.age)
         let progress = min(1, age / Float(particle.lifetime))
-        // Expand gently, float away from the roll, and dissolve. The short
-        // entrance hides individual births without producing a solid ribbon.
-        let scale = particle.size * (1 + (style.expansion - 1) * progress)
-        particle.node.simdPosition = particle.origin + particle.velocity * age
-        particle.node.simdScale = SIMD3(repeating: scale)
-        particle.node.simdOrientation = cameraOrientation * simd_quatf(
-            angle: particle.angle + particle.spin * age, axis: SIMD3(0, 0, 1))
-        let fadeIn = min(1, age / 0.025 + 0.25)
-        particle.node.opacity = CGFloat(0.82 * fadeIn * (1 - progress) * (1 - progress))
+        // Decelerating drift keeps the tail close to its corridor. Interleaved
+        // floor streaks overlap into a tapered wake; the skin's motifs float
+        // above it instead of merging into a cloud that obscures the board.
+        let driftTime = (1 - exp(-age * 3)) / 3
+        particle.node.simdPosition = particle.origin + particle.velocity * driftTime
+        let entrance = min(1, age / 0.035)
+        let fadeIn = entrance * entrance * (3 - 2 * entrance)
+        if particle.kind == .wake {
+            let taper = 1 - progress * 0.82
+            particle.node.simdScale = SIMD3(particle.size * 1.25 * taper,
+                                            style.spacing * 3.8 * (1 - progress * 0.25), 1)
+            particle.node.simdOrientation = particle.heading
+            particle.node.opacity = CGFloat(0.72 * fadeIn * pow(1 - progress, 1.6))
+        } else {
+            let easeOut = 1 - (1 - progress) * (1 - progress)
+            let scale = particle.size * (1 + (style.expansion - 1) * easeOut)
+                * (1 - progress * 0.25)
+            particle.node.simdScale = SIMD3(repeating: scale)
+            particle.node.simdOrientation = cameraOrientation * simd_quatf(
+                angle: particle.angle + particle.spin * driftTime, axis: SIMD3(0, 0, 1))
+            particle.node.opacity = CGFloat(0.90 * fadeIn * pow(1 - progress, 1.45))
+        }
     }
 }

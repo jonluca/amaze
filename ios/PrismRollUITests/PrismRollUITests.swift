@@ -75,22 +75,23 @@ final class PrismRollUITests: XCTestCase {
     @MainActor
     func testPlayProgressionShopAndRelaunch() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "--ui-test-coins", "400"]
         app.launch()
         XCTAssertTrue(app.otherElements["mazeBoard"].waitForExistence(timeout: 15))
         capture(app, name: "01-first-level")
         solve(app)
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 002")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 2")
         XCTAssertFalse(app.buttons["Keep rolling"].exists)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("50"))
+        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("450"))
         capture(app, name: "02-completed")
         solve(app)
-        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("100"))
+        XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("500"))
         app.tabBars.buttons["Collection"].tap()
         XCTAssertTrue(app.buttons["worldPicker"].waitForExistence(timeout: 3))
         capture(app, name: "03-collection")
-        let affordableSkin = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'skin_' AND label CONTAINS '100 coins'")).firstMatch
+        let affordableSkin = app.buttons["skin_mint"]
         XCTAssertTrue(affordableSkin.exists)
+        XCTAssertTrue(affordableSkin.label.contains("500 coins"))
         affordableSkin.tap()
         app.alerts.buttons.matching(identifier: "confirmSkinUnlock").firstMatch.tap()
         XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("0"))
@@ -117,7 +118,7 @@ final class PrismRollUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["movesRemaining"].exists)
         capture(app, name: "05-challenge")
         solve(app)
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 002")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 2")
         XCTAssertFalse(app.buttons["Keep rolling"].exists)
         capture(app, name: "06-challenge-complete")
         app.buttons["Settings"].tap()

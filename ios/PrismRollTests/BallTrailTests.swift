@@ -11,15 +11,15 @@ final class BallTrailTests: XCTestCase {
         for skin in BallSkin.catalog {
             let style = try XCTUnwrap(BallTrailStyle(rawValue: skin.id), "Missing trail for \(skin.name)")
             let images = BallTrailTexture.make(for: style)
-            XCTAssertFalse(images.isEmpty)
+            XCTAssertEqual(images.count, 3, "Each ball needs two motifs and its directional wake")
             var bytes = Data()
             for image in images {
-                XCTAssertGreaterThan(image.size.width, 0)
+                XCTAssertEqual(image.size, CGSize(width: 96, height: 96))
                 bytes.append(try XCTUnwrap(image.pngData()))
             }
             XCTAssertTrue(artwork.insert(bytes).inserted, "\(skin.name) duplicates another ball's trail artwork")
         }
-        XCTAssertEqual(artwork.count, 12)
+        XCTAssertEqual(artwork.count, BallSkin.catalog.count)
     }
 
     func testTrailEmitsOnAlreadyPaintedRevisitsAndDrainsWhileBallIsIdle() async throws {
@@ -132,36 +132,71 @@ final class BallTrailTests: XCTestCase {
     }
 
     func testParticleAndPerFrameBudgetsReusePreparedResourcesAcrossRepeatedBursts() throws {
-        let effects = MazeBallTrailEffects()
-        effects.setSkin(BallSkin.catalog[0])
-        let prepared = effects.preparationResources.compactMap { $0 as? SCNGeometry }
-        let resourceIDs = prepared.map(ObjectIdentifier.init)
-        XCTAssertFalse(prepared.isEmpty, "Particle geometry should be prepared before the first moving frame")
-        let level = trailLevel(width: 9, height: 7)
-        let root = SCNNode()
-        let corners: [SIMD2<Float>] = [SIMD2(8, 0), SIMD2(0, 6), SIMD2(-8, 0), SIMD2(0, -6)]
-        let segments = (0..<80).map { corners[$0 % 4] }
-        effects.emit(from: .zero, segments: segments, level: level, root: root, interval: 1.0 / 120)
-        XCTAssertGreaterThan(effects.activeParticleCount, 0)
-        XCTAssertLessThanOrEqual(effects.activeParticleCount, MazeBallTrailEffects.maxEmissionsPerFrame)
-        for _ in 0..<12 {
-            effects.advance(by: 1.0 / 120)
+        for skin in BallSkin.catalog {
+            let effects = MazeBallTrailEffects()
+            effects.setSkin(skin)
+            let prepared = effects.preparationResources.compactMap { $0 as? SCNGeometry }
+            let resourceIDs = prepared.map(ObjectIdentifier.init)
+            XCTAssertFalse(prepared.isEmpty, "Particle geometry should be prepared before the first moving frame")
+            let level = trailLevel(width: 9, height: 7)
+            let root = SCNNode()
+            let corners: [SIMD2<Float>] = [SIMD2(8, 0), SIMD2(0, 6), SIMD2(-8, 0), SIMD2(0, -6)]
+            let segments = (0..<80).map { corners[$0 % 4] }
             effects.emit(from: .zero, segments: segments, level: level, root: root, interval: 1.0 / 120)
+            XCTAssertGreaterThan(effects.activeParticleCount, 0)
+            XCTAssertLessThanOrEqual(effects.activeParticleCount, MazeBallTrailEffects.maxEmissionsPerFrame)
+            for _ in 0..<12 {
+                effects.advance(by: 1.0 / 120)
+                effects.emit(from: .zero, segments: segments, level: level, root: root, interval: 1.0 / 120)
+            }
+            let allocated = Set(particles(in: root).map(ObjectIdentifier.init))
+            XCTAssertLessThanOrEqual(allocated.count, MazeBallTrailEffects.capacity)
+            for _ in 0..<120 {
+                effects.advance(by: 1.0 / 120)
+                effects.emit(from: .zero, segments: segments, level: level, root: root, interval: 1.0 / 120)
+                XCTAssertLessThanOrEqual(effects.activeParticleCount, MazeBallTrailEffects.capacity)
+                XCTAssertTrue(Set(particles(in: root).map(ObjectIdentifier.init)).isSubset(of: allocated),
+                              "Continuous movement allocated more particle nodes")
+                XCTAssertEqual(effects.preparationResources.compactMap { $0 as? SCNGeometry }.map(ObjectIdentifier.init), resourceIDs)
+            }
+            effects.reset()
+            XCTAssertFalse(effects.hasParticles)
+            XCTAssertEqual(effects.activeParticleCount, 0)
+            XCTAssertTrue(visibleParticles(in: root).isEmpty)
         }
-        let allocated = Set(particles(in: root).map(ObjectIdentifier.init))
-        XCTAssertLessThanOrEqual(allocated.count, MazeBallTrailEffects.capacity)
-        for _ in 0..<120 {
-            effects.advance(by: 1.0 / 120)
-            effects.emit(from: .zero, segments: segments, level: level, root: root, interval: 1.0 / 120)
-            XCTAssertLessThanOrEqual(effects.activeParticleCount, MazeBallTrailEffects.capacity)
-            XCTAssertTrue(Set(particles(in: root).map(ObjectIdentifier.init)).isSubset(of: allocated),
-                          "Continuous movement allocated more particle nodes")
-            XCTAssertEqual(effects.preparationResources.compactMap { $0 as? SCNGeometry }.map(ObjectIdentifier.init), resourceIDs)
+    }
+
+    func testWakeFollowsEachRollDirectionAndTapersAsMotifsDissolve() throws {
+        let level = trailLevel()
+        for direction: SIMD2<Float> in [SIMD2(1, 0), SIMD2(-1, 0), SIMD2(0, 1), SIMD2(0, -1)] {
+            let effects = MazeBallTrailEffects()
+            effects.setSkin(BallSkin.catalog[0])
+            let root = SCNNode()
+            effects.emit(from: SIMD2(4, 2), segments: [direction * 2], level: level,
+                         root: root, interval: 1.0 / 60)
+            let visible = visibleParticles(in: root)
+            let wake = visible.filter { $0.geometry?.name == "ball-trail-wake" }
+            XCTAssertFalse(wake.isEmpty)
+            XCTAssertTrue(visible.contains { $0.geometry?.name == "ball-trail-motif" },
+                          "The smoother wake must preserve the ball's signature artwork")
+            for node in wake {
+                let tangent = node.simdConvertVector(SIMD3(0, 1, 0), to: root)
+                let expected = SIMD3(direction.x, 0, direction.y)
+                XCTAssertEqual(abs(simd_dot(simd_normalize(tangent), expected)), 1, accuracy: 0.0001,
+                               "A trail streak must follow the roll, including vertical moves")
+                let normal = simd_normalize(node.simdConvertVector(SIMD3(0, 0, 1), to: root))
+                XCTAssertEqual(normal.y, 1, accuracy: 0.0001,
+                               "The wake should settle on the board rather than face the camera")
+            }
+            for _ in 0..<2 { effects.advance(by: 1.0 / 30) }
+            let widths = wake.map { $0.simdScale.x }
+            let opacity = wake.map(\.opacity)
+            for _ in 0..<2 { effects.advance(by: 1.0 / 30) }
+            for (index, node) in wake.enumerated() {
+                XCTAssertLessThan(node.simdScale.x, widths[index], "The wake must taper as it ages")
+                XCTAssertLessThan(node.opacity, opacity[index], "The wake must dissolve after its entrance")
+            }
         }
-        effects.reset()
-        XCTAssertFalse(effects.hasParticles)
-        XCTAssertEqual(effects.activeParticleCount, 0)
-        XCTAssertTrue(visibleParticles(in: root).isEmpty)
     }
 
     func testRenderEveryBallTrailForVisualReview() async throws {
@@ -193,9 +228,11 @@ final class BallTrailTests: XCTestCase {
         }
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
-        let montage = UIGraphicsImageRenderer(size: CGSize(width: cellSize.width * 4, height: cellSize.height * 3), format: format).image { context in
+        let rows = CGFloat((previews.count + 3) / 4)
+        let montageSize = CGSize(width: cellSize.width * 4, height: cellSize.height * rows)
+        let montage = UIGraphicsImageRenderer(size: montageSize, format: format).image { context in
             UIColor(red: 0.94, green: 0.96, blue: 1, alpha: 1).setFill()
-            context.fill(CGRect(x: 0, y: 0, width: cellSize.width * 4, height: cellSize.height * 3))
+            context.fill(CGRect(origin: .zero, size: montageSize))
             for (index, preview) in previews.enumerated() {
                 let origin = CGPoint(x: CGFloat(index % 4) * cellSize.width, y: CGFloat(index / 4) * cellSize.height)
                 preview.1.draw(in: CGRect(origin: origin, size: viewport))
@@ -207,7 +244,7 @@ final class BallTrailTests: XCTestCase {
             }
         }
         let attachment = XCTAttachment(image: montage)
-        attachment.name = "All twelve moving ball trails"
+        attachment.name = "All moving ball trails"
         attachment.lifetime = .keepAlways
         add(attachment)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("prismroll-ball-trails.png")

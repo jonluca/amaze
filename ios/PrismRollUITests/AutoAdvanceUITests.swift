@@ -10,7 +10,7 @@ final class AutoAdvanceUITests: XCTestCase {
         XCTAssertFalse(app.buttons["pauseGame"].exists)
         XCTAssertFalse(app.progressIndicators["Maze painted"].exists)
         for level in 1...3 {
-            let title = String(format: "Level %03d", level)
+            let title = String(format: "Level %d", level)
             XCTAssertEqual(app.staticTexts["levelTitle"].label, title)
             for _ in 0..<80 {
                 if app.waitForMazeAdvanceAfterCompletion(from: title) { break }
@@ -31,7 +31,7 @@ final class AutoAdvanceUITests: XCTestCase {
                 default: XCTFail("Missing hint: \(direction)"); return
                 }
             }
-            XCTAssertEqual(app.staticTexts["levelTitle"].label, String(format: "Level %03d", level + 1))
+            XCTAssertEqual(app.staticTexts["levelTitle"].label, String(format: "Level %d", level + 1))
             XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
             XCTAssertTrue(app.otherElements.matching(identifier: "pointsBalance").firstMatch.label.contains("\(level * 50)"))
         }
@@ -40,7 +40,7 @@ final class AutoAdvanceUITests: XCTestCase {
         XCTAssertFalse(app.buttons["completionBonus_endless_1"].exists)
         XCTAssertFalse(app.alerts.firstMatch.exists)
         app.tabBars.buttons["Play"].tap()
-        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 004")
+        XCTAssertEqual(app.staticTexts["levelTitle"].label, "Level 4")
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "three-levels-advanced-automatically"
         attachment.lifetime = .keepAlways

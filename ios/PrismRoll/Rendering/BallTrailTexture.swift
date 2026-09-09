@@ -11,13 +11,28 @@ enum BallTrailTexture {
         format.scale = 1
         format.opaque = false
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 96, height: 96), format: format)
-        let images = (0..<2).map { variant in
+        var images = (0..<2).map { variant in
             renderer.image { context in
                 draw(style, variant: variant, in: context.cgContext)
             }
         }
+        images.append(renderer.image { context in
+            wake(color: colors(for: style)[0], in: context.cgContext)
+        })
         cache[style] = images
         return images
+    }
+
+    /// The final sprite is a soft directional wake, shared by both motifs.
+    /// Its center catches the light while the tinted edge dissolves into paint.
+    private static func wake(color: UIColor, in context: CGContext) {
+        let colors = [UIColor.white.withAlphaComponent(0.85).cgColor,
+                      color.withAlphaComponent(0.70).cgColor,
+                      color.withAlphaComponent(0).cgColor]
+        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                        colors: colors as CFArray, locations: [0, 0.30, 1]) else { return }
+        context.drawRadialGradient(gradient, startCenter: CGPoint(x: 48, y: 48), startRadius: 0,
+                                   endCenter: CGPoint(x: 48, y: 48), endRadius: 46, options: [])
     }
 
     private static func draw(_ style: BallTrailStyle, variant: Int, in context: CGContext) {
@@ -52,6 +67,18 @@ enum BallTrailTexture {
             ribbon(color: color, variant: variant, in: context)
         case .midnight:
             crescent(color: color, in: context)
+        case .solarFlare:
+            solarCorona(color: color, variant: variant, in: context)
+        case .plasma:
+            plasmaArc(color: color, variant: variant, in: context)
+        case .supernova:
+            stellarShockwave(color: color, variant: variant, in: context)
+        case .singularity:
+            accretionDisk(color: color, variant: variant, in: context)
+        case .tesseract:
+            hypercube(color: color, variant: variant, in: context)
+        case .genesis:
+            creationSigil(color: color, variant: variant, in: context)
         }
     }
 
@@ -70,6 +97,12 @@ enum BallTrailTexture {
         case .nova: values = [0xF779B8, 0xFFD05B]
         case .aurora: values = [0x50D9D2, 0xBD8CFF]
         case .midnight: values = [0xD6AD61, 0xFFE5A0]
+        case .solarFlare: values = [0xFF8B32, 0xFFD566]
+        case .plasma: values = [0x30D7F3, 0xA86CFF]
+        case .supernova: values = [0xF864AD, 0xFFC661]
+        case .singularity: values = [0x9773F4, 0x56B9F6]
+        case .tesseract: values = [0x30CFB8, 0x9D83FF]
+        case .genesis: values = [0xF0B64F, 0xEB88C9]
         }
         return values.map { value in
             UIColor(red: CGFloat((value >> 16) & 255) / 255,

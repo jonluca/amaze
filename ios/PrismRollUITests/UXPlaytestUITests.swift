@@ -67,16 +67,14 @@ final class UXPlaytestUITests: XCTestCase {
 
     @MainActor
     func testSkinPurchaseCancellationAndEquippingStayInCollection() {
-        let app = launch()
-        solve(app)
-        solve(app)
+        let app = launch(extra: ["--ui-test-coins", "500"])
         app.tabBars.buttons["Collection"].tap()
-        let skin = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'skin_' AND label CONTAINS '100 coins'")).firstMatch
+        let skin = app.buttons["skin_mint"]
         XCTAssertTrue(skin.waitForExistence(timeout: 3))
         let wallet = app.otherElements.matching(identifier: "pointsBalance").firstMatch
         skin.tap()
         app.alerts.buttons.matching(identifier: "cancelSkinUnlock").firstMatch.tap()
-        XCTAssertTrue(wallet.label.contains("100"))
+        XCTAssertTrue(wallet.label.contains("500"))
         skin.tap()
         app.alerts.buttons.matching(identifier: "confirmSkinUnlock").firstMatch.tap()
         XCTAssertTrue(wallet.label.contains("0"))

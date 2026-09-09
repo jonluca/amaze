@@ -77,6 +77,9 @@ struct MazeMotionTimeline {
             let origin = SIMD2(Float(move.origin.column), Float(move.origin.row))
             let target = SIMD2(Float(move.position.column), Float(move.position.row))
             let next = origin + (target - origin) * Float(fraction)
+            // An intermediate wall crossed within this frame is no longer the
+            // visible contact point once a queued turn has moved away from it.
+            if simd_length_squared(next - position) > 0 { update.wallImpactDirection = nil }
             update.rotations.append(next - position)
             position = next
             let reached = min(move.path.count, Int(fraction * Double(move.path.count) + 0.5))
@@ -88,6 +91,7 @@ struct MazeMotionTimeline {
             }
             if timeFraction >= 1 {
                 painted.formUnion(move.painted)
+                update.wallImpactDirection = target - origin
                 if move.isComplete { update.completedAt = move.position }
                 moves.removeFirst()
                 elapsed = 0

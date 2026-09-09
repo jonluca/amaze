@@ -71,7 +71,7 @@ final class SwipeReliabilityUITests: XCTestCase {
         XCTAssertTrue(board.waitForExistence(timeout: 15))
         let title = app.staticTexts["levelTitle"]
         XCTAssertTrue(title.waitForExistence(timeout: 15))
-        XCTAssertEqual(title.label, "Level 001")
+        XCTAssertEqual(title.label, "Level 1")
         XCTAssertEqual(app.staticTexts["moveCount"].label, "0 moves")
         app.buttons["reward_hint"].tap()
 
@@ -97,7 +97,7 @@ final class SwipeReliabilityUITests: XCTestCase {
                          withVelocity: XCUIGestureVelocity(rawValue: 2_500), thenHoldForDuration: 0)
         }
         XCTAssertEqual(app.staticTexts["moveCount"].label, "20 moves", "Each diagonal flick must register exactly once")
-        XCTAssertEqual(title.label, "Level 001")
+        XCTAssertEqual(title.label, "Level 1")
 
         let boardState = board.value as? String
         app.buttons["Settings"].tap()

@@ -5,7 +5,7 @@ Implemented September 7, 2026. These changes follow the requested feel: continuo
 ## Feedback
 
 - `MazeHapticPlayer` follows the renderer's pending movement, so queued swipes sustain one rolling pattern until the visible ball stops. The model no longer triggers an additional impact on each successful swipe or an early success notification.
-- Core Haptics loops a flat 0.24-second continuous pattern at 0.75 intensity and 0.45 sharpness. There is no repeating dip in strength. Completion stops that loop and plays four increasingly sharp, stronger taps over 0.30 seconds.
+- Core Haptics loops a flat 0.24-second continuous pattern at 0.90 intensity and 0.30 sharpness. The higher intensity and lower sharpness create a stronger, deeper rolling feel while preserving continuous contact. There is no repeating dip in strength. Completion stops that loop and plays four increasingly sharp, stronger taps over 0.30 seconds.
 - Engine and player operations run on an owned serial queue. Preparation starts while the visible board is loading; the swipe path never waits for hardware startup. The engine uses haptics only and stays warm throughout the active gameplay session, reusing players between moves and levels.
 - A prepared native impact covers a roll that begins before the engine is ready or when hardware playback fails. That fallback occurs at most once during the current rolling interval and never replays after the ball stops. Hardware failures are logged; another rolling interval can retry without retrying every frame.
 - Settings, backgrounding, hidden gameplay, disabled haptics, run replacement, and teardown stop playback. Inactive gameplay releases the hardware; run replacement keeps it warm. Session and hardware identifiers reject stale asynchronous callbacks. Interrupted completion patterns do not replay. A hardware interruption can resume rolling only after a fresh visible-motion frame.
@@ -15,7 +15,7 @@ The patterns use Apple's [continuous haptic engine](https://developer.apple.com/
 
 ## Progression
 
-- Once the final accepted move visibly finishes, the rendered completion phase lasts 0.36 seconds. It uses the display clock and pauses with gameplay. The timer and gameplay input are already stopped for the completed maze.
+- Once the final accepted move visibly finishes, a gold coin fan plays for 0.54 seconds. It uses the display clock and pauses with gameplay. The timer and gameplay input are already stopped for the completed maze. Reduce Motion shows a single stationary fading coin. See [motion polish](MOTION_POLISH.md).
 - Automatic progression sends an ordered, run-scoped event before replacing the model, preserving the completed board independently of SwiftUI update ordering. After the next scene's first frame, a 0.30-second native animation slides the old maze upward and the next maze in from below.
 - Input and the countdown resume after the incoming board settles. Manual restarts and mode changes keep their existing direct transitions.
 - A stationary, clipped UIKit viewport contains the moving SceneKit view. Preparation resizing, including dismissal of the opening tutorial, preserves the outgoing snapshot's top position and aspect ratio. Resizing during animation settles the current board. Stale callbacks cannot make a replaced board ready.

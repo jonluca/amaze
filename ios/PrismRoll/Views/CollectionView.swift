@@ -2,7 +2,9 @@ import SwiftUI
 
 struct CollectionView: View {
     @EnvironmentObject private var store: GameStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var skinToUnlock: BallSkin?
+    @State private var selectedRarity: BallRarity?
 
     var body: some View {
         List {
@@ -21,21 +23,46 @@ struct CollectionView: View {
                 Text("Set the scene")
             }
             Section {
-                ForEach(BallSkin.catalog) { skin in
-                    SkinCard(skin: skin, owned: store.progress.ownedSkinIDs.contains(skin.id),
-                             selected: store.progress.selectedSkinID == skin.id,
-                             coinBalance: store.progress.points) {
-                        if store.progress.ownedSkinIDs.contains(skin.id) {
-                            store.selectSkin(skin)
-                        } else if store.progress.points >= skin.price {
-                            skinToUnlock = skin
-                        }
+                Picker("Rarity", selection: $selectedRarity) {
+                    Text("All rarities").tag(nil as BallRarity?)
+                    ForEach(BallRarity.allCases) { rarity in
+                        Label(rarity.name, systemImage: rarity.symbol).tag(Optional(rarity))
                     }
                 }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("rarityPicker")
             } header: {
-                Text("Balls · \(store.progress.ownedSkinIDs.count) of \(BallSkin.catalog.count) owned")
+                Text("Balls · \(ownedCount) of \(BallSkin.catalog.count) owned")
             } footer: {
-                Text("Finish a new level to earn 50 coins. Unlocking a ball equips it immediately. You can switch between owned balls for free.")
+                Text("Earn 50 coins for each new level.")
+            }
+            ForEach(visibleRarities) { rarity in
+                Section {
+                    ForEach(BallSkin.catalog.filter { $0.rarity == rarity }) { skin in
+                        SkinCard(skin: skin, owned: store.progress.ownedSkinIDs.contains(skin.id),
+                                 selected: store.progress.selectedSkinID == skin.id,
+                                 coinBalance: store.progress.points) {
+                            if store.progress.ownedSkinIDs.contains(skin.id) {
+                                store.selectSkin(skin)
+                            } else if store.progress.points >= skin.price {
+                                skinToUnlock = skin
+                            }
+                        }
+                    }
+                } header: {
+                    rarityHeaderLayout {
+                        Label(rarity.name, systemImage: rarity.symbol)
+                            .foregroundStyle(Color(hex: rarity.hex))
+                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+                        Text("\(ownedCount(in: rarity)) / \(BallSkin.catalog.filter { $0.rarity == rarity }.count) owned")
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("rarity_\(rarity.id)")
+                } footer: {
+                    if rarity == visibleRarities.last {
+                        Text("Unlocking a ball equips it immediately. Switch between owned balls for free.")
+                    }
+                }
             }
         }
         .listStyle(.insetGrouped)
@@ -51,7 +78,25 @@ struct CollectionView: View {
             Button("Cancel", role: .cancel) { }
                 .accessibilityIdentifier("cancelSkinUnlock")
         } message: { skin in
-            Text("Spend \(skin.price.formatted()) coins to unlock and equip \(skin.name).")
+            Text("Spend \(skin.price.formatted()) coins to unlock and equip \(skin.name), a \(skin.rarity.name.lowercased()) ball.")
         }
+    }
+
+    private var visibleRarities: [BallRarity] {
+        selectedRarity.map { [$0] } ?? BallRarity.allCases
+    }
+
+    private var rarityHeaderLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout())
+    }
+
+    private var ownedCount: Int {
+        BallSkin.catalog.filter { store.progress.ownedSkinIDs.contains($0.id) }.count
+    }
+
+    private func ownedCount(in rarity: BallRarity) -> Int {
+        BallSkin.catalog.filter { $0.rarity == rarity && store.progress.ownedSkinIDs.contains($0.id) }.count
     }
 }

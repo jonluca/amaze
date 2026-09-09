@@ -148,6 +148,7 @@ final class MazeSceneCoordinator: NSObject {
         }
         if !isStopped, isActive, isReady, receivedMove, renderer.isComplete,
            renderer.resultReady, completionBeat.begin() {
+            renderer.celebrateCompletion()
             haptics.playCompletion()
         }
         guard !isStopped, isActive, isReady, renderer.resultReady,

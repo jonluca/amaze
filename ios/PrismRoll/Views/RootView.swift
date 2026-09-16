@@ -30,6 +30,10 @@ struct RootView: View {
     private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
 
     var body: some View {
+        contentWithRunChanges
+    }
+
+    private var tabsWithGameplayInput: some View {
         TabView(selection: $tab) {
             navigationPage("Prism Roll") {
                 PlayView(isActive: playSceneActive, onRestart: requestRestart,
@@ -75,6 +79,10 @@ struct RootView: View {
             sessionID: store.inputID,
             onSwipe: { direction, inputID in store.move(direction, for: inputID) }
         )
+    }
+
+    private var contentWithPresentations: some View {
+        tabsWithGameplayInput
         .sheet(isPresented: $settingsOpen, onDismiss: { settingsPresented = false; syncModalState() }) {
             SettingsView().onAppear { settingsPresented = true }
         }
@@ -92,10 +100,7 @@ struct RootView: View {
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if let url = activity.webpageURL { receiveChallenge(url) }
         }
-        .sheet(isPresented: Binding(
-            get: { needsAnalyticsChoice },
-            set: { _ in }
-        ), onDismiss: {
+        .sheet(isPresented: analyticsChoiceBinding, onDismiss: {
             analyticsChoicePresented = false
             syncModalState()
             prepareAds()
@@ -105,9 +110,13 @@ struct RootView: View {
                 syncModalState()
             }
         }
-        .alert("Prism Roll", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
+        .alert("Prism Roll", isPresented: noticeBinding) {
             Button("Got it", role: .cancel) { store.notice = nil }
         } message: { Text(store.notice ?? "") }
+    }
+
+    private var contentWithLifecycle: some View {
+        contentWithPresentations
         .onReceive(timer) { _ in store.tick() }
         .onAppear {
             reviewPrompts.recordEngagement()
@@ -161,6 +170,10 @@ struct RootView: View {
                 store.notice = message
             }
         }
+    }
+
+    private var contentWithModalChanges: some View {
+        contentWithLifecycle
         .onChange(of: duel.isMatching) { _, _ in syncModalState() }
         .onChange(of: settingsOpen) { _, open in
             syncModalState()
@@ -177,6 +190,10 @@ struct RootView: View {
             analytics.screen(sharedChallenge == nil ? (tab == "journey" ? "levels" : tab) : "shared_challenge")
         }
         .onChange(of: store.isRewardPending) { _, _ in syncModalState() }
+    }
+
+    private var contentWithRunChanges: some View {
+        contentWithModalChanges
         .onChange(of: playSceneActive) { _, active in
             if active { advanceCompletedLevelIfReady() }
         }
@@ -200,6 +217,19 @@ struct RootView: View {
                 if store.run.isComplete { duel.submitCompletion() }
             }
         }
+    }
+
+    private var analyticsChoiceBinding: Binding<Bool> {
+        Binding<Bool>(get: { needsAnalyticsChoice }, set: { _ in })
+    }
+
+    private var noticeBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { store.notice != nil },
+            set: { isPresented in
+                if !isPresented { store.notice = nil }
+            }
+        )
     }
 
     private var playSceneActive: Bool {

@@ -57,6 +57,7 @@ def main():
     parser.add_argument("root", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
+    (root / "validation").mkdir(parents=True, exist_ok=True)
     video = root / "video"
     for folder in ("app-store", "social", "web", "segments"):
         (video / folder).mkdir(parents=True, exist_ok=True)

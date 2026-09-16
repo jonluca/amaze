@@ -4,6 +4,7 @@ import UIKit
 @MainActor
 final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     var onSwipe: (MoveDirection, UUID) -> Void = { _, _ in }
+    weak var gameplayHost: UIView?
     private var sessionID = UUID()
     private var strokeSessionID: UUID?
     private var sequence = SwipeSequence<ObjectIdentifier>()
@@ -64,7 +65,7 @@ final class GameplaySwipeGestureRecognizer: UIGestureRecognizer, UIGestureRecogn
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         guard let window = view as? UIWindow else { return false }
-        return GameplayTouchPolicy.allowsSwipe(startingIn: touch.view, window: window)
+        return GameplayTouchPolicy.allowsSwipe(startingIn: touch.view, window: window, gameplayHost: gameplayHost)
     }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,

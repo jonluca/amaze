@@ -7,6 +7,7 @@ struct JourneyView: View {
     @State private var pageStart: Int?
     @State private var jumpOpen = false
     @State private var jumpNumber = ""
+    var onSharePresentationChanged: (Bool) -> Void = { _ in }
     let onPlay: () -> Void
 
     var body: some View {
@@ -197,6 +198,14 @@ struct JourneyView: View {
             .accessibilityLabel("\(title), \(unlocked ? "unlocked" : "locked"), \(optimal ? "solved optimally" : solved ? "solved" : "not solved")\(bestMoves.map { ", best \($0) \($0 == 1 ? "move" : "moves")" } ?? "")")
             .accessibilityHint(unlocked ? resumable ? "Continue your saved run" : solved ? "Replay to improve your best" : "Play this \(store.mode == .timed ? "round" : "level")" : "Solve earlier \(store.mode == .timed ? "rounds" : "levels") to unlock")
             .accessibilityIdentifier("journeyLevel_\(number)")
+            if solved && store.mode != .timed {
+                ChallengeShareButton(onPresentationChanged: onSharePresentationChanged) {
+                    let level = MazeLevel.generate(number: number, mode: store.mode)
+                    return try ChallengeLink.make(level: level, title: "\(pathTitle) · Level \(number)",
+                                                  moves: store.progress.bestMoves(for: level))
+                }
+                .font(.subheadline)
+            }
             if store.progress.canClaimAdBonus(number: number, mode: store.mode) {
                 CompletionBonusButton(number: number, mode: store.mode)
             }

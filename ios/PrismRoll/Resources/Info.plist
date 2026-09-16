@@ -1,12 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+    <key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key><false/>
+    <key>GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED</key><false/>
+    <key>GOOGLE_ANALYTICS_TCF_DATA_ENABLED</key><false/>
+    <key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS</key><false/>
+    <key>FirebaseAutomaticScreenReportingEnabled</key><false/>
+    <key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE</key><false/>
+    <key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE</key><false/>
+    <key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA</key><false/>
     <key>CADisableMinimumFrameDurationOnPhone</key><true/>
     <key>CFBundleDisplayName</key><string>Prism Roll</string>
     <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleURLTypes</key><array><dict>
+        <key>CFBundleURLName</key><string>com.jonluca.prismroll.challenge</string>
+        <key>CFBundleURLSchemes</key><array><string>prismroll</string></array>
+        <key>CFBundleTypeRole</key><string>Viewer</string>
+    </dict></array>
     <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
     <key>LSRequiresIPhoneOS</key><true/>

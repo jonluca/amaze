@@ -3,6 +3,7 @@ import SwiftUI
 struct ChallengesView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var onSharePresentationChanged: (Bool) -> Void = { _ in }
     let onPlay: () -> Void
 
     var body: some View {
@@ -56,6 +57,12 @@ struct ChallengesView: View {
                           systemImage: "calendar")
                 }
                 .accessibilityIdentifier("playDaily")
+                ChallengeShareButton(title: store.dailyChallengeShareMoves == nil ? "Share today's maze" : "Challenge a friend",
+                                     onPresentationChanged: onSharePresentationChanged) {
+                    try ChallengeLink.make(level: store.dailyChallenge.level,
+                                           title: "Daily maze · \(store.dailyChallenge.id)",
+                                           moves: store.dailyChallengeShareMoves)
+                }
                 Text("One new move challenge each day. Finish it to earn your daily prize.")
                     .font(.subheadline).foregroundStyle(.secondary)
             }

@@ -7,6 +7,7 @@ final class GameplaySwipeHostView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        swipeRecognizer.gameplayHost = self
         isUserInteractionEnabled = false
         isAccessibilityElement = false
         backgroundColor = .clear

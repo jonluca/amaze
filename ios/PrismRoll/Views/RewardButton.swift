@@ -15,7 +15,7 @@ struct RewardButton: View {
                         Label(isIntroductoryHint ? "Free hint" : title, systemImage: icon)
                     }
                     .font(.subheadline.weight(.semibold))
-                    Text(isPreparingHint ? "Finding best move" : isIntroductoryHint ? "First maze" : "Watch ad")
+                    Text(isPreparingHint ? "Finding best move" : isIntroductoryHint ? "First 5 levels" : "Watch ad")
                         .font(.caption).foregroundStyle(Palette.ink.opacity(0.8))
                 }
                 .frame(maxWidth: .infinity, minHeight: 36)
@@ -23,7 +23,7 @@ struct RewardButton: View {
             .buttonStyle(.bordered)
             .controlSize(.regular)
             .disabled(ads.isPresenting || ads.isPrivacyFormPresenting || store.isRewardPending || isPreparingHint)
-            .accessibilityLabel(isIntroductoryHint ? "Free hint, first maze" : "\(kind == .hint ? "Show hint" : kind.title), Watch ad")
+            .accessibilityLabel(isIntroductoryHint ? "Free hint, first five Classic levels" : "\(kind == .hint ? "Show hint" : kind.title), Watch ad")
             .accessibilityHint(isPreparingHint ? "Finding the shortest route from your current position." : isIntroductoryHint ? "Shows the next direction on a shortest route." : "Watch a video ad to receive this reward.")
             .accessibilityIdentifier("reward_\(kind.rawValue)")
         }

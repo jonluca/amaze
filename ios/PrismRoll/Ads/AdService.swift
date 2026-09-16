@@ -5,11 +5,25 @@ import UserMessagingPlatform
 
 @MainActor
 final class AdService: NSObject, ObservableObject {
+    enum RewardedPlacement: String {
+        case gameplay
+        case completionBonus = "completion_bonus"
+        case coinShop = "coin_shop"
+    }
+
+    private enum AdFailure: String {
+        case unavailable
+        case presentationUnavailable = "presentation_unavailable"
+        case presentationFailed = "presentation_failed"
+    }
+
     @Published private(set) var rewardedAvailability: RewardedAdAvailability = .loading
     @Published private(set) var isPresenting = false
     @Published private(set) var privacyOptionsRequired = false
     @Published private(set) var statusMessage = "Preparing optional ads…"
     @Published private(set) var isPrivacyFormPresenting = false
+    /// Includes the consent-info request, before UMP knows whether a sheet is required.
+    @Published private(set) var isUpdatingConsent = false
     @Published var interstitialsDisabled = false {
         didSet {
             if interstitialsDisabled {
@@ -21,6 +35,7 @@ final class AdService: NSObject, ObservableObject {
 
     private let configuration: AdConfiguration?
     private let now: () -> Date
+    private let analytics: any AnalyticsRecording
     private var consentTask: Task<Void, Never>?
     private var rewardedTask: Task<Void, Never>?
     private var interstitialTask: Task<Void, Never>?
@@ -33,11 +48,15 @@ final class AdService: NSObject, ObservableObject {
     private var rewardedAd: LoadedAd<RewardedAd>?
     private var interstitialAd: LoadedAd<InterstitialAd>?
     private var activePresentation: AdPresentation?
+    private var activeRewardedPlacement: RewardedPlacement = .gameplay
+    private var recordedPresentationShown = false
     private var frequency = InterstitialFrequencyPolicy()
 
-    init(configuration: AdConfiguration? = .current, now: @escaping () -> Date = Date.init) {
+    init(configuration: AdConfiguration? = .current, now: @escaping () -> Date = Date.init,
+         analytics: (any AnalyticsRecording)? = nil) {
         self.configuration = configuration
         self.now = now
+        self.analytics = analytics ?? AnalyticsService.shared
         super.init()
         if configuration == nil { rewardedAvailability = .unavailable }
     }
@@ -64,9 +83,14 @@ final class AdService: NSObject, ObservableObject {
         }
         guard consentTask == nil, retryIsDue(lastConsentAttempt) else { return }
         lastConsentAttempt = now()
+        isUpdatingConsent = true
         consentTask = Task { [weak self] in
             guard let self else { return }
-            defer { consentTask = nil; updateRewardedAvailability() }
+            defer {
+                consentTask = nil
+                isUpdatingConsent = false
+                updateRewardedAvailability()
+            }
             do {
                 try await ConsentInformation.shared.requestConsentInfoUpdate(with: RequestParameters())
                 privacyOptionsRequired = ConsentInformation.shared.privacyOptionsRequirementStatus == .required
@@ -88,12 +112,15 @@ final class AdService: NSObject, ObservableObject {
     }
 
     /// The callback runs only when Google's SDK reports the reward as earned.
-    func presentRewarded(onReward: @escaping () -> Void, onDismiss: @escaping () -> Void = {}) {
+    func presentRewarded(placement: RewardedPlacement = .gameplay,
+                         onReward: @escaping () -> Void, onDismiss: @escaping () -> Void = {}) {
+        recordAdEvent("ad_requested", rewarded: true, placement: placement)
         discardExpiredAds()
         guard configuration != nil, !isPresenting, !isPrivacyFormPresenting,
               ConsentInformation.shared.canRequestAds,
               let loaded = rewardedAd else {
             statusMessage = "No video is available right now. You can keep playing."
+            recordAdEvent("ad_failed", rewarded: true, placement: placement, failure: .unavailable)
             onDismiss()
             prepare()
             return
@@ -104,12 +131,15 @@ final class AdService: NSObject, ObservableObject {
             rewardedAd = nil
             updateRewardedAvailability()
             statusMessage = "The video could not open. You can keep playing."
+            recordAdEvent("ad_failed", rewarded: true, placement: placement, failure: .presentationUnavailable)
             onDismiss()
             prepare()
             return
         }
         rewardedAd = nil
         activePresentation = .rewarded(loaded.ad, reward: onReward, dismiss: onDismiss)
+        activeRewardedPlacement = placement
+        recordedPresentationShown = false
         isPresenting = true
         updateRewardedAvailability()
         frequency.presentedAd()
@@ -120,7 +150,7 @@ final class AdService: NSObject, ObservableObject {
     }
 
     /// Invoke exactly once when a completed level advances automatically.
-    /// Four completions and 90 seconds since the last ad are required.
+    /// Session grace comes first, then four completions and 90 seconds after an ad.
     /// Unavailable ads never delay the next level or appear when loading finishes later.
     func presentInterstitial(onDismiss: @escaping () -> Void) {
         guard configuration != nil, !interstitialsDisabled else {
@@ -130,9 +160,12 @@ final class AdService: NSObject, ObservableObject {
         guard !isPresenting else { return }
         let isEligible = frequency.completedLevel(at: now())
         discardExpiredAds()
+        // Frequency suppression and No Ads are not failed ad requests.
+        if isEligible { recordAdEvent("ad_requested", rewarded: false) }
         guard isEligible, !isPrivacyFormPresenting,
               ConsentInformation.shared.canRequestAds,
               let loaded = interstitialAd else {
+            if isEligible { recordAdEvent("ad_failed", rewarded: false, failure: .unavailable) }
             onDismiss()
             prepare()
             return
@@ -141,12 +174,14 @@ final class AdService: NSObject, ObservableObject {
             try loaded.ad.canPresent(from: nil)
         } catch {
             interstitialAd = nil
+            recordAdEvent("ad_failed", rewarded: false, failure: .presentationUnavailable)
             onDismiss()
             prepare()
             return
         }
         interstitialAd = nil
         activePresentation = .interstitial(loaded.ad, dismiss: onDismiss)
+        recordedPresentationShown = false
         frequency.presentedAd()
         isPresenting = true
         updateRewardedAvailability()
@@ -172,10 +207,19 @@ final class AdService: NSObject, ObservableObject {
         }
     }
 
+    func recordPresentationShown(_ ad: any FullScreenPresentingAd) {
+        guard let presentation = activePresentation, presentation.ad === ad,
+              !recordedPresentationShown else { return }
+        recordedPresentationShown = true
+        recordPresentationEvent("ad_shown", presentation: presentation)
+    }
+
     func finishPresentation(_ ad: any FullScreenPresentingAd, failed: Bool) {
         guard let presentation = activePresentation, presentation.ad === ad else { return }
         activePresentation = nil
         isPresenting = false
+        recordPresentationEvent(failed ? "ad_failed" : "ad_dismissed", presentation: presentation,
+                                failure: failed ? .presentationFailed : nil)
         if !failed { frequency.dismissedAd(at: now()) }
         statusMessage = failed ? "The ad could not open. You can keep playing." : "Optional bonus ads"
         switch presentation {
@@ -189,7 +233,27 @@ final class AdService: NSObject, ObservableObject {
               ad === rewarded, let reward else { return }
         // Consume the callback before invoking client code, so a repeated SDK event is harmless.
         activePresentation = .rewarded(ad, reward: nil, dismiss: dismiss)
+        recordAdEvent("ad_reward_earned", rewarded: true, placement: activeRewardedPlacement)
         reward()
+    }
+
+    private func recordPresentationEvent(_ name: String, presentation: AdPresentation, failure: AdFailure? = nil) {
+        switch presentation {
+        case .rewarded:
+            recordAdEvent(name, rewarded: true, placement: activeRewardedPlacement, failure: failure)
+        case .interstitial:
+            recordAdEvent(name, rewarded: false, failure: failure)
+        }
+    }
+
+    private func recordAdEvent(_ name: String, rewarded: Bool, placement: RewardedPlacement = .gameplay,
+                               failure: AdFailure? = nil) {
+        var parameters: [String: Any] = [
+            "ad_format": rewarded ? "rewarded" : "interstitial",
+            "placement": rewarded ? placement.rawValue : "level_transition"
+        ]
+        if let failure { parameters["reason"] = failure.rawValue }
+        analytics.record(name, parameters: parameters)
     }
 
     private func startAdsIfAllowed() {

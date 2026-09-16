@@ -97,8 +97,8 @@ jobs:
           info = plistlib.loads((app / "Info.plist").read_bytes())
           expected = {
               "CFBundleIdentifier": "com.jonluca.prismroll",
-              "CFBundleShortVersionString": "1.0.0",
-              "CFBundleVersion": "13",
+              "CFBundleShortVersionString": "1.1.0",
+              "CFBundleVersion": "14",
               "CADisableMinimumFrameDurationOnPhone": True,
               "DTXcodeBuild": "17F113",
               "DTSDKName": "iphoneos26.5",
@@ -106,6 +106,9 @@ jobs:
               "GADApplicationIdentifier": "ca-app-pub-8314265628354618~3970821518",
               "PrismRewardedAdUnitID": "ca-app-pub-8314265628354618/1472545489",
               "PrismInterstitialAdUnitID": "ca-app-pub-8314265628354618/4122030604",
+              "FIREBASE_ANALYTICS_COLLECTION_ENABLED": False,
+              "GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED": False,
+              "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS": False,
           }
           for key, value in expected.items():
               assert info.get(key) == value, (key, info.get(key), value)
@@ -116,6 +119,10 @@ jobs:
           signature = subprocess.run(["codesign", "-dv", str(app)], capture_output=True, text=True)
           assert signature.returncode != 0, "The app unexpectedly contains a code signature"
           assert (app / "PrivacyInfo.xcprivacy").is_file()
+          firebase = plistlib.loads((app / "GoogleService-Info.plist").read_bytes())
+          assert firebase["BUNDLE_ID"] == "com.jonluca.prismroll"
+          assert firebase["PROJECT_ID"] == "prism-roll"
+          assert info["CFBundleURLTypes"][0]["CFBundleURLSchemes"] == ["prismroll"]
           assert (archive / "dSYMs/PrismRoll.app.dSYM").is_dir()
           assert plistlib.loads((archive / "Info.plist").read_bytes())["ApplicationProperties"]["ApplicationPath"] == "Applications/PrismRoll.app"
           build_commands = subprocess.check_output(["xcrun", "vtool", "-show-build", str(executable)], text=True)
@@ -146,7 +153,7 @@ jobs:
       - name: Upload the unsigned archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: PrismRoll-1.0.0-13-xcode26.6-unsigned-${{ github.run_id }}
+          name: PrismRoll-1.1.0-14-xcode26.6-unsigned-${{ github.run_id }}
           path: build/deliverables/
           if-no-files-found: error
           retention-days: 7

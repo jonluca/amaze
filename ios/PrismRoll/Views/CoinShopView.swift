@@ -122,7 +122,7 @@ struct CoinShopView: View {
     private func watchVideo() {
         guard ads.canShowRewarded, let requestID = store.beginCoinReward() else { return }
         videoStatus = nil
-        ads.presentRewarded(onReward: {
+        ads.presentRewarded(placement: .coinShop, onReward: {
             let amount = store.claimCoinReward(requestID)
             videoStatus = amount > 0 ? "Added \(amount) coins." : "Coins could not be saved. Please try again."
         }, onDismiss: {

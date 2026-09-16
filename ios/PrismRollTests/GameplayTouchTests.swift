@@ -83,5 +83,35 @@ final class GameplayTouchTests: XCTestCase {
         host.detach()
         XCTAssertFalse(second.gestureRecognizers?.contains { $0 === host.swipeRecognizer } ?? false)
     }
+
+    func testPresentedGameplayAcceptsOnlyItsOwnHostAndRejectsSheetsAboveIt() async throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previousKey = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let root = UIViewController()
+        window.rootViewController = root
+        window.makeKeyAndVisible()
+        defer { root.dismiss(animated: false); window.isHidden = true; previousKey?.makeKey() }
+        let underlyingHost = GameplaySwipeHostView()
+        root.view.addSubview(underlyingHost)
+        let gameplay = UIViewController()
+        gameplay.modalPresentationStyle = .fullScreen
+        await withCheckedContinuation { continuation in
+            root.present(gameplay, animated: false) { continuation.resume() }
+        }
+        let sharedHost = GameplaySwipeHostView()
+        let board = UIView()
+        gameplay.view.addSubview(sharedHost)
+        gameplay.view.addSubview(board)
+        XCTAssertTrue(GameplayTouchPolicy.allowsSwipe(startingIn: board, window: window, gameplayHost: sharedHost))
+        XCTAssertFalse(GameplayTouchPolicy.allowsSwipe(startingIn: board, window: window, gameplayHost: underlyingHost))
+        XCTAssertFalse(GameplayTouchPolicy.allowsSwipe(startingIn: board, window: window))
+        let sheet = UIViewController()
+        await withCheckedContinuation { continuation in
+            gameplay.present(sheet, animated: false) { continuation.resume() }
+        }
+        XCTAssertFalse(GameplayTouchPolicy.allowsSwipe(startingIn: sheet.view, window: window, gameplayHost: sharedHost))
+        XCTAssertFalse(GameplayTouchPolicy.allowsSwipe(startingIn: board, window: window, gameplayHost: sharedHost))
+    }
 }
 #endif

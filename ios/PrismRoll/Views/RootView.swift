@@ -1,16 +1,26 @@
 import SwiftUI
 import Combine
+import StoreKit
 
 struct RootView: View {
+    @ObservedObject private var analytics = AnalyticsService.shared
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var ads: AdService
     @EnvironmentObject private var duel: DuelService
     @EnvironmentObject private var purchases: PurchaseService
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.requestReview) private var requestReview
+    @State private var reviewPrompts = ReviewPromptStore()
+    @State private var sharedChallenge: SharedChallenge?
+    @State private var pendingSharedChallenge: SharedChallenge?
     @State private var tab = "play"
     @State private var settingsOpen = false
     @State private var coinShopOpen = false
+    @State private var settingsPresented = false
+    @State private var coinShopPresented = false
+    @State private var challengeShareOpen = false
+    @State private var analyticsChoicePresented = false
     @State private var restartPromptOpen = false
     @State private var restartRunID: UUID?
     @State private var readyRunID: UUID?
@@ -45,32 +55,63 @@ struct RootView: View {
             }
                 .tabItem { Label("Play", systemImage: "square.grid.3x3.fill").accessibilityIdentifier("tab_play") }
                 .tag("play")
-            navigationPage("Challenges") { ChallengesView { tab = "play" } }
+            navigationPage("Challenges") { ChallengesView(onSharePresentationChanged: setChallengeSharing) { tab = "play" } }
                 .tabItem { Label("Challenges", systemImage: "trophy.fill").accessibilityIdentifier("tab_challenges") }
                 .tag("challenges")
             navigationPage("Collection") { CollectionView { coinShopOpen = true } }
                 .tabItem { Label("Collection", systemImage: "circle.hexagongrid.fill").accessibilityIdentifier("tab_collection") }
                 .tag("collection")
-            navigationPage("Levels") { JourneyView { tab = "play" } }
+            navigationPage("Levels") { JourneyView(onSharePresentationChanged: setChallengeSharing) { tab = "play" } }
                 .tabItem { Label("Levels", systemImage: "square.grid.2x2.fill").accessibilityIdentifier("tab_journey") }
                 .tag("journey")
         }
         .tint(Palette.violet)
         .gameplaySwipes(
             enabled: tab == "play" && readyRunID == store.runID && store.acceptsGameplayInput
+                && sharedChallenge == nil
                 && scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen && !duel.isMatching
                 && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
                 && !store.hasEnded && !store.isRewardPending && !(store.isDuel && duel.didWin != nil),
             sessionID: store.inputID,
             onSwipe: { direction, inputID in store.move(direction, for: inputID) }
         )
-        .sheet(isPresented: $settingsOpen) { SettingsView() }
-        .sheet(isPresented: $coinShopOpen) { CoinShopView() }
+        .sheet(isPresented: $settingsOpen, onDismiss: { settingsPresented = false; syncModalState() }) {
+            SettingsView().onAppear { settingsPresented = true }
+        }
+        .sheet(isPresented: $coinShopOpen, onDismiss: { coinShopPresented = false; syncModalState() }) {
+            CoinShopView().onAppear { coinShopPresented = true }
+        }
+        .fullScreenCover(item: $sharedChallenge, onDismiss: { syncModalState(); prepareAds() }) { challenge in
+            SharedChallengeView(challenge: challenge, skin: store.skin, theme: store.theme,
+                                hapticsEnabled: store.progress.hapticsEnabled,
+                                soundEnabled: store.progress.soundEnabled,
+                                directionButtonsEnabled: store.progress.directionButtonsEnabled)
+                .id(challenge.id)
+        }
+        .onOpenURL(perform: receiveChallenge)
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL { receiveChallenge(url) }
+        }
+        .sheet(isPresented: Binding(
+            get: { needsAnalyticsChoice },
+            set: { _ in }
+        ), onDismiss: {
+            analyticsChoicePresented = false
+            syncModalState()
+            prepareAds()
+        }) {
+            AnalyticsConsentView().onAppear {
+                analyticsChoicePresented = true
+                syncModalState()
+            }
+        }
         .alert("Prism Roll", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
             Button("Got it", role: .cancel) { store.notice = nil }
         } message: { Text(store.notice ?? "") }
         .onReceive(timer) { _ in store.tick() }
         .onAppear {
+            reviewPrompts.recordEngagement()
+            analytics.screen(tab)
             store.setPresentationReady(readyRunID == store.runID, for: store.runID)
             store.setActivity(active: scenePhase == .active, visible: tab == "play")
             syncModalState()
@@ -95,6 +136,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             store.setActivity(active: phase == .active)
             if phase == .active {
+                reviewPrompts.recordEngagement()
+                syncModalState()
                 store.refreshDaily()
                 prepareAds()
                 Task { await purchases.recoverUnfinishedPurchases() }
@@ -105,9 +148,11 @@ struct RootView: View {
             }
         }
         .onChange(of: tab) { _, newTab in
+            analytics.screen(newTab == "journey" ? "levels" : newTab)
             store.setActivity(visible: newTab == "play")
             if newTab == "challenges" { store.refreshDaily() }
             if newTab != "play", store.isDuel { duel.cancel(); store.endSpecialSession() }
+            if newTab != "play" { requestReviewAtRest() }
         }
         .onChange(of: duel.matchID) { _, id in
             if id == nil, store.isDuel {
@@ -117,9 +162,21 @@ struct RootView: View {
             }
         }
         .onChange(of: duel.isMatching) { _, _ in syncModalState() }
-        .onChange(of: settingsOpen) { _, _ in syncModalState() }
-        .onChange(of: coinShopOpen) { _, _ in syncModalState() }
+        .onChange(of: settingsOpen) { _, open in
+            syncModalState()
+            analytics.screen(open ? "settings" : (tab == "journey" ? "levels" : tab))
+        }
+        .onChange(of: coinShopOpen) { _, open in
+            syncModalState()
+            analytics.screen(open ? "coin_shop" : (tab == "journey" ? "levels" : tab))
+        }
+        .onChange(of: analytics.hasMadeChoice) { _, _ in syncModalState() }
         .onChange(of: restartPromptOpen) { _, _ in syncModalState() }
+        .onChange(of: sharedChallenge) { _, _ in
+            syncModalState()
+            analytics.screen(sharedChallenge == nil ? (tab == "journey" ? "levels" : tab) : "shared_challenge")
+        }
+        .onChange(of: store.isRewardPending) { _, _ in syncModalState() }
         .onChange(of: playSceneActive) { _, active in
             if active { advanceCompletedLevelIfReady() }
         }
@@ -133,6 +190,7 @@ struct RootView: View {
         }
         .onChange(of: ads.isPresenting) { _, _ in syncModalState() }
         .onChange(of: ads.isPrivacyFormPresenting) { _, _ in syncModalState() }
+        .onChange(of: ads.isUpdatingConsent) { _, _ in syncModalState() }
         .onChange(of: store.notice) { _, _ in syncModalState() }
         .onChange(of: store.progress.soundEnabled) { _, enabled in ads.setSoundEnabled(enabled) }
         .onChange(of: purchases.removesAds) { _, removed in ads.interstitialsDisabled = removed }
@@ -146,7 +204,20 @@ struct RootView: View {
 
     private var playSceneActive: Bool {
         tab == "play" && scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen && !duel.isMatching
-            && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
+            && sharedChallenge == nil
+            && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil && !needsAnalyticsChoice && !analyticsChoicePresented
+    }
+
+    private var needsAnalyticsChoice: Bool {
+        analytics.isAvailable && !analytics.hasMadeChoice && !isUITesting
+    }
+
+    private var isUITesting: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--uitesting")
+#else
+        false
+#endif
     }
 
     private func requestRestart() {
@@ -188,8 +259,53 @@ struct RootView: View {
         }
     }
 
-    private func syncModalState() { store.setActivity(modal: settingsOpen || coinShopOpen || restartPromptOpen || duel.isMatching || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil) }
+    private func syncModalState() {
+        presentPendingChallengeIfReady()
+        store.setActivity(modal: settingsOpen || coinShopOpen || restartPromptOpen || duel.isMatching
+                          || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil
+                          || needsAnalyticsChoice || analyticsChoicePresented || sharedChallenge != nil
+                          || settingsPresented || coinShopPresented || challengeShareOpen)
+    }
+
+    private func setChallengeSharing(_ open: Bool) {
+        challengeShareOpen = open
+        syncModalState()
+    }
+
+    private func receiveChallenge(_ url: URL) {
+        do {
+            let challenge = try ChallengeLink.decode(url)
+            if sharedChallenge != nil { sharedChallenge = challenge }
+            else { pendingSharedChallenge = challenge }
+            syncModalState()
+        } catch {
+            store.notice = "This challenge link is invalid or needs a newer version of Prism Roll."
+        }
+    }
+
+    private func presentPendingChallengeIfReady() {
+        guard let pending = pendingSharedChallenge, sharedChallenge == nil, scenePhase == .active,
+              !settingsOpen, !coinShopOpen, !restartPromptOpen, !duel.isMatching, !store.isDuel,
+              !settingsPresented, !coinShopPresented, !challengeShareOpen,
+              !ads.isPresenting, !ads.isPrivacyFormPresenting, !ads.isUpdatingConsent, !store.isRewardPending,
+              store.notice == nil, !needsAnalyticsChoice, !analyticsChoicePresented else { return }
+        pendingSharedChallenge = nil
+        sharedChallenge = pending
+    }
+
+    /// Request at a player-selected pause after sustained progress, never mid-maze.
+    private func requestReviewAtRest() {
+        guard scenePhase == .active, !settingsOpen, !coinShopOpen, sharedChallenge == nil,
+              !settingsPresented, !coinShopPresented, !challengeShareOpen,
+              !ads.isPresenting, !ads.isPrivacyFormPresenting, !ads.isUpdatingConsent, !duel.isMatching,
+              !needsAnalyticsChoice, !analyticsChoicePresented, store.notice == nil,
+              !isUITesting,
+              reviewPrompts.consumeRequest(completedLevels: store.progress.completedLevels) else { return }
+        analytics.record("review_prompt_requested", parameters: [:])
+        requestReview()
+    }
     private func prepareAds() {
+        guard !needsAnalyticsChoice, !analyticsChoicePresented, sharedChallenge == nil else { return }
         ads.setSoundEnabled(store.progress.soundEnabled)
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()

@@ -136,6 +136,13 @@ struct ProgressData: Codable, Equatable, Sendable {
         return levelRecords[completionKey(number: number, mode: mode)]?.bestMoves
     }
 
+    /// Shared scores must describe the exact geometry included in the link.
+    func bestMoves(for level: MazeLevel) -> Int? {
+        guard level.mode != .timed, let board = RecordedBoard(level),
+              let record = levelRecords[completionKey(for: level)], record.board == board else { return nil }
+        return record.bestMoves
+    }
+
     func hasOptimalCompletion(number: Int, mode: GameMode) -> Bool {
         guard hasCompleted(number: number, mode: mode) else { return false }
         let key = completionKey(number: number, mode: mode)

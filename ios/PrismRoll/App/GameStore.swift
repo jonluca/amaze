@@ -26,6 +26,9 @@ final class GameStore: ObservableObject {
     @Published var notice: String?
     @Published private(set) var earnedPoints = 0
     @Published private(set) var isRewardPending = false
+    let analytics: any AnalyticsRecording
+    var analyticsBoardHasMoved = false
+    private var pendingHintAnalyticsSource = "free"
     private let defaults: UserDefaults
     private let progressPersistence: ProgressPersistence
     private let snapshotEncoder = GameSnapshotEncoder()
@@ -64,8 +67,9 @@ final class GameStore: ObservableObject {
          },
          optimalHintSolver: @escaping @Sendable (MazeLevel, GridCell, Set<GridCell>) async -> MazeNativeOptimizer.Result? = { level, position, painted in
              await MazeMinimumMoveCache.shared.solution(for: level, position: position, painted: painted)
-         }) {
+         }, analytics: (any AnalyticsRecording)? = nil) {
         self.defaults = defaults
+        self.analytics = analytics ?? AnalyticsService.shared
         self.optimalHintSolver = optimalHintSolver
         progressPersistence = ProgressPersistence(url: progressFileURL ?? ProgressPersistence.defaultURL(for: defaults))
         dateProvider = now
@@ -80,7 +84,8 @@ final class GameStore: ObservableObject {
         let decoder = JSONDecoder()
         let snapshot = defaults.data(forKey: "prism.snapshot.v2").flatMap { try? decoder.decode(GameSnapshot.self, from: $0) }
         pendingCompletions = snapshot?.pendingCompletions ?? []
-        var loadedProgress = (try? progressPersistence.load()) ?? snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
+        let persistedProgress = try? progressPersistence.load()
+        var loadedProgress = persistedProgress ?? snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
             try? decoder.decode(ProgressData.self, from: $0)
         } ?? ProgressData()
 #if DEBUG
@@ -181,10 +186,10 @@ final class GameStore: ObservableObject {
     var isFailed: Bool { !run.isComplete && (run.isFailed || timeExpired) }
     var hasEnded: Bool { (run.isComplete && !isAwaitingTimeRushMaze) || isFailed }
     var offersIntroductoryHints: Bool {
-        !isDaily && !isDuel && mode == .endless && run.level.number == 1
+        !isDaily && !isDuel && mode == .endless && (1...5).contains(run.level.number)
             && !hasEnded && !progress.hasCompleted(run.level)
     }
-    var showsTutorial: Bool { offersIntroductoryHints && !progress.tutorialDismissed }
+    var showsTutorial: Bool { offersIntroductoryHints && run.level.number == 1 && !progress.tutorialDismissed }
     var bonusClaimed: Bool { progress.hasClaimedAdBonus(level: run.level) }
     var canClaimAdBonus: Bool { !isDaily && !isDuel && run.isComplete && hasEnded && progress.hasCompleted(run.level) && !bonusClaimed }
     var currentUnlockedLevel: Int {
@@ -201,6 +206,11 @@ final class GameStore: ObservableObject {
     var currentStreak: Int { progress.dailyCurrentStreak(at: dateProvider()) }
     var canClaimDaily: Bool { progress.canClaimDailyReward(at: dateProvider()) }
     var dailyReward: Int { progress.dailyRewardAmount(at: dateProvider()) }
+    var dailyChallengeShareMoves: Int? {
+        let candidate = isDaily ? run : savedDailyRun
+        guard let candidate, candidate.level == dailyChallenge.level, candidate.isComplete else { return nil }
+        return candidate.moves
+    }
     var clockRunning: Bool { appActive && playVisible && presentationReady && !modalOpen && !isRewardPending && !hasEnded && !run.isComplete && clock?.hasStarted == true }
     var acceptsGameplayInput: Bool { appActive && playVisible && presentationReady && !modalOpen && notice == nil && !hasEnded && !run.isComplete && !isRewardPending }
 
@@ -212,6 +222,7 @@ final class GameStore: ObservableObject {
         let oldSecond = Int(current.remainingSeconds)
         current.consume(now - previous)
         clock = current
+        if isFailed { recordGameplayEvent("level_failed", parameters: ["reason": "time_expired"]) }
         if oldSecond != Int(current.remainingSeconds) { save() }
     }
 
@@ -260,6 +271,7 @@ final class GameStore: ObservableObject {
         tick()
         guard inputID == self.inputID, originalRun == runID, acceptsGameplayInput else { return }
         let start = run.position
+        let previousMoves = run.moves
         let path = run.move(direction, recomputeFallbackHint: false)
         guard !path.isEmpty else {
             blockedDirection = direction
@@ -267,6 +279,7 @@ final class GameStore: ObservableObject {
             if progress.hapticsEnabled { feedback.impactOccurred(intensity: 0.25) }
             return
         }
+        recordBoardInteraction(previousMoves: previousMoves)
         blockedDirection = nil
         moveEvents.send(GameMoveEvent(runID: runID, start: start, path: path, position: run.position,
                                      painted: run.painted, isComplete: run.isComplete, moves: run.moves))
@@ -274,15 +287,25 @@ final class GameStore: ObservableObject {
         lastTick = uptimeProvider()
         hint = nil
         refreshOptimalHintPreparation()
-        if !isDaily && !isDuel { progress.awardCollectedCoins(for: run) }
+        let pickupAward = !isDaily && !isDuel ? progress.awardCollectedCoins(for: run) : 0
         if progress.soundEnabled { AudioServicesPlaySystemSound(1104) }
         if run.isComplete {
             if !isAwaitingTimeRushMaze {
                 earnedPoints = isDuel ? 0 : isDaily ? progress.completeDailyChallenge(dailyChallenge, at: dateProvider()) : progress.completeLevel(run.level)
             }
             startCompletionVerification()
+            if isTimeRush { recordGameplayEvent("time_rush_maze_completed") }
+            if !isAwaitingTimeRushMaze { recordGameplayEvent("level_end", parameters: ["success": 1]) }
+        } else if isFailed {
+            recordGameplayEvent("level_failed", parameters: ["reason": "move_limit"])
         }
-        save()
+        if save() {
+            recordCurrencyEarned(pickupAward, source: "maze_pickup", parameters: gameplayAnalyticsParameters)
+            if run.isComplete, !isAwaitingTimeRushMaze {
+                recordCurrencyEarned(earnedPoints, source: isDaily ? "daily_maze" : "level_completion",
+                                     parameters: gameplayAnalyticsParameters)
+            }
+        }
     }
 
     func switchMode(_ next: GameMode) {
@@ -291,9 +314,11 @@ final class GameStore: ObservableObject {
         isDaily = false; duelID = nil; mode = next
         restoreSoloRun()
         clearTransientState(); save()
+        recordGameplayEvent("mode_selected")
     }
 
     func replay() {
+        recordGameplayEvent("level_restarted")
         if isTimeRush, let previous = timeRushSession {
             let session = TimeRushSession(course: previous.course.retimed())
             timeRushSession = session
@@ -356,6 +381,7 @@ final class GameStore: ObservableObject {
         if replayCompleted && run.isComplete { run.reset() }
         clock = nil
         clearTransientState(); save()
+        recordGameplayEvent("daily_opened", parameters: ["resumed": run.moves > 0 ? 1 : 0])
     }
 
     func openDuel(seed: Int, id: String) {
@@ -373,13 +399,15 @@ final class GameStore: ObservableObject {
         clearTransientState(); save()
     }
 
-    func showHint() {
+    func showHint(source: String = "free") {
         guard !hasEnded, !run.isComplete, !isDuel else { return }
         blockedDirection = nil
         if hasOptimalHint {
+            if hint != run.hintDirection { recordGameplayEvent("hint_used", parameters: ["source": source]) }
             hint = run.hintDirection
         } else {
             isHintPending = true
+            pendingHintAnalyticsSource = source
             startOptimalHintPreparation()
         }
     }
@@ -423,7 +451,10 @@ final class GameStore: ObservableObject {
             if case let .optimal(moves, route) = result, moves == route.count {
                 _ = self.run.installOptimalRoute(route)
             }
-            if self.isHintPending, self.hasOptimalHint { self.hint = self.run.hintDirection }
+            if self.isHintPending, self.hasOptimalHint {
+                self.hint = self.run.hintDirection
+                self.recordGameplayEvent("hint_used", parameters: ["source": self.pendingHintAnalyticsSource])
+            }
             self.isHintPending = false
         }
     }
@@ -464,6 +495,7 @@ final class GameStore: ObservableObject {
         let previous = progress
         progress.points = balance
         guard save() else { progress = previous; return 0 }
+        recordCurrencyEarned(Self.videoCoinReward, source: "rewarded_video")
         return Self.videoCoinReward
     }
 
@@ -488,18 +520,24 @@ final class GameStore: ObservableObject {
         try progressPersistence.persist(credited)
         progress = credited
         save()
+        recordCurrencyEarned(amount, source: "purchase", parameters: ["item_id": purchase.productID])
         return .credited(amount)
     }
 
     func applyReward(_ request: GameplayRewardRequest) {
         guard request.runID == runID, rewardedRequestIDs.insert(request.id).inserted else { return }
+        let wasFailed = isFailed
         switch request.kind {
         case .hint:
             guard request.position == run.position, request.moves == run.moves else { return }
-            showHint()
-        case .extraTime: clock?.extend(by: 30)
-        case .extraMoves: _ = run.grantExtraMoves(count: 3)
+            showHint(source: "rewarded_video")
+        case .extraTime:
+            guard clock != nil, !run.isComplete else { return }
+            clock?.extend(by: 30)
+        case .extraMoves:
+            guard run.grantExtraMoves(count: 3) else { return }
         case .skip:
+            recordGameplayEvent("level_skipped", parameters: ["reason": "rewarded_video"])
             let next = run.level.number == Int.max ? Int.max : run.level.number + 1
             switch mode {
             case .endless: progress.endlessLevel = max(progress.endlessLevel, next)
@@ -507,6 +545,10 @@ final class GameStore: ObservableObject {
             case .timed: progress.timedLevel = max(progress.timedLevel, next)
             }
             nextLevel()
+        }
+        if request.kind != .skip {
+            recordGameplayEvent("gameplay_reward_earned", parameters: ["reward_type": request.kind.rawValue])
+            if wasFailed, !isFailed { recordGameplayEvent("level_revived", parameters: ["reward_type": request.kind.rawValue]) }
         }
         startOptimalHintPreparation()
         lastTick = uptimeProvider(); save()
@@ -517,25 +559,36 @@ final class GameStore: ObservableObject {
         let previous = progress
         let amount = progress.claimDailyReward(at: dateProvider())
         guard save() else { progress = previous; notice = "Your reward could not be saved. Please try again."; return }
+        recordCurrencyEarned(amount, source: "daily_login", parameters: ["streak": currentStreak])
         if amount > 0 { notice = "+\(amount) coins! Day \(currentStreak) of your streak." }
     }
     func claimMilestone(_ id: String) {
         let previous = progress
         let amount = progress.claimMilestone(id: id)
         guard save() else { progress = previous; notice = "Your reward could not be saved. Please try again."; return }
+        recordCurrencyEarned(amount, source: "milestone", parameters: ["item_id": id])
         if amount > 0, progress.hapticsEnabled { feedback.impactOccurred() }
     }
     func selectSkin(_ skin: BallSkin) {
         let previous = progress
         if progress.purchaseSkin(skin) {
             guard save() else { progress = previous; notice = "Your ball could not be saved. Please try again."; return }
+            let properties: [String: Any] = ["item_id": skin.id, "rarity": skin.rarity.rawValue]
+            if !previous.ownedSkinIDs.contains(skin.id) {
+                analytics.record("skin_unlocked", parameters: properties)
+                analytics.record("spend_virtual_currency", parameters: properties.merging([
+                    "virtual_currency_name": "coins", "value": previous.points - progress.points
+                ]) { _, new in new })
+            }
+            if previous.selectedSkinID != skin.id { analytics.record("skin_equipped", parameters: properties) }
             if progress.hapticsEnabled { feedback.impactOccurred() }
         } else { notice = "Earn \(max(0, skin.price - progress.points)) more coins to unlock \(skin.name)." }
     }
     func claimAdBonus(for level: MazeLevel) {
         let previous = progress
-        progress.claimAdBonus(level: level)
-        if !save() { progress = previous; notice = "Your reward could not be saved. Please try again." }
+        let amount = progress.claimAdBonus(level: level)
+        guard save() else { progress = previous; notice = "Your reward could not be saved. Please try again."; return }
+        recordCurrencyEarned(amount, source: "completion_bonus", parameters: ["game_mode": level.mode.rawValue, "level": level.number])
     }
     func setHaptics(_ enabled: Bool) { progress.hapticsEnabled = enabled; save() }
     func setSound(_ enabled: Bool) { progress.soundEnabled = enabled; save() }
@@ -547,6 +600,7 @@ final class GameStore: ObservableObject {
         // Cancel the actual native owner, not just its awaiting presentation task.
         for id in nonpersistentCompletionIDs { completionTasks[id]?.cancel() }
         runID = UUID(); inputID = UUID(); earnedPoints = 0; hint = nil; notice = nil
+        analyticsBoardHasMoved = false
         completedOptimality = nil
         blockedDirection = nil
         isRewardPending = false; coinRewardRequestID = nil; rewardedRequestIDs.removeAll(); lastTick = uptimeProvider()

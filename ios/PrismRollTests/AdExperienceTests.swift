@@ -46,45 +46,63 @@ final class AdExperienceTests: XCTestCase {
         XCTAssertTrue(retry.canAttempt(at: date.addingTimeInterval(70)))
     }
 
-    func testInterstitialNeedsFourCompletionsAndQuietPeriodAfterDismissal() {
+    func testFirstInterstitialRequiresBothEightCompletionsAndThreeMinuteGrace() {
         let date = Date(timeIntervalSince1970: 1_000)
         var frequency = InterstitialFrequencyPolicy()
-        for _ in 0..<3 { XCTAssertFalse(frequency.completedLevel(at: date)) }
-        XCTAssertTrue(frequency.completedLevel(at: date))
+        for _ in 0..<8 { XCTAssertFalse(frequency.completedLevel(at: date)) }
+        XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(179)))
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(180)))
+
+        var slowPlayer = InterstitialFrequencyPolicy()
+        XCTAssertFalse(slowPlayer.completedLevel(at: date))
+        for _ in 0..<6 { XCTAssertFalse(slowPlayer.completedLevel(at: date.addingTimeInterval(600))) }
+        XCTAssertTrue(slowPlayer.completedLevel(at: date.addingTimeInterval(600)))
+    }
+
+    func testLaterInterstitialsNeedFourCompletionsAndQuietPeriodAfterDismissal() {
+        let date = Date(timeIntervalSince1970: 1_000)
+        var frequency = InterstitialFrequencyPolicy()
+        for _ in 0..<7 { XCTAssertFalse(frequency.completedLevel(at: date)) }
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(180)))
         frequency.presentedAd()
-        frequency.dismissedAd(at: date.addingTimeInterval(30))
+        frequency.dismissedAd(at: date.addingTimeInterval(210))
         // Fast maze completions never bypass the interval measured from dismissal.
-        for second in 31..<120 {
+        for second in 211..<300 {
             XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(Double(second))))
         }
-        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(120)))
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(300)))
         frequency.presentedAd()
-        frequency.dismissedAd(at: date.addingTimeInterval(150))
-        for _ in 0..<3 { XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(240))) }
-        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(240)))
+        frequency.dismissedAd(at: date.addingTimeInterval(330))
+        for _ in 0..<3 { XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(420))) }
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(420)))
     }
 
     func testVoluntaryRewardAdAlsoResetsAutomaticAdFrequency() {
         let date = Date(timeIntervalSince1970: 1_000)
         var frequency = InterstitialFrequencyPolicy()
-        for _ in 0..<4 { _ = frequency.completedLevel(at: date) }
+        for _ in 0..<8 { _ = frequency.completedLevel(at: date) }
         // Both ad formats use these callbacks, so a bonus video buys the same quiet period.
         frequency.presentedAd()
         frequency.dismissedAd(at: date)
         for _ in 0..<4 { XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(89))) }
-        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(90)))
+        XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(90)), "An optional video must not end first-session grace early")
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(180)))
+        frequency.presentedAd()
+        frequency.dismissedAd(at: date.addingTimeInterval(200))
+        for _ in 0..<4 { XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(289))) }
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(290)))
     }
 
     func testUnavailableInterstitialOpportunityDoesNotWaitForInventory() {
         let date = Date(timeIntervalSince1970: 1_000)
         var frequency = InterstitialFrequencyPolicy()
-        for _ in 0..<4 { _ = frequency.completedLevel(at: date) }
+        for _ in 0..<8 { _ = frequency.completedLevel(at: date) }
         // No presentation is recorded when inventory is absent. Eligibility is only
         // evaluated again at a future completed level, never by an ad-load callback.
-        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(5)))
+        XCTAssertTrue(frequency.completedLevel(at: date.addingTimeInterval(180)))
         frequency.presentedAd()
-        frequency.dismissedAd(at: date.addingTimeInterval(10))
-        XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(11)))
+        frequency.dismissedAd(at: date.addingTimeInterval(190))
+        XCTAssertFalse(frequency.completedLevel(at: date.addingTimeInterval(191)))
     }
 }
 #endif

@@ -2,6 +2,7 @@ import SwiftUI
 import StoreKit
 
 struct SettingsView: View {
+    @ObservedObject private var analytics = AnalyticsService.shared
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var ads: AdService
     @EnvironmentObject private var purchases: PurchaseService
@@ -78,6 +79,13 @@ struct SettingsView: View {
                     }
                 }
                 Section("Privacy & ads") {
+                    Toggle("Share usage analytics", isOn: Binding(
+                        get: { analytics.isEnabled }, set: analytics.setEnabled
+                    ))
+                    .disabled(!analytics.isAvailable)
+                    .accessibilityIdentifier("analyticsToggle")
+                    Text("Help improve Prism Roll by sharing gameplay, feature use, and purchase activity with Google Analytics. No name, email, Game Center identity, or advertising identifier is sent by analytics. You can turn this off at any time.")
+                        .font(.caption).foregroundStyle(.secondary)
                     NavigationLink {
                         PrivacyPolicyView()
                     } label: {

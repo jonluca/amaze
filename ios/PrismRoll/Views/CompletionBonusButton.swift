@@ -14,7 +14,7 @@ struct CompletionBonusButton: View {
                 guard store.progress.canClaimAdBonus(number: number, mode: mode) else { return }
                 let level = MazeLevel.generate(number: number, mode: mode)
                 store.beginReward()
-                ads.presentRewarded(onReward: { store.claimAdBonus(for: level) }, onDismiss: { store.finishReward() })
+                ads.presentRewarded(placement: .completionBonus, onReward: { store.claimAdBonus(for: level) }, onDismiss: { store.finishReward() })
             } label: {
                 Label("+50 bonus coins · Watch ad", systemImage: "play.rectangle")
                     .font(.subheadline)

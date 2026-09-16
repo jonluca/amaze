@@ -1,4 +1,5 @@
 import CoreHaptics
+import AVFAudio
 
 final class CoreMazeHapticHardware: MazeHapticHardware {
     private enum Failure: Error { case playerUnavailable }

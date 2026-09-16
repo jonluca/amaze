@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class GameCoachingTests: XCTestCase {
-    func testIntroductoryHintsAreLimitedToTheUnfinishedFirstClassicMaze() throws {
+    func testIntroductoryHintsAreLimitedToUnfinishedEarlyClassicMazes() throws {
         try withDefaults { defaults in
             let store = makeStore(defaults: defaults)
             XCTAssertTrue(store.offersIntroductoryHints)
@@ -46,12 +46,32 @@ final class GameCoachingTests: XCTestCase {
             XCTAssertFalse(store.showsTutorial)
             store.nextLevel()
             XCTAssertEqual(store.run.level.number, 2)
-            XCTAssertFalse(store.offersIntroductoryHints)
+            XCTAssertTrue(store.offersIntroductoryHints)
             XCTAssertFalse(store.showsTutorial)
             let restored = makeStore(defaults: defaults)
             restored.openLevel(1)
             XCTAssertFalse(restored.offersIntroductoryHints)
             XCTAssertFalse(restored.showsTutorial)
+        }
+    }
+
+    func testFreeCoachingContinuesThroughFiveClassicLevelsAndStopsAtSix() throws {
+        try withDefaults { defaults in
+            let store = makeStore(defaults: defaults)
+            for number in 1...5 {
+                XCTAssertEqual(store.run.level.number, number)
+                XCTAssertTrue(store.offersIntroductoryHints)
+                if number > 1 { XCTAssertFalse(store.showsTutorial) }
+                complete(store)
+                XCTAssertFalse(store.offersIntroductoryHints)
+                store.nextLevel()
+            }
+            XCTAssertEqual(store.run.level.number, 6)
+            XCTAssertFalse(store.offersIntroductoryHints)
+            let restored = makeStore(defaults: defaults)
+            XCTAssertFalse(restored.offersIntroductoryHints)
+            restored.openLevel(5)
+            XCTAssertFalse(restored.offersIntroductoryHints, "Replaying a completed board does not renew introductory help")
         }
     }
 

@@ -2,6 +2,10 @@ import SwiftUI
 
 @main
 struct PrismRollApp: App {
+    init() {
+        AnalyticsService.shared.configure()
+    }
+
     @StateObject private var store = GameStore()
     @StateObject private var ads = AdService()
     @StateObject private var duel = DuelService()

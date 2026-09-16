@@ -107,6 +107,7 @@ jobs:
               "PrismRewardedAdUnitID": "ca-app-pub-8314265628354618/1472545489",
               "PrismInterstitialAdUnitID": "ca-app-pub-8314265628354618/4122030604",
               "FIREBASE_ANALYTICS_COLLECTION_ENABLED": False,
+              "FirebaseCrashlyticsCollectionEnabled": False,
               "GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED": False,
               "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS": False,
           }
@@ -149,6 +150,13 @@ jobs:
           PY
           tar -czf build/deliverables/PrismRoll.xcarchive.tar.gz -C build PrismRoll.xcarchive
           (cd build/deliverables && shasum -a 256 PrismRoll.xcarchive.tar.gz > SHA256SUMS)
+
+      - name: Upload Crashlytics symbols for this archive
+        run: |
+          set -euo pipefail
+          bash ios/scripts/upload_crashlytics_symbols.sh \
+            "$PWD/build/PrismRoll.xcarchive" "$RUNNER_TEMP/PrismRollPackages" \
+            2>&1 | tee build/logs/crashlytics-symbols.log
 
       - name: Upload the unsigned archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

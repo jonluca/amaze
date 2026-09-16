@@ -64,6 +64,13 @@ For another release, update the workflow's expected version/build and configurat
 
 **Preserve entitlements before export.** Exporting this unsigned archive directly omitted Game Center from the resulting signature. The successful route signed the archived app locally with entitlements derived from the project's requested capabilities and the matching provisioning profile, then ran `xcodebuild -exportArchive` with the local distribution configuration. Verify the final IPA's signature and embedded profile, including the correct application and team identifiers, `com.apple.developer.game-center = true`, `get-task-allow = false`, and `beta-reports-active = true`. Do not change SDK or Xcode metadata to make an archive appear to use a different toolchain.
 
+## Swift formatting and linting
+
+Run `python3 ios/scripts/swift_quality.py check` from the repository root before
+committing. Use `format` instead of `check` to apply the agreed whitespace rules.
+The runner installs checksum-verified, pinned SwiftLint and SwiftFormat binaries;
+CI runs the same check. See [SWIFT_QUALITY.md](SWIFT_QUALITY.md) for scope and setup.
+
 ## Test
 
 The pure engine tests also run without a simulator:

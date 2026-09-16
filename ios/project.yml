@@ -14,6 +14,9 @@ settings:
     DEVELOPMENT_TEAM: F35YQQ5672
     OTHER_LDFLAGS: ['$(inherited)', '-ObjC']
 packages:
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing.git
+    exactVersion: 1.19.5
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk.git
     exactVersion: 12.19.2
@@ -38,9 +41,12 @@ targets:
         INFOPLIST_FILE: PrismRoll/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: PrismRoll/Resources/PrismRoll.entitlements
+        DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
     dependencies:
       - package: Firebase
         product: FirebaseAnalyticsCore
+      - package: Firebase
+        product: FirebaseCrashlytics
       - package: PrismOptimizer
         product: CPrismOptimizer
       - package: GoogleMobileAds
@@ -51,6 +57,7 @@ targets:
     platform: iOS
     sources:
       - path: PrismRollTests
+        excludes: ['__Snapshots__/**']
       - path: release-draft/storekit/PrismRoll-Local.storekit
         buildPhase: resources
     settings:
@@ -58,6 +65,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: PrismRoll
+      - package: SnapshotTesting
+        product: SnapshotTesting
   PrismRollUITests:
     type: bundle.ui-testing
     platform: iOS

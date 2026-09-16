@@ -40,7 +40,7 @@ final class SwipeSequenceTests: XCTestCase {
         var sequence = SwipeSequence<Int>()
         sequence.begin(1, at: .zero)
         XCTAssertEqual(sequence.direction(for: 1, at: CGPoint(x: 8, y: 0)), .right)
-        for contact in 2 ... 101 {
+        for contact in 2...101 {
             XCTAssertTrue(sequence.begin(contact, at: .zero))
             XCTAssertEqual(sequence.direction(for: contact, at: CGPoint(x: 0, y: -8)), .up)
             XCTAssertNil(sequence.direction(for: 1, at: CGPoint(x: 8, y: 0)))
@@ -107,7 +107,7 @@ final class SwipeSequenceTests: XCTestCase {
             (CGPoint(x: 8, y: 0), .right), (CGPoint(x: 0, y: -8), .up),
             (CGPoint(x: -8, y: 0), .left), (CGPoint(x: 0, y: 8), .down)
         ]
-        for contact in 0 ..< 1_000 {
+        for contact in 0..<1_000 {
             let (point, direction) = directions[contact % directions.count]
             XCTAssertTrue(sequence.begin(contact, at: .zero))
             XCTAssertEqual(sequence.end(contact, at: point), direction)

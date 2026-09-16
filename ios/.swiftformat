@@ -1,0 +1,9 @@
+# Conservative whitespace rules preserve the existing code layout and semantics.
+--min-version 0.62.1
+--swift-version 6.0
+--language-mode 5
+--linebreaks lf
+--ranges no-space
+--operator-func spaced
+--rules trailingSpace,linebreakAtEndOfFile,linebreaks,consecutiveBlankLines,spaceAroundOperators,spaceAroundParens,spaceInsideParens,spaceAroundBrackets,spaceInsideBrackets,spaceAroundBraces,spaceInsideBraces,spaceAroundGenerics,spaceInsideGenerics,spaceInsideComments,spaceAroundComments
+--exclude PrismRoll/Core/MazeClassicBoardSeeds.swift,PrismRoll/Core/MazePerfectMoveCatalog+Generated.swift,PrismRollTests/__Snapshots__,Packages,EnginePackage,Validation,artifacts,release

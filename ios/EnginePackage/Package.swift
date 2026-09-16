@@ -24,6 +24,6 @@ let package = Package(
         .executableTarget(name: "MazeClassicSeedCatalogGenerator", dependencies: [
             .product(name: "CPrismOptimizer", package: "PrismOptimizer")
         ]),
-        .testTarget(name: "PrismRollTests", dependencies: ["PrismRoll"])
+        .testTarget(name: "PrismRollTests", dependencies: ["PrismRoll"], exclude: ["__Snapshots__"])
     ]
 )

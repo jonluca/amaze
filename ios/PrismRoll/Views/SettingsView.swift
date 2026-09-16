@@ -3,6 +3,7 @@ import StoreKit
 
 struct SettingsView: View {
     @ObservedObject private var analytics = AnalyticsService.shared
+    @ObservedObject private var diagnostics = DiagnosticsService.shared
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var ads: AdService
     @EnvironmentObject private var purchases: PurchaseService
@@ -79,6 +80,13 @@ struct SettingsView: View {
                     }
                 }
                 Section("Privacy & ads") {
+                    Toggle("Share saved and future crash reports", isOn: Binding(
+                        get: { diagnostics.isEnabled }, set: diagnostics.setEnabled
+                    ))
+                    .disabled(!diagnostics.isAvailable)
+                    .accessibilityIdentifier("diagnosticsToggle")
+                    Text("Send saved and future crash reports, selected save or purchase errors, app and device information, and an installation identifier to Firebase Crashlytics. Saved reports may include crashes from before you enabled this setting. Sharing is optional and separate from usage analytics. Turning it off stops new error recording and future upload requests; reports already authorized may still be sent.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Toggle("Share usage analytics", isOn: Binding(
                         get: { analytics.isEnabled }, set: analytics.setEnabled
                     ))

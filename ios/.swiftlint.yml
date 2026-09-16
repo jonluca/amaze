@@ -1,0 +1,40 @@
+# Keep this list focused on correctness. Formatting belongs to SwiftFormat.
+# No baseline: every included source must pass the same rules.
+included:
+  - PrismRoll
+  - PrismRollTests
+  - PrismRollUITests
+  - scripts
+excluded:
+  - PrismRoll/Core/MazeClassicBoardSeeds.swift
+  - PrismRoll/Core/MazePerfectMoveCatalog+Generated.swift
+  - PrismRollTests/__Snapshots__
+  - Packages
+  - EnginePackage
+  - Validation
+  - artifacts
+  - release
+only_rules:
+  - compiler_protocol_init
+  - discarded_notification_center_observer
+  - duplicate_conditions
+  - duplicate_enum_cases
+  - duplicate_imports
+  - duplicated_key_in_dictionary_literal
+  - empty_xctest_method
+  - fatal_error_message
+  - identical_operands
+  - incompatible_concurrency_annotation
+  - notification_center_detachment
+  - overridden_super_call
+  - private_unit_test
+  - prohibited_super_call
+  - self_in_property_initialization
+  - unhandled_throwing_task
+  - unowned_variable_capture
+  - unused_closure_parameter
+  - unused_control_flow_label
+  - unused_enumerated
+  - unused_setter_value
+  - weak_delegate
+  - xctfail_message

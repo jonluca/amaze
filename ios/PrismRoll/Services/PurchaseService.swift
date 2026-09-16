@@ -18,16 +18,19 @@ final class PurchaseService: ObservableObject {
     @Published private(set) var coinStatus = "Checking coin packs…"
     private let productID: String
     private let analytics: any AnalyticsRecording
+    private let diagnostics: any DiagnosticsRecording
     private var updatesTask: Task<Void, Never>?
     private var deliverCoins: (@MainActor (CoinPurchase) throws -> CoinDeliveryResult)?
 
     init(bundle: Bundle = .main,
          analytics: (any AnalyticsRecording)? = nil,
+         diagnostics: (any DiagnosticsRecording)? = nil,
          deliverCoins: (@MainActor (CoinPurchase) throws -> CoinDeliveryResult)? = nil) {
         let configured = (bundle.object(forInfoDictionaryKey: "PrismRemoveAdsProductID") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         productID = configured.flatMap { $0.isEmpty ? nil : $0 } ?? "com.jonluca.prismroll.removeads"
         self.analytics = analytics ?? AnalyticsService.shared
+        self.diagnostics = diagnostics ?? DiagnosticsService.shared
         self.deliverCoins = deliverCoins
         updatesTask = Task { [weak self] in
             for await result in Transaction.updates {
@@ -65,6 +68,7 @@ final class PurchaseService: ObservableObject {
                     "Choose a coin pack."
             }
         } catch {
+            diagnostics.record(error: error, operation: .storeLoad)
             product = nil
             coinProducts = []
             status = removesAds ? "No Ads is active. The store could not refresh right now." :
@@ -233,6 +237,7 @@ final class PurchaseService: ObservableObject {
             return .success
         } catch {
             // Leave the StoreKit transaction unfinished so launch/Retry can deliver it.
+            diagnostics.record(error: error, operation: .coinDelivery)
             coinStatus = "Your purchase is saved by the App Store. Reopen the shop to finish adding your coins."
             return .deliveryPending
         }

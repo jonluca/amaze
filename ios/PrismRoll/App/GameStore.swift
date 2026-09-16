@@ -27,6 +27,7 @@ final class GameStore: ObservableObject {
     @Published private(set) var earnedPoints = 0
     @Published private(set) var isRewardPending = false
     let analytics: any AnalyticsRecording
+    private let diagnostics: any DiagnosticsRecording
     var analyticsBoardHasMoved = false
     private var pendingHintAnalyticsSource = "free"
     private let defaults: UserDefaults
@@ -67,9 +68,11 @@ final class GameStore: ObservableObject {
          },
          optimalHintSolver: @escaping @Sendable (MazeLevel, GridCell, Set<GridCell>) async -> MazeNativeOptimizer.Result? = { level, position, painted in
              await MazeMinimumMoveCache.shared.solution(for: level, position: position, painted: painted)
-         }, analytics: (any AnalyticsRecording)? = nil) {
+         }, analytics: (any AnalyticsRecording)? = nil, diagnostics: (any DiagnosticsRecording)? = nil) {
         self.defaults = defaults
         self.analytics = analytics ?? AnalyticsService.shared
+        let diagnostics = diagnostics ?? DiagnosticsService.shared
+        self.diagnostics = diagnostics
         self.optimalHintSolver = optimalHintSolver
         progressPersistence = ProgressPersistence(url: progressFileURL ?? ProgressPersistence.defaultURL(for: defaults))
         dateProvider = now
@@ -84,7 +87,13 @@ final class GameStore: ObservableObject {
         let decoder = JSONDecoder()
         let snapshot = defaults.data(forKey: "prism.snapshot.v2").flatMap { try? decoder.decode(GameSnapshot.self, from: $0) }
         pendingCompletions = snapshot?.pendingCompletions ?? []
-        let persistedProgress = try? progressPersistence.load()
+        let persistedProgress: ProgressData?
+        do {
+            persistedProgress = try progressPersistence.load()
+        } catch {
+            persistedProgress = nil
+            diagnostics.record(error: error, operation: .progressLoad)
+        }
         var loadedProgress = persistedProgress ?? snapshot?.progress ?? defaults.data(forKey: "prism.progress").flatMap {
             try? decoder.decode(ProgressData.self, from: $0)
         } ?? ProgressData()
@@ -809,6 +818,7 @@ final class GameStore: ObservableObject {
             defaults.set(data, forKey: "prism.snapshot.v2")
             return true
         } catch {
+            diagnostics.record(error: error, operation: .progressSave)
             return false
         }
     }

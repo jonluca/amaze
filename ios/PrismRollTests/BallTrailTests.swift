@@ -200,6 +200,7 @@ final class BallTrailTests: XCTestCase {
     }
 
     func testRenderEveryBallTrailForVisualReview() async throws {
+        try SnapshotAssertions.requireReferenceEnvironment()
         let cellSize = CGSize(width: 360, height: 296)
         let viewport = CGSize(width: cellSize.width, height: cellSize.height - 36)
         var previews: [(String, UIImage)] = []
@@ -222,6 +223,7 @@ final class BallTrailTests: XCTestCase {
             }
             XCTAssertTrue(prepared, "SceneKit could not prepare \(skin.name) for its snapshot")
             let snapshot = snapshotter.snapshot(atTime: 1, with: viewport, antialiasingMode: .multisampling4X)
+            SnapshotAssertions.assertImage(snapshot, named: skin.id)
             previews.append((skin.name, snapshot))
             print("PRISM_BALL_TRAIL_CAPTURE=\(skin.id)")
             renderer.stop()

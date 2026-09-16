@@ -7,6 +7,7 @@ import XCTest
 @MainActor
 final class MazeMotionPolishVisualTests: XCTestCase {
     func testRenderMotionAndCompletionStatesForVisualReview() async throws {
+        try SnapshotAssertions.requireReferenceEnvironment()
         let viewport = CGSize(width: 480, height: 384)
         let renderer = MazeSceneRenderer()
         defer { renderer.stop() }
@@ -130,9 +131,11 @@ final class MazeMotionPolishVisualTests: XCTestCase {
     }
 
     private func capture(_ label: String, at time: TimeInterval, renderer: SCNRenderer,
-                         viewport: CGSize, previews: inout [(String, UIImage)]) {
+                         viewport: CGSize, previews: inout [(String, UIImage)],
+                         file: StaticString = #filePath, testName: String = #function, line: UInt = #line) {
         SCNTransaction.flush()
         let image = renderer.snapshot(atTime: time, with: viewport, antialiasingMode: .multisampling4X)
+        SnapshotAssertions.assertImage(image, named: label, file: file, testName: testName, line: line)
         let caption = "\(label)\nDisplay clock: \(String(format: "%.3f", time)) s"
         previews.append((caption, image))
         print("PRISM_MOTION_POLISH_CAPTURE=\(label) displayClock=\(time)")

@@ -1,0 +1,449 @@
+{
+  "frame_parity_cases_passed": 63,
+  "hardware": "Apple M4 Max",
+  "optimization": "SwiftPM release (-O), standalone macOS executable",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0\nBuildVersion:\t\t26A428",
+  "package_resolution": {
+    "originHash": "296f46cd00433367976c8802ef6ad0ce1cf5513251673da01b633162d9bcd366",
+    "pins": [
+      {
+        "identity": "swift-collections",
+        "kind": "remoteSourceControl",
+        "location": "https://github.com/apple/swift-collections.git",
+        "state": {
+          "revision": "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+          "version": "1.6.0"
+        }
+      }
+    ],
+    "version": 3
+  },
+  "results": [
+    {
+      "array_ns_per_iteration_median": 31.1375,
+      "array_ns_per_iteration_samples": [
+        28.64771,
+        31.1375,
+        30.465,
+        32.76229,
+        30.603335,
+        27.605,
+        34.967085,
+        38.282085,
+        33.88625
+      ],
+      "checksum": 46800000,
+      "deque_ns_per_iteration_median": 13.76625,
+      "deque_ns_per_iteration_samples": [
+        13.12792,
+        13.36708,
+        13.76625,
+        18.19896,
+        13.09854,
+        22.061665,
+        19.66104,
+        21.414585,
+        13.069585
+      ],
+      "deque_over_array_ratio": 0.4421116017663589,
+      "iterations_per_sample": 200000,
+      "mode": "queue_only",
+      "moves": 1,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 118.19416,
+      "array_ns_per_iteration_samples": [
+        230.44582,
+        104.81666,
+        324.22832,
+        171.18666,
+        178.64834,
+        114.64584,
+        118.19416,
+        106.935,
+        116.61084
+      ],
+      "checksum": 67500000,
+      "deque_ns_per_iteration_median": 67.85,
+      "deque_ns_per_iteration_samples": [
+        56.66168,
+        62.79334,
+        103.5775,
+        109.37,
+        93.41084,
+        62.415,
+        58.08918,
+        67.85,
+        69.57918
+      ],
+      "deque_over_array_ratio": 0.5740554355646674,
+      "iterations_per_sample": 50000,
+      "mode": "queue_only",
+      "moves": 4,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 336.30832,
+      "array_ns_per_iteration_samples": [
+        255.51168,
+        487.25332,
+        349.31,
+        243.97668,
+        373.26164,
+        336.30832,
+        332.08,
+        327.215,
+        374.355
+      ],
+      "checksum": 76950000,
+      "deque_ns_per_iteration_median": 158.83832,
+      "deque_ns_per_iteration_samples": [
+        158.83832,
+        112.325,
+        211.44668,
+        303.53168,
+        213.66332,
+        113.76664,
+        131.84336,
+        282.32332,
+        145.61336
+      ],
+      "deque_over_array_ratio": 0.4722997040334893,
+      "iterations_per_sample": 25000,
+      "mode": "queue_only",
+      "moves": 8,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 562.80664,
+      "array_ns_per_iteration_samples": [
+        805.35672,
+        621.64664,
+        619.37,
+        684.11336,
+        535.44,
+        562.80664,
+        537.49664,
+        474.62672,
+        507.60664
+      ],
+      "checksum": 81675000,
+      "deque_ns_per_iteration_median": 277.77336,
+      "deque_ns_per_iteration_samples": [
+        273.60664,
+        343.30664,
+        208.20672,
+        245.20336,
+        369.44,
+        242.42664,
+        336.93,
+        277.77336,
+        279.02336
+      ],
+      "deque_over_array_ratio": 0.49355025377810047,
+      "iterations_per_sample": 12500,
+      "mode": "queue_only",
+      "moves": 16,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 9000.640204865556,
+      "array_ns_per_iteration_samples": [
+        8907.650448143406,
+        9000.640204865556,
+        8914.265685019207,
+        8466.28233034571,
+        9328.558898847632,
+        8784.571062740077,
+        10523.554417413572,
+        10406.716389244559,
+        9563.3271446863
+      ],
+      "checksum": 85781916,
+      "deque_ns_per_iteration_median": 1949.690781049936,
+      "deque_ns_per_iteration_samples": [
+        1717.7496798975671,
+        1977.4327784891166,
+        1656.7170294494238,
+        2039.9058898847632,
+        1645.4865556978234,
+        1949.690781049936,
+        2136.5236875800256,
+        1714.4686299615878,
+        2154.5825864276567
+      ],
+      "deque_over_array_ratio": 0.21661690020627358,
+      "iterations_per_sample": 1562,
+      "mode": "queue_only",
+      "moves": 128,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 565720.0871794872,
+      "array_ns_per_iteration_samples": [
+        382025.8564102564,
+        510030.55897435895,
+        402182.90256410255,
+        706960.8974358974,
+        1533407.9076923076,
+        858273.5025641025,
+        545595.9435897436,
+        597983.758974359,
+        565720.0871794872
+      ],
+      "checksum": 86188050,
+      "deque_ns_per_iteration_median": 17195.938461538462,
+      "deque_ns_per_iteration_samples": [
+        14698.71794871795,
+        13912.179487179486,
+        14901.492307692308,
+        19906.625641025643,
+        163729.06153846154,
+        36325.42564102564,
+        17195.938461538462,
+        25392.30769230769,
+        15094.65641025641
+      ],
+      "deque_over_array_ratio": 0.030396549196745545,
+      "iterations_per_sample": 195,
+      "mode": "queue_only",
+      "moves": 1024,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 1490.739585,
+      "array_ns_per_iteration_samples": [
+        1386.49604,
+        1366.089375,
+        2098.73896,
+        1267.67896,
+        2840.423955,
+        2191.401875,
+        3104.914165,
+        1490.739585,
+        1367.33292
+      ],
+      "checksum": 84873600000,
+      "deque_ns_per_iteration_median": 1545,
+      "deque_ns_per_iteration_samples": [
+        1365.68167,
+        1545,
+        1320.094585,
+        1277.97625,
+        5278.78771,
+        2061.259165,
+        4251.00771,
+        4254.10125,
+        1296.22771
+      ],
+      "deque_over_array_ratio": 1.0363983190263242,
+      "iterations_per_sample": 200000,
+      "mode": "timeline_burst_120hz",
+      "moves": 1,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 3096.81832,
+      "array_ns_per_iteration_samples": [
+        2933.39,
+        3244.54084,
+        3430.13166,
+        3096.81832,
+        3056.67834,
+        2997.48834,
+        2934.69084,
+        3268.30334,
+        3686.9
+      ],
+      "checksum": 14831100000,
+      "deque_ns_per_iteration_median": 3023.32,
+      "deque_ns_per_iteration_samples": [
+        2985.48084,
+        3100.0775,
+        3259.83918,
+        3206.81834,
+        2982.36166,
+        3023.32,
+        2945.62418,
+        2974.40666,
+        4047.43584
+      ],
+      "deque_over_array_ratio": 0.9762665056825162,
+      "iterations_per_sample": 50000,
+      "mode": "timeline_burst_120hz",
+      "moves": 4,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 5739.70332,
+      "array_ns_per_iteration_samples": [
+        6351.15832,
+        5739.70332,
+        5948.41332,
+        5183.76164,
+        5443.33168,
+        5790.78836,
+        6437.28668,
+        5652.55668,
+        5467.91
+      ],
+      "checksum": 7417350000,
+      "deque_ns_per_iteration_median": 5931.64,
+      "deque_ns_per_iteration_samples": [
+        7676.05664,
+        6636.87168,
+        5094.40168,
+        5301.97168,
+        5931.64,
+        5994.335,
+        6308.6,
+        5588.205,
+        5464.90664
+      ],
+      "deque_over_array_ratio": 1.0334401743956343,
+      "iterations_per_sample": 25000,
+      "mode": "timeline_burst_120hz",
+      "moves": 8,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 7908.50672,
+      "array_ns_per_iteration_samples": [
+        8474.89328,
+        8712.97336,
+        8132.51664,
+        8236.95672,
+        7908.50672,
+        7610.59,
+        7572.97,
+        7698.32672,
+        7480.91
+      ],
+      "checksum": 3710475000,
+      "deque_ns_per_iteration_median": 7708.01336,
+      "deque_ns_per_iteration_samples": [
+        8632.36,
+        8909.40336,
+        7977.48,
+        8073.54336,
+        7634.56328,
+        7589.44,
+        7579.54,
+        7708.01336,
+        7487.50328
+      ],
+      "deque_over_array_ratio": 0.9746483922820767,
+      "iterations_per_sample": 12500,
+      "mode": "timeline_burst_120hz",
+      "moves": 16,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 58662.74519846351,
+      "array_ns_per_iteration_samples": [
+        58662.74519846351,
+        57719.83034571063,
+        58115.023687580026,
+        58703.85147247119,
+        57507.682458386684,
+        130659.2509603073,
+        69520.45966709347,
+        59398.71446862996,
+        57886.44366197183
+      ],
+      "checksum": 466809948,
+      "deque_ns_per_iteration_median": 52764.29769526248,
+      "deque_ns_per_iteration_samples": [
+        52732.50064020487,
+        52366.57042253521,
+        52106.5409731114,
+        52378.414212548014,
+        180428.27016645327,
+        93930.64468629961,
+        60827.677976952626,
+        53300.81626120359,
+        52764.29769526248
+      ],
+      "deque_over_array_ratio": 0.8994515602151615,
+      "iterations_per_sample": 1562,
+      "mode": "timeline_burst_120hz",
+      "moves": 128,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 755947.6461538462,
+      "array_ns_per_iteration_samples": [
+        715050.641025641,
+        727519.6564102564,
+        717147.4358974359,
+        753771.7948717949,
+        755947.6461538462,
+        774191.8820512821,
+        761270.082051282,
+        818632.0512820513,
+        1061580.553846154
+      ],
+      "checksum": 61425000,
+      "deque_ns_per_iteration_median": 424640.6,
+      "deque_ns_per_iteration_samples": [
+        406436.75384615385,
+        405651.4974358974,
+        416406.8358974359,
+        424913.8923076923,
+        432104.06153846154,
+        424640.6,
+        494306.41025641025,
+        423070.7282051282,
+        584983.5435897436
+      ],
+      "deque_over_array_ratio": 0.5617328159701414,
+      "iterations_per_sample": 195,
+      "mode": "timeline_burst_120hz",
+      "moves": 1024,
+      "path_cells": 4
+    },
+    {
+      "array_ns_per_iteration_median": 47459.666,
+      "array_ns_per_iteration_samples": [
+        46631.75,
+        44082.916,
+        45597.332,
+        43016.834,
+        47459.666,
+        48331,
+        48507.584,
+        58461.5,
+        54501.582
+      ],
+      "checksum": 6983721000,
+      "deque_ns_per_iteration_median": 50974.168,
+      "deque_ns_per_iteration_samples": [
+        42956.5,
+        47070,
+        43771.668,
+        43764.25,
+        51011.25,
+        50974.168,
+        57040.166,
+        62547.834,
+        60158.582
+      ],
+      "deque_over_array_ratio": 1.0740523964075095,
+      "iterations_per_sample": 500,
+      "mode": "timeline_sustained_120hz_25ms",
+      "moves": 64,
+      "path_cells": 4
+    }
+  ],
+  "samples_per_case": 9,
+  "source_sha256": {
+    "Core/GridCell.swift": "99a2313d5a67de2d2b827035c64038159c842be85280c182004cdc4439dbb75a",
+    "Core/MoveDirection.swift": "0fd0d5288d2f95d168a8c883e1eca345620a1e882f8d502b9f4968d5f41c812e",
+    "Rendering/MazeMotionTimeline.swift": "dedc589f1b43e091940a728b7f1374a881d7f3c8b6d9593320a179183e078d50",
+    "Rendering/MazeMotionUpdate.swift": "29b31a315d011c39c5bd41f5402b96de677c5ad91b85dd4fd8c2e83c20e8af41",
+    "Rendering/MazeSceneMove.swift": "a13a713c664f8902b691c6fd6ba5fcb204b007f7e09cdf38fdb164d81c529e7e"
+  },
+  "swift_version": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "timestamp": "2026-09-16T22:46:25Z"
+}

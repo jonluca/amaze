@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "appId": "6809253424",
+  "bundleId": "com.jonluca.prismroll",
+  "gameCenterDetailId": "c19f1a60-288d-4cfd-8fba-9fdf3fe8cb58",
+  "locale": "en-US",
+  "defaultLeaderboard": "classic_completed",
+  "publicationPolicy": "Stage only. Do not create releases or submit for review.",
+  "achievements": [
+    {
+      "suffix": "first_maze",
+      "id": "com.jonluca.prismroll.achievement.first_maze",
+      "name": "First Light",
+      "points": 10,
+      "target": 1,
+      "beforeEarnedDescription": "Complete your first Classic maze.",
+      "afterEarnedDescription": "You completed your first Classic maze.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/first_maze.png"
+    },
+    {
+      "suffix": "classic_25",
+      "id": "com.jonluca.prismroll.achievement.classic_25",
+      "name": "Finding Flow",
+      "points": 25,
+      "target": 25,
+      "beforeEarnedDescription": "Complete 25 different Classic mazes.",
+      "afterEarnedDescription": "You completed 25 different Classic mazes.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/classic_25.png"
+    },
+    {
+      "suffix": "classic_100",
+      "id": "com.jonluca.prismroll.achievement.classic_100",
+      "name": "Maze Voyager",
+      "points": 50,
+      "target": 100,
+      "beforeEarnedDescription": "Complete 100 different Classic mazes.",
+      "afterEarnedDescription": "You completed 100 different Classic mazes.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/classic_100.png"
+    },
+    {
+      "suffix": "classic_500",
+      "id": "com.jonluca.prismroll.achievement.classic_500",
+      "name": "Prism Master",
+      "points": 100,
+      "target": 500,
+      "beforeEarnedDescription": "Complete 500 different Classic mazes.",
+      "afterEarnedDescription": "You completed 500 different Classic mazes.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/classic_500.png"
+    },
+    {
+      "suffix": "perfect_1",
+      "id": "com.jonluca.prismroll.achievement.perfect_1",
+      "name": "Perfect Line",
+      "points": 15,
+      "target": 1,
+      "beforeEarnedDescription": "Earn a Perfect solve on a regular level.",
+      "afterEarnedDescription": "You earned your first Perfect solve.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/perfect_1.png"
+    },
+    {
+      "suffix": "perfect_25",
+      "id": "com.jonluca.prismroll.achievement.perfect_25",
+      "name": "Pure Precision",
+      "points": 50,
+      "target": 25,
+      "beforeEarnedDescription": "Earn Perfect solves on 25 different regular levels.",
+      "afterEarnedDescription": "You earned Perfect solves on 25 different regular levels.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/perfect_25.png"
+    },
+    {
+      "suffix": "perfect_100",
+      "id": "com.jonluca.prismroll.achievement.perfect_100",
+      "name": "Flawless Form",
+      "points": 100,
+      "target": 100,
+      "beforeEarnedDescription": "Earn Perfect solves on 100 different regular levels.",
+      "afterEarnedDescription": "You earned Perfect solves on 100 different regular levels.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/perfect_100.png"
+    },
+    {
+      "suffix": "limited_25",
+      "id": "com.jonluca.prismroll.achievement.limited_25",
+      "name": "Move Maestro",
+      "points": 50,
+      "target": 25,
+      "beforeEarnedDescription": "Complete 25 different Limited Moves levels.",
+      "afterEarnedDescription": "You completed 25 different Limited Moves levels.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/limited_25.png"
+    },
+    {
+      "suffix": "rush_10",
+      "id": "com.jonluca.prismroll.achievement.rush_10",
+      "name": "Against the Clock",
+      "points": 50,
+      "target": 10,
+      "beforeEarnedDescription": "Complete 10 different Time Rush rounds.",
+      "afterEarnedDescription": "You completed 10 different Time Rush rounds.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/rush_10.png"
+    },
+    {
+      "suffix": "daily_1",
+      "id": "com.jonluca.prismroll.achievement.daily_1",
+      "name": "Daily Spark",
+      "points": 15,
+      "target": 1,
+      "beforeEarnedDescription": "Complete your first daily maze.",
+      "afterEarnedDescription": "You completed your first daily maze.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/daily_1.png"
+    },
+    {
+      "suffix": "daily_7",
+      "id": "com.jonluca.prismroll.achievement.daily_7",
+      "name": "Daily Explorer",
+      "points": 50,
+      "target": 7,
+      "beforeEarnedDescription": "Complete 7 different daily mazes. Consecutive days are not required.",
+      "afterEarnedDescription": "You completed 7 different daily mazes.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/daily_7.png"
+    },
+    {
+      "suffix": "coins_100",
+      "id": "com.jonluca.prismroll.achievement.coins_100",
+      "name": "Pocketful of Prisms",
+      "points": 35,
+      "target": 100,
+      "beforeEarnedDescription": "Pick up 100 coins inside mazes.",
+      "afterEarnedDescription": "You picked up 100 coins inside mazes.",
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "artwork/coins_100.png"
+    }
+  ],
+  "leaderboards": [
+    {
+      "suffix": "classic_completed",
+      "id": "com.jonluca.prismroll.leaderboard.classic_completed",
+      "name": "Classic Mazes Completed",
+      "description": "Different Classic mazes completed.",
+      "formatter": "INTEGER",
+      "sort": "DESC",
+      "submissionType": "BEST_SCORE",
+      "recurring": false,
+      "scoreRangeStart": 0,
+      "scoreRangeEnd": 2147483647,
+      "formatterSuffix": "mazes",
+      "formatterSuffixSingular": "maze"
+    },
+    {
+      "suffix": "perfect_completed",
+      "id": "com.jonluca.prismroll.leaderboard.perfect_completed",
+      "name": "Perfect Mazes",
+      "description": "Different regular levels completed with a Perfect solve.",
+      "formatter": "INTEGER",
+      "sort": "DESC",
+      "submissionType": "BEST_SCORE",
+      "recurring": false,
+      "scoreRangeStart": 0,
+      "scoreRangeEnd": 2147483647,
+      "formatterSuffix": "mazes",
+      "formatterSuffixSingular": "maze"
+    },
+    {
+      "suffix": "limited_completed",
+      "id": "com.jonluca.prismroll.leaderboard.limited_completed",
+      "name": "Limited Moves Completed",
+      "description": "Different Limited Moves levels completed.",
+      "formatter": "INTEGER",
+      "sort": "DESC",
+      "submissionType": "BEST_SCORE",
+      "recurring": false,
+      "scoreRangeStart": 0,
+      "scoreRangeEnd": 2147483647,
+      "formatterSuffix": "mazes",
+      "formatterSuffixSingular": "maze"
+    },
+    {
+      "suffix": "rush_completed",
+      "id": "com.jonluca.prismroll.leaderboard.rush_completed",
+      "name": "Time Rush Completed",
+      "description": "Different Time Rush rounds completed.",
+      "formatter": "INTEGER",
+      "sort": "DESC",
+      "submissionType": "BEST_SCORE",
+      "recurring": false,
+      "scoreRangeStart": 0,
+      "scoreRangeEnd": 2147483647,
+      "formatterSuffix": "mazes",
+      "formatterSuffixSingular": "maze"
+    },
+    {
+      "suffix": "daily_completed",
+      "id": "com.jonluca.prismroll.leaderboard.daily_completed",
+      "name": "Daily Mazes Completed",
+      "description": "Different daily mazes completed.",
+      "formatter": "INTEGER",
+      "sort": "DESC",
+      "submissionType": "BEST_SCORE",
+      "recurring": false,
+      "scoreRangeStart": 0,
+      "scoreRangeEnd": 2147483647,
+      "formatterSuffix": "mazes",
+      "formatterSuffixSingular": "maze"
+    }
+  ],
+  "activities": [
+    {
+      "suffix": "classic",
+      "name": "Classic Mazes",
+      "description": "Follow the color. Find your flow in a Classic maze.",
+      "leaderboards": [
+        "classic_completed",
+        "perfect_completed"
+      ],
+      "achievements": [
+        "first_maze",
+        "classic_25",
+        "classic_100",
+        "classic_500",
+        "perfect_1",
+        "perfect_25",
+        "perfect_100"
+      ],
+      "id": "com.jonluca.prismroll.activity.classic",
+      "minimumPlayers": 1,
+      "maximumPlayers": 1,
+      "supportsPartyCode": false,
+      "playStyle": "ASYNCHRONOUS",
+      "image": "artwork/activity_classic.png"
+    },
+    {
+      "suffix": "time_rush",
+      "name": "Time Rush",
+      "description": "Beat the clock and fill every path before time runs out.",
+      "leaderboards": [
+        "rush_completed"
+      ],
+      "achievements": [
+        "rush_10"
+      ],
+      "id": "com.jonluca.prismroll.activity.time_rush",
+      "minimumPlayers": 1,
+      "maximumPlayers": 1,
+      "supportsPartyCode": false,
+      "playStyle": "ASYNCHRONOUS",
+      "image": "artwork/activity_time_rush.png"
+    },
+    {
+      "suffix": "daily",
+      "name": "Daily Maze",
+      "description": "A fresh maze every day. Roll in and make it yours.",
+      "leaderboards": [
+        "daily_completed"
+      ],
+      "achievements": [
+        "daily_1",
+        "daily_7"
+      ],
+      "id": "com.jonluca.prismroll.activity.daily",
+      "minimumPlayers": 1,
+      "maximumPlayers": 1,
+      "supportsPartyCode": false,
+      "playStyle": "ASYNCHRONOUS",
+      "image": "artwork/activity_daily.png"
+    }
+  ]
+}

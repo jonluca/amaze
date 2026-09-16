@@ -14,6 +14,8 @@ struct PrismRollApp: App {
     @StateObject private var store: GameStore
     @StateObject private var ads = AdService()
     @StateObject private var duel = DuelService()
+    @StateObject private var gameCenter = GameCenterService()
+    @StateObject private var gameActivities = GameCenterActivityCoordinator()
     @StateObject private var purchases = PurchaseService()
 
     var body: some Scene {
@@ -22,6 +24,8 @@ struct PrismRollApp: App {
                 .environmentObject(store)
                 .environmentObject(ads)
                 .environmentObject(duel)
+                .environmentObject(gameCenter)
+                .environmentObject(gameActivities)
                 .environmentObject(purchases)
                 .preferredColorScheme(.dark)
                 .task { await DiagnosticsService.shared.runDebugSmokeCrashIfRequested() }

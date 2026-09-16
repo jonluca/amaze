@@ -9,6 +9,7 @@ struct SettingsView: View {
     @EnvironmentObject private var purchases: PurchaseService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var onShowGameCenter: () -> Void = {}
 
     var body: some View {
         NavigationStack {
@@ -41,6 +42,14 @@ struct SettingsView: View {
                     Label("Earn coins from new levels, bonus boards, and challenges. Unlock balls in Collection.", systemImage: "circle.fill")
                     Label("Claim your daily reward and return tomorrow to grow your streak.", systemImage: "flame")
                 }.font(.subheadline)
+                Section("Game Center") {
+                    Button(action: onShowGameCenter) {
+                        Label("Achievements & leaderboards", systemImage: "trophy")
+                    }
+                    .accessibilityIdentifier("openGameCenter")
+                    Text("Earn achievements, compare completed mazes with friends, and keep your best scores on Game Center.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Section("No Ads") {
                     if purchases.removesAds {
                         Label("No Ads is active", systemImage: "checkmark.seal.fill")
@@ -106,7 +115,7 @@ struct SettingsView: View {
                         }
                         .accessibilityIdentifier("supportWebsite")
                     }
-                    Text("Progress stays on this device. Ads may appear between levels; reward videos are always optional.")
+                    Text("Maze saves, coins, and collection stay on this device. Game Center syncs achievements and scores when signed in. Ads may appear between levels; reward videos are always optional.")
                         .font(.subheadline)
                     if ads.privacyOptionsRequired {
                         Button("Manage ad privacy", action: ads.presentPrivacyOptions)

@@ -5,6 +5,9 @@ import Combine
 @MainActor
 final class GameStore: ObservableObject {
     @Published private(set) var progress: ProgressData
+    /// Game Center only observes progress after it has been saved successfully.
+    @Published private(set) var gameCenterProgress = GameCenterProgressSnapshot(progress: ProgressData())
+    private var gameCenterSavedProgress = ProgressData()
     @Published private(set) var run: MazeRun
     @Published private(set) var mode: GameMode
     @Published private(set) var runID = UUID()
@@ -152,6 +155,8 @@ final class GameStore: ObservableObject {
         let daily = DailyChallenge.generate(for: now())
         let resumeDaily = snapshot?.dailyActive == true && snapshot?.dailyID == daily.id
         progress = loadedProgress
+        gameCenterProgress = GameCenterProgressSnapshot(progress: loadedProgress)
+        gameCenterSavedProgress = loadedProgress
         savedRuns = loadedRuns
         savedClocks = loadedClocks
         timeRushSession = loadedSession
@@ -816,6 +821,11 @@ final class GameStore: ObservableObject {
             let data = try snapshotEncoder.encode(snapshot)
             try progressPersistence.persist(progress)
             defaults.set(data, forKey: "prism.snapshot.v2")
+            if gameCenterSavedProgress != progress {
+                let reportedProgress = GameCenterProgressSnapshot(progress: progress)
+                if gameCenterProgress != reportedProgress { gameCenterProgress = reportedProgress }
+                gameCenterSavedProgress = progress
+            }
             return true
         } catch {
             diagnostics.record(error: error, operation: .progressSave)

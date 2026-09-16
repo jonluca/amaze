@@ -119,7 +119,7 @@ final class LevelBrowserUITests: XCTestCase {
         capture(app, "padding-accessibility-settings")
         for _ in 0..<15 { app.swipeUp() }
         XCTAssertFalse(app.buttons["signInGameCenter"].exists)
-        XCTAssertFalse(app.staticTexts["Game Center"].exists)
+        // Sign-in lives on the dedicated Game Center page, not in this Form.
         capture(app, "padding-accessibility-settings-footer")
     }
 
@@ -144,7 +144,7 @@ final class LevelBrowserUITests: XCTestCase {
         capture(app, "padding-compact-settings")
         for _ in 0..<8 { app.swipeUp() }
         XCTAssertFalse(app.buttons["signInGameCenter"].exists)
-        XCTAssertFalse(app.staticTexts["Game Center"].exists)
+        // The Game Center entry is now available earlier in this Form.
         capture(app, "padding-compact-settings-footer")
     }
 

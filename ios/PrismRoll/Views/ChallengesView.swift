@@ -4,10 +4,17 @@ struct ChallengesView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var onSharePresentationChanged: (Bool) -> Void = { _ in }
+    var onShowGameCenter: () -> Void = {}
     let onPlay: () -> Void
 
     var body: some View {
         List {
+            Section("Game Center") {
+                Button(action: onShowGameCenter) {
+                    Label("Achievements & leaderboards", systemImage: "trophy")
+                }
+                .accessibilityIdentifier("openGameCenter")
+            }
             Section {
                 LabeledContent {
                     Text("\(store.currentStreak) days").monospacedDigit()

@@ -1,0 +1,596 @@
+{
+  "verifiedAt": "2026-09-16T23:22:36.841020+00:00",
+  "appId": "6809253424",
+  "locale": "en-US",
+  "publication": "STAGED_ONLY",
+  "achievements": [
+    {
+      "id": "1940b715-bbcc-4135-80aa-486b3692d417",
+      "vendorId": "com.jonluca.prismroll.achievement.first_maze",
+      "points": 10,
+      "localizationId": "60c05775-10c3-46ed-8193-f9971db1cef6",
+      "image": {
+        "id": "7a243127-8244-4a4f-b366-9ea4faa3ff6f",
+        "fileName": "first_maze.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "2f2ed16bdf32dafa8e6efc0a388dd6882f9f12d570a2d90e30d08a92d3c83aef"
+      },
+      "versions": [
+        {
+          "id": "a91b98e3-bdf1-46be-9794-311ceb4a1088",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "28271ef3-6fd5-4caf-81cd-bcad5b4122d9",
+      "vendorId": "com.jonluca.prismroll.achievement.classic_25",
+      "points": 25,
+      "localizationId": "708ce324-24fb-4c6d-b9c1-22393a9952e1",
+      "image": {
+        "id": "5973c895-53b8-4110-9324-fd7a3e88623d",
+        "fileName": "classic_25.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "d91661f7c17fa1e529b34b804dcf8ef893ca9ea945917b00bfc83e39ad32daaf"
+      },
+      "versions": [
+        {
+          "id": "fb4c0f88-db08-4d5c-8f93-9e728e6ccd6d",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "717e5e26-31a3-41d5-8a95-01b17cfb757a",
+      "vendorId": "com.jonluca.prismroll.achievement.classic_100",
+      "points": 50,
+      "localizationId": "6179e7f9-40a6-4c3b-b126-37cb8ea1dcde",
+      "image": {
+        "id": "5002d1ed-8860-4bb8-90f0-9e140892b47a",
+        "fileName": "classic_100.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "2e117523fcfa56ede4177f474e4eeafecfb6b7050b75e125c96aa1b1579fa110"
+      },
+      "versions": [
+        {
+          "id": "05a1e02b-fed2-4f0b-823d-8229d4457414",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "8b5aeb65-9e01-47b9-9184-ce5ec6805526",
+      "vendorId": "com.jonluca.prismroll.achievement.classic_500",
+      "points": 100,
+      "localizationId": "fcbc842b-f7c0-4c64-bd2d-04cf995b0b0d",
+      "image": {
+        "id": "cdcb9f29-fb20-4356-921c-35f21dbca9bf",
+        "fileName": "classic_500.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "0a22828a3d176e169c81ab1806db4704206e4bf68126bf18aae86a4650326f44"
+      },
+      "versions": [
+        {
+          "id": "317d241a-11b9-41b3-b72a-476190078d62",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "67d1425e-5856-4556-b48d-7d16fe1da354",
+      "vendorId": "com.jonluca.prismroll.achievement.perfect_1",
+      "points": 15,
+      "localizationId": "02e0c8ef-9f06-4fb0-abc5-057f3402496e",
+      "image": {
+        "id": "310deaf4-10d1-4a8d-92b2-7d9951654e1b",
+        "fileName": "perfect_1.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "4d6d6235f2223fcc7b18f28052bcbb43c14f7286a38995f49ea7566789060d36"
+      },
+      "versions": [
+        {
+          "id": "729f16b9-76cb-4ffc-a75d-a1102400f425",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "c49cfa71-4404-42c9-9cbd-58fd8231b560",
+      "vendorId": "com.jonluca.prismroll.achievement.perfect_25",
+      "points": 50,
+      "localizationId": "cef79ed1-6141-4503-b2e9-bd9c1b0164c8",
+      "image": {
+        "id": "e21e5e3c-1e66-4a95-9da0-b5f51c3c7c12",
+        "fileName": "perfect_25.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "eb63ad9c72d70135bbac65ada52adc05a4d0dfe3e04934ae655be2aef946d1b4"
+      },
+      "versions": [
+        {
+          "id": "9f42a587-abb9-4173-b2ab-179a5f705889",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "f8f69d0c-d37c-47f5-8ce2-e3b13f19b7dc",
+      "vendorId": "com.jonluca.prismroll.achievement.perfect_100",
+      "points": 100,
+      "localizationId": "abfd5230-bbfc-4052-8039-afb72d894c06",
+      "image": {
+        "id": "900e4526-a9de-410c-8c6f-cbacc31e0592",
+        "fileName": "perfect_100.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "5575a95bdb4383ef1e3ede8d2cd067986917398b4b0cb66584cc62615b923390"
+      },
+      "versions": [
+        {
+          "id": "66cf6053-a4da-44f4-aa28-51b0bbce5db3",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "56176ffd-7df6-498d-a1b6-04bd3b67bb52",
+      "vendorId": "com.jonluca.prismroll.achievement.limited_25",
+      "points": 50,
+      "localizationId": "edeea78d-2f63-4e54-b8fd-da4eea463bb2",
+      "image": {
+        "id": "e6b766df-165b-49ab-a75f-1e50396a68c3",
+        "fileName": "limited_25.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "21a3a09869e8b31a25bf09f93f449ec7e77e716460659557b6bb64977b930a4e"
+      },
+      "versions": [
+        {
+          "id": "cf69dfea-a63a-4b23-bcbf-0ce85decc543",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "69ddccb7-bbcb-41c7-a0b1-19a992b22d10",
+      "vendorId": "com.jonluca.prismroll.achievement.rush_10",
+      "points": 50,
+      "localizationId": "f76c08f4-4268-4072-a1a5-a7635fe1266d",
+      "image": {
+        "id": "19dc68a2-2a23-47f9-a008-9241b612160c",
+        "fileName": "rush_10.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "20f9c66dfaa3fea5e39f518ea9ae47a6dc1ff2f1fa9f7ccd78a243a0934ed461"
+      },
+      "versions": [
+        {
+          "id": "c55892c0-0e2c-4b27-8a7e-d6d9979aa136",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "c025d47f-ac44-4346-932c-6bd6265a753f",
+      "vendorId": "com.jonluca.prismroll.achievement.daily_1",
+      "points": 15,
+      "localizationId": "16d4277d-8dc9-4eba-8d85-40160b86d8c8",
+      "image": {
+        "id": "734af85f-d2b4-4131-9902-67e1d8c4f176",
+        "fileName": "daily_1.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "fdebc2afeb9dd98ac473ad6e78330f1497a0966bc5dd0c0ddc86938a47f1801c"
+      },
+      "versions": [
+        {
+          "id": "20c8dabf-f981-4590-846d-2387484d44a3",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "4b362576-d1be-4a4f-b987-f8c602b7739e",
+      "vendorId": "com.jonluca.prismroll.achievement.daily_7",
+      "points": 50,
+      "localizationId": "9a27dd17-b512-4f3c-b9ee-5f3854ec672d",
+      "image": {
+        "id": "141aa8a0-9edb-4fbd-a574-62af1e78658f",
+        "fileName": "daily_7.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "027350f623aee20ec77620fc41ae8a101afabd8195e365814bb71e0ad5f70419"
+      },
+      "versions": [
+        {
+          "id": "272ec62a-5887-42e0-9b7c-eaf3a5eef8b7",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "c7222956-6e6b-4f64-b585-454f73ef9606",
+      "vendorId": "com.jonluca.prismroll.achievement.coins_100",
+      "points": 35,
+      "localizationId": "156778d9-a7a8-4d08-8e13-bffbc2b8c7f9",
+      "image": {
+        "id": "2d990aeb-fa83-4706-b764-b8f62bb17261",
+        "fileName": "coins_100.png",
+        "width": 1024,
+        "height": 1024,
+        "state": "COMPLETE",
+        "sha256": "00e10fe72e4b5e5ec98a4bd0124e674893a1b63b1eaeafa0a16e5ac3764ff32c"
+      },
+      "versions": [
+        {
+          "id": "13aa2a03-4f39-486c-9a39-81ddd89c7b59",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    }
+  ],
+  "leaderboards": [
+    {
+      "id": "d0b159dc-67f7-409e-b5fe-cfabfa76cb76",
+      "vendorId": "com.jonluca.prismroll.leaderboard.classic_completed",
+      "configuration": {
+        "referenceName": "Classic Mazes Completed",
+        "vendorIdentifier": "com.jonluca.prismroll.leaderboard.classic_completed",
+        "defaultFormatter": "INTEGER",
+        "scoreSortType": "DESC",
+        "scoreRangeStart": "0",
+        "scoreRangeEnd": "2147483647",
+        "submissionType": "BEST_SCORE",
+        "visibility": "SHOW_FOR_ALL"
+      },
+      "localizationId": "a19ccc40-c944-40db-b402-05c74422b991",
+      "versions": [
+        {
+          "id": "9d92e211-daf4-47b3-acd4-9a0cf4525f93",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "8f8f6eda-42dc-4470-afb1-b3f2bdd1c9e9",
+      "vendorId": "com.jonluca.prismroll.leaderboard.perfect_completed",
+      "configuration": {
+        "referenceName": "Perfect Mazes",
+        "vendorIdentifier": "com.jonluca.prismroll.leaderboard.perfect_completed",
+        "defaultFormatter": "INTEGER",
+        "scoreSortType": "DESC",
+        "scoreRangeStart": "0",
+        "scoreRangeEnd": "2147483647",
+        "submissionType": "BEST_SCORE",
+        "visibility": "SHOW_FOR_ALL"
+      },
+      "localizationId": "f227fef4-bd16-49de-bb65-9213718f7ef0",
+      "versions": [
+        {
+          "id": "74d04cbf-3012-4c62-a4bd-8ee1960ab216",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "e2700bad-8bd8-4321-bf93-863e8504c4b1",
+      "vendorId": "com.jonluca.prismroll.leaderboard.limited_completed",
+      "configuration": {
+        "referenceName": "Limited Moves Completed",
+        "vendorIdentifier": "com.jonluca.prismroll.leaderboard.limited_completed",
+        "defaultFormatter": "INTEGER",
+        "scoreSortType": "DESC",
+        "scoreRangeStart": "0",
+        "scoreRangeEnd": "2147483647",
+        "submissionType": "BEST_SCORE",
+        "visibility": "SHOW_FOR_ALL"
+      },
+      "localizationId": "2781b31a-d077-45a7-a7a8-2e171c322df4",
+      "versions": [
+        {
+          "id": "b10db990-1b46-4f06-b683-d0d7cf43082e",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "d3f0386b-3446-44c3-8bc2-f0e6b9949e8c",
+      "vendorId": "com.jonluca.prismroll.leaderboard.rush_completed",
+      "configuration": {
+        "referenceName": "Time Rush Completed",
+        "vendorIdentifier": "com.jonluca.prismroll.leaderboard.rush_completed",
+        "defaultFormatter": "INTEGER",
+        "scoreSortType": "DESC",
+        "scoreRangeStart": "0",
+        "scoreRangeEnd": "2147483647",
+        "submissionType": "BEST_SCORE",
+        "visibility": "SHOW_FOR_ALL"
+      },
+      "localizationId": "c31f2f7d-3267-4837-884d-b6ddc44f052f",
+      "versions": [
+        {
+          "id": "827163b0-ae32-47db-a8fc-1fc06d57c553",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    },
+    {
+      "id": "3f6f7a71-85c2-4c8e-8739-f056ac5905ff",
+      "vendorId": "com.jonluca.prismroll.leaderboard.daily_completed",
+      "configuration": {
+        "referenceName": "Daily Mazes Completed",
+        "vendorIdentifier": "com.jonluca.prismroll.leaderboard.daily_completed",
+        "defaultFormatter": "INTEGER",
+        "scoreSortType": "DESC",
+        "scoreRangeStart": "0",
+        "scoreRangeEnd": "2147483647",
+        "submissionType": "BEST_SCORE",
+        "visibility": "SHOW_FOR_ALL"
+      },
+      "localizationId": "4ee40809-8bc1-445b-8113-ea4af0e30e57",
+      "versions": [
+        {
+          "id": "32bf4659-b8d3-4582-8691-3a92f09c010a",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "releaseCount": 0
+    }
+  ],
+  "activities": [
+    {
+      "id": "7a21fa26-7987-4d97-ab01-533767f1b24a",
+      "vendorId": "com.jonluca.prismroll.activity.classic",
+      "configuration": {
+        "referenceName": "Classic Mazes",
+        "vendorIdentifier": "com.jonluca.prismroll.activity.classic",
+        "playStyle": "ASYNCHRONOUS",
+        "minimumPlayersCount": 1,
+        "maximumPlayersCount": 1,
+        "supportsPartyCode": false
+      },
+      "localizationId": "1b867b17-0c6b-4e30-a928-234f9e18cb63",
+      "image": {
+        "id": "7427618c-deda-4e48-aa93-550b06f67173",
+        "fileName": "activity_classic.png",
+        "width": 3840,
+        "height": 2160,
+        "state": "COMPLETE",
+        "sha256": "05ea47772632c7e2fc737bc75f1a85ccc23b74723fc0cbe08a481d833c7db36e"
+      },
+      "defaultImage": {
+        "id": "75121b0e-ee0f-4cae-9294-3848e7cd2199",
+        "fileName": "activity_classic.png",
+        "width": 3840,
+        "height": 2160,
+        "state": "COMPLETE",
+        "sha256": "05ea47772632c7e2fc737bc75f1a85ccc23b74723fc0cbe08a481d833c7db36e"
+      },
+      "versions": [
+        {
+          "id": "d7bbf4cf-aab5-4067-8694-4c3556606557",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "verifiedRelationships": {
+        "achievements": [
+          "1940b715-bbcc-4135-80aa-486b3692d417",
+          "28271ef3-6fd5-4caf-81cd-bcad5b4122d9",
+          "67d1425e-5856-4556-b48d-7d16fe1da354",
+          "717e5e26-31a3-41d5-8a95-01b17cfb757a",
+          "8b5aeb65-9e01-47b9-9184-ce5ec6805526",
+          "c49cfa71-4404-42c9-9cbd-58fd8231b560",
+          "f8f69d0c-d37c-47f5-8ce2-e3b13f19b7dc"
+        ],
+        "leaderboards": [
+          "8f8f6eda-42dc-4470-afb1-b3f2bdd1c9e9",
+          "d0b159dc-67f7-409e-b5fe-cfabfa76cb76"
+        ]
+      }
+    },
+    {
+      "id": "828aec95-220c-4826-bd73-0e3e8f2f6477",
+      "vendorId": "com.jonluca.prismroll.activity.time_rush",
+      "configuration": {
+        "referenceName": "Time Rush",
+        "vendorIdentifier": "com.jonluca.prismroll.activity.time_rush",
+        "playStyle": "ASYNCHRONOUS",
+        "minimumPlayersCount": 1,
+        "maximumPlayersCount": 1,
+        "supportsPartyCode": false
+      },
+      "localizationId": "5ac15fae-dace-4b2b-a46c-c527926e8478",
+      "image": {
+        "id": "38bd4d93-6fc3-4a6b-bb82-22ef6a0e7727",
+        "fileName": "activity_time_rush.png",
+        "width": 3840,
+        "height": 2160,
+        "state": "COMPLETE",
+        "sha256": "6343ed9e64bb4f2a08307d30ae5dcc1521b0cfe99ba30cff1e84afecf969662f"
+      },
+      "defaultImage": {
+        "id": "3fdcfde1-b13a-40a7-9ed1-cfdbbf5d76b8",
+        "fileName": "activity_time_rush.png",
+        "width": 3840,
+        "height": 2160,
+        "state": "COMPLETE",
+        "sha256": "6343ed9e64bb4f2a08307d30ae5dcc1521b0cfe99ba30cff1e84afecf969662f"
+      },
+      "versions": [
+        {
+          "id": "ed59f2d9-5678-4a37-8e62-6d488d520ee4",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "verifiedRelationships": {
+        "achievements": [
+          "69ddccb7-bbcb-41c7-a0b1-19a992b22d10"
+        ],
+        "leaderboards": [
+          "d3f0386b-3446-44c3-8bc2-f0e6b9949e8c"
+        ]
+      }
+    },
+    {
+      "id": "dad36273-5b3c-43e4-ae75-2a4a68c1b737",
+      "vendorId": "com.jonluca.prismroll.activity.daily",
+      "configuration": {
+        "referenceName": "Daily Maze",
+        "vendorIdentifier": "com.jonluca.prismroll.activity.daily",
+        "playStyle": "ASYNCHRONOUS",
+        "minimumPlayersCount": 1,
+        "maximumPlayersCount": 1,
+        "supportsPartyCode": false
+      },
+      "localizationId": "8855c306-9663-4214-a737-49d9df2b2ff5",
+      "image": {
+        "id": "15f701ef-5e44-4dea-bc86-3a29e417eeec",
+        "fileName": "activity_daily.png",
+        "width": 3840,
+        "height": 2160,
+        "state": "COMPLETE",
+        "sha256": "8f164b8ed08fcf1615817e71b9228b16b300e96849c9fc465d6a61d44a31fd9c"
+      },
+      "defaultImage": {
+        "id": "ec5ac155-f8b5-4da1-8cac-aea175a6cc48",
+        "fileName": "activity_daily.png",
+        "width": 3840,
+        "height": 2160,
+        "state": "COMPLETE",
+        "sha256": "8f164b8ed08fcf1615817e71b9228b16b300e96849c9fc465d6a61d44a31fd9c"
+      },
+      "versions": [
+        {
+          "id": "8be135ac-169c-46fd-81ea-7aefcb1adf5b",
+          "version": 1,
+          "state": "PREPARE_FOR_SUBMISSION"
+        }
+      ],
+      "verifiedRelationships": {
+        "achievements": [
+          "4b362576-d1be-4a4f-b987-f8c602b7739e",
+          "c025d47f-ac44-4346-932c-6bd6265a753f"
+        ],
+        "leaderboards": [
+          "3f6f7a71-85c2-4c8e-8739-f056ac5905ff"
+        ]
+      }
+    }
+  ],
+  "relationshipWrites": [
+    {
+      "activityId": "7a21fa26-7987-4d97-ab01-533767f1b24a",
+      "type": "achievements",
+      "ids": [
+        "1940b715-bbcc-4135-80aa-486b3692d417",
+        "28271ef3-6fd5-4caf-81cd-bcad5b4122d9",
+        "717e5e26-31a3-41d5-8a95-01b17cfb757a",
+        "8b5aeb65-9e01-47b9-9184-ce5ec6805526",
+        "67d1425e-5856-4556-b48d-7d16fe1da354",
+        "c49cfa71-4404-42c9-9cbd-58fd8231b560",
+        "f8f69d0c-d37c-47f5-8ce2-e3b13f19b7dc"
+      ],
+      "result": "API accepted"
+    },
+    {
+      "activityId": "7a21fa26-7987-4d97-ab01-533767f1b24a",
+      "type": "leaderboards",
+      "ids": [
+        "d0b159dc-67f7-409e-b5fe-cfabfa76cb76",
+        "8f8f6eda-42dc-4470-afb1-b3f2bdd1c9e9"
+      ],
+      "result": "API accepted"
+    },
+    {
+      "activityId": "828aec95-220c-4826-bd73-0e3e8f2f6477",
+      "type": "achievements",
+      "ids": [
+        "69ddccb7-bbcb-41c7-a0b1-19a992b22d10"
+      ],
+      "result": "API accepted"
+    },
+    {
+      "activityId": "828aec95-220c-4826-bd73-0e3e8f2f6477",
+      "type": "leaderboards",
+      "ids": [
+        "d3f0386b-3446-44c3-8bc2-f0e6b9949e8c"
+      ],
+      "result": "API accepted"
+    },
+    {
+      "activityId": "dad36273-5b3c-43e4-ae75-2a4a68c1b737",
+      "type": "achievements",
+      "ids": [
+        "c025d47f-ac44-4346-932c-6bd6265a753f",
+        "4b362576-d1be-4a4f-b987-f8c602b7739e"
+      ],
+      "result": "API accepted"
+    },
+    {
+      "activityId": "dad36273-5b3c-43e4-ae75-2a4a68c1b737",
+      "type": "leaderboards",
+      "ids": [
+        "3f6f7a71-85c2-4c8e-8739-f056ac5905ff"
+      ],
+      "result": "API accepted"
+    }
+  ],
+  "activityReleaseCount": 0,
+  "totalAchievementPoints": 550,
+  "verificationLimits": [
+    "Checks metadata, image delivery, version states, activity associations and absent releases via live API. Does not prove authenticated device gameplay."
+  ],
+  "defaultLeaderboardId": "d0b159dc-67f7-409e-b5fe-cfabfa76cb76",
+  "defaultLeaderboardVerifiedAt": "2026-09-16T23:26:18.755737+00:00"
+}

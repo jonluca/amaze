@@ -214,6 +214,19 @@ struct ProgressData: Codable, Equatable, Sendable {
         rewardedLevelKeys.lazy.filter { $0.hasPrefix("\(mode.rawValue):") }.count
     }
 
+    /// Actual completion IDs, never the highest unlocked level or legacy aggregate count.
+    func completedLevelNumbers(in mode: GameMode) -> Set<Int> {
+        let prefix = "\(mode.rawValue):"
+        return Set(rewardedLevelKeys.compactMap { key in
+            guard key.hasPrefix(prefix) else { return nil }
+            let suffix = key.dropFirst(prefix.count)
+            guard let number = Int(suffix), number > 0, suffix == String(number) else { return nil }
+            return number
+        })
+    }
+
+    var completedDailyChallengeCount: Int { completedDailyChallengeIDs.count }
+
     /// Each level has one collectible allowance, even if a later update changes its layout.
     @discardableResult
     mutating func awardCollectedCoins(for run: MazeRun) -> Int {

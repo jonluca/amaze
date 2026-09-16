@@ -7,6 +7,8 @@ struct RootView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var ads: AdService
     @EnvironmentObject private var duel: DuelService
+    @EnvironmentObject private var gameCenter: GameCenterService
+    @EnvironmentObject private var gameActivities: GameCenterActivityCoordinator
     @EnvironmentObject private var purchases: PurchaseService
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -16,6 +18,8 @@ struct RootView: View {
     @State private var pendingSharedChallenge: SharedChallenge?
     @State private var tab = "play"
     @State private var settingsOpen = false
+    @State private var gameCenterOpen = false
+    @State private var gameCenterPresented = false
     @State private var coinShopOpen = false
     @State private var settingsPresented = false
     @State private var coinShopPresented = false
@@ -59,7 +63,10 @@ struct RootView: View {
             }
                 .tabItem { Label("Play", systemImage: "square.grid.3x3.fill").accessibilityIdentifier("tab_play") }
                 .tag("play")
-            navigationPage("Challenges") { ChallengesView(onSharePresentationChanged: setChallengeSharing) { tab = "play" } }
+            navigationPage("Challenges") {
+                ChallengesView(onSharePresentationChanged: setChallengeSharing, onShowGameCenter: openGameCenter) { tab = "play" }
+                    .navigationDestination(isPresented: $gameCenterOpen) { GameCenterView() }
+            }
                 .tabItem { Label("Challenges", systemImage: "trophy.fill").accessibilityIdentifier("tab_challenges") }
                 .tag("challenges")
             navigationPage("Collection") { CollectionView { coinShopOpen = true } }
@@ -72,7 +79,7 @@ struct RootView: View {
         .tint(Palette.violet)
         .gameplaySwipes(
             enabled: tab == "play" && readyRunID == store.runID && store.acceptsGameplayInput
-                && sharedChallenge == nil
+                && sharedChallenge == nil && !gameCenterIsPresenting
                 && scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen && !duel.isMatching
                 && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil
                 && !store.hasEnded && !store.isRewardPending && !(store.isDuel && duel.didWin != nil),
@@ -84,10 +91,19 @@ struct RootView: View {
     private var contentWithPresentations: some View {
         tabsWithGameplayInput
         .sheet(isPresented: $settingsOpen, onDismiss: { settingsPresented = false; syncModalState() }) {
-            SettingsView().onAppear { settingsPresented = true }
+            SettingsView(onShowGameCenter: openGameCenter).onAppear { settingsPresented = true }
         }
         .sheet(isPresented: $coinShopOpen, onDismiss: { coinShopPresented = false; syncModalState() }) {
             CoinShopView().onAppear { coinShopPresented = true }
+        }
+        .fullScreenCover(item: $gameCenter.presentation, onDismiss: {
+            gameCenterPresented = false
+            gameCenter.presentationDidDismiss()
+            syncModalState()
+        }) { presentation in
+            GameCenterControllerView(presentation: presentation)
+                .ignoresSafeArea()
+                .onAppear { gameCenterPresented = true; syncModalState() }
         }
         .fullScreenCover(item: $sharedChallenge, onDismiss: { syncModalState(); prepareAds() }) { challenge in
             SharedChallengeView(challenge: challenge, skin: store.skin, theme: store.theme,
@@ -123,7 +139,11 @@ struct RootView: View {
             analytics.screen(tab)
             store.setPresentationReady(readyRunID == store.runID, for: store.runID)
             store.setActivity(active: scenePhase == .active, visible: tab == "play")
+            gameCenter.observe(store.gameCenterProgress)
+            gameActivities.setAuthenticated(gameCenter.authenticated)
+            gameActivities.start()
             syncModalState()
+            gameCenter.start()
             prepareAds()
             duel.onStart = { seed, id in
                 guard scenePhase == .active, !ads.isPresenting, !ads.isPrivacyFormPresenting else {
@@ -145,6 +165,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             store.setActivity(active: phase == .active)
             if phase == .active {
+                gameCenter.refresh()
                 reviewPrompts.recordEngagement()
                 syncModalState()
                 store.refreshDaily()
@@ -155,6 +176,7 @@ struct RootView: View {
                 duel.cancel()
                 if store.isDuel { store.endSpecialSession() }
             }
+            updateGameCenterPresentationGate()
         }
         .onChange(of: tab) { _, newTab in
             analytics.screen(newTab == "journey" ? "levels" : newTab)
@@ -162,6 +184,7 @@ struct RootView: View {
             if newTab == "challenges" { store.refreshDaily() }
             if newTab != "play", store.isDuel { duel.cancel(); store.endSpecialSession() }
             if newTab != "play" { requestReviewAtRest() }
+            syncModalState()
         }
         .onChange(of: duel.matchID) { _, id in
             if id == nil, store.isDuel {
@@ -175,6 +198,17 @@ struct RootView: View {
     private var contentWithModalChanges: some View {
         contentWithLifecycle
         .onChange(of: duel.isMatching) { _, _ in syncModalState() }
+        .onChange(of: gameCenter.presentation?.id) { _, _ in syncModalState() }
+        .onChange(of: gameCenter.authenticated) { _, authenticated in
+            gameActivities.setAuthenticated(authenticated)
+        }
+        .onChange(of: store.gameCenterProgress) { _, progress in gameCenter.observe(progress) }
+        .onChange(of: gameActivities.pendingDestination) { _, _ in syncModalState() }
+        .onChange(of: store.mode) { _, _ in syncModalState() }
+        .onChange(of: store.isDaily) { _, _ in syncModalState() }
+        .onChange(of: store.isFailed) { _, failed in
+            if failed { gameActivities.finish() }
+        }
         .onChange(of: settingsOpen) { _, open in
             syncModalState()
             analytics.screen(open ? "settings" : (tab == "journey" ? "levels" : tab))
@@ -195,6 +229,7 @@ struct RootView: View {
     private var contentWithRunChanges: some View {
         contentWithModalChanges
         .onChange(of: playSceneActive) { _, active in
+            gameActivities.setPlaying(active)
             if active { advanceCompletedLevelIfReady() }
         }
         .onChange(of: readyRunID) { _, _ in advanceCompletedLevelIfReady() }
@@ -204,6 +239,7 @@ struct RootView: View {
             completedRunID = nil
             advancingRunID = nil
             adCheckedRunID = nil
+            updateGameCenterPresentationGate()
         }
         .onChange(of: ads.isPresenting) { _, _ in syncModalState() }
         .onChange(of: ads.isPrivacyFormPresenting) { _, _ in syncModalState() }
@@ -212,6 +248,7 @@ struct RootView: View {
         .onChange(of: store.progress.soundEnabled) { _, enabled in ads.setSoundEnabled(enabled) }
         .onChange(of: purchases.removesAds) { _, removed in ads.interstitialsDisabled = removed }
         .onChange(of: store.run.moves) { _, _ in
+            updateGameCenterPresentationGate()
             if store.isDuel {
                 duel.sendProgress(painted: store.run.painted.count, total: store.run.level.openCells.count, moves: store.run.moves)
                 if store.run.isComplete { duel.submitCompletion() }
@@ -234,12 +271,16 @@ struct RootView: View {
 
     private var playSceneActive: Bool {
         tab == "play" && scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen && !duel.isMatching
-            && sharedChallenge == nil
+            && sharedChallenge == nil && !gameCenterIsPresenting
             && !ads.isPresenting && !ads.isPrivacyFormPresenting && store.notice == nil && !needsAnalyticsChoice && !analyticsChoicePresented
     }
 
     private var needsAnalyticsChoice: Bool {
         analytics.isAvailable && !analytics.hasMadeChoice && !isUITesting
+    }
+
+    private var gameCenterIsPresenting: Bool {
+        gameCenter.presentation != nil || gameCenterPresented
     }
 
     private var isUITesting: Bool {
@@ -263,6 +304,7 @@ struct RootView: View {
 
     private func completedLevel(_ runID: UUID) {
         guard store.runID == runID, store.run.isComplete, !store.isDuel else { return }
+        if store.hasEnded { gameActivities.finish() }
         completedRunID = runID
         advanceCompletedLevelIfReady()
     }
@@ -291,10 +333,43 @@ struct RootView: View {
 
     private func syncModalState() {
         presentPendingChallengeIfReady()
+        launchPendingGameActivityIfReady()
+        updateGameCenterPresentationGate()
         store.setActivity(modal: settingsOpen || coinShopOpen || restartPromptOpen || duel.isMatching
                           || ads.isPresenting || ads.isPrivacyFormPresenting || store.notice != nil
                           || needsAnalyticsChoice || analyticsChoicePresented || sharedChallenge != nil
-                          || settingsPresented || coinShopPresented || challengeShareOpen)
+                          || settingsPresented || coinShopPresented || challengeShareOpen || gameCenterIsPresenting)
+        gameActivities.setPlaying(playSceneActive)
+        gameActivities.setContext(mode: store.mode, isDaily: store.isDaily, isDuel: store.isDuel)
+    }
+
+    private func openGameCenter() {
+        settingsOpen = false
+        tab = "challenges"
+        gameCenterOpen = true
+    }
+
+    private var canPresentGameCenter: Bool {
+        scenePhase == .active && !settingsOpen && !coinShopOpen && !restartPromptOpen
+            && !settingsPresented && !coinShopPresented && !challengeShareOpen
+            && !duel.isMatching && !store.isDuel && !store.isRewardPending
+            && !ads.isPresenting && !ads.isPrivacyFormPresenting && !ads.isUpdatingConsent
+            && store.notice == nil && !needsAnalyticsChoice && !analyticsChoicePresented
+            && sharedChallenge == nil && !gameCenterIsPresenting
+    }
+
+    private func updateGameCenterPresentationGate() {
+        // A delayed sign-in response waits until the player leaves an active maze.
+        gameCenter.setPresentationAllowed(canPresentGameCenter
+            && (tab != "play" || store.run.moves == 0 || store.hasEnded))
+    }
+
+    private func launchPendingGameActivityIfReady() {
+        guard let destination = gameActivities.pendingDestination, canPresentGameCenter else { return }
+        store.openGameCenterActivity(destination)
+        gameCenterOpen = false
+        tab = "play"
+        gameActivities.didLaunchPendingActivity()
     }
 
     private func setChallengeSharing(_ open: Bool) {
@@ -316,7 +391,7 @@ struct RootView: View {
     private func presentPendingChallengeIfReady() {
         guard let pending = pendingSharedChallenge, sharedChallenge == nil, scenePhase == .active,
               !settingsOpen, !coinShopOpen, !restartPromptOpen, !duel.isMatching, !store.isDuel,
-              !settingsPresented, !coinShopPresented, !challengeShareOpen,
+              !settingsPresented, !coinShopPresented, !challengeShareOpen, !gameCenterIsPresenting,
               !ads.isPresenting, !ads.isPrivacyFormPresenting, !ads.isUpdatingConsent, !store.isRewardPending,
               store.notice == nil, !needsAnalyticsChoice, !analyticsChoicePresented else { return }
         pendingSharedChallenge = nil
@@ -326,7 +401,7 @@ struct RootView: View {
     /// Request at a player-selected pause after sustained progress, never mid-maze.
     private func requestReviewAtRest() {
         guard scenePhase == .active, !settingsOpen, !coinShopOpen, sharedChallenge == nil,
-              !settingsPresented, !coinShopPresented, !challengeShareOpen,
+              !settingsPresented, !coinShopPresented, !challengeShareOpen, !gameCenterIsPresenting, !gameCenterOpen,
               !ads.isPresenting, !ads.isPrivacyFormPresenting, !ads.isUpdatingConsent, !duel.isMatching,
               !needsAnalyticsChoice, !analyticsChoicePresented, store.notice == nil,
               !isUITesting,
@@ -335,7 +410,7 @@ struct RootView: View {
         requestReview()
     }
     private func prepareAds() {
-        guard !needsAnalyticsChoice, !analyticsChoicePresented, sharedChallenge == nil else { return }
+        guard !needsAnalyticsChoice, !analyticsChoicePresented, sharedChallenge == nil, !gameCenterIsPresenting else { return }
         ads.setSoundEnabled(store.progress.soundEnabled)
         ads.interstitialsDisabled = purchases.removesAds
         ads.prepare()

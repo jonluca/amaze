@@ -1,6 +1,7 @@
 import FirebaseAnalytics
 import FirebaseCore
 import Foundation
+import StoreKit
 
 @MainActor
 final class FirebaseAnalyticsTransport: AnalyticsTransport {
@@ -46,5 +47,9 @@ final class FirebaseAnalyticsTransport: AnalyticsTransport {
 
     func record(_ name: String, parameters: [String: Any]) {
         Analytics.logEvent(name, parameters: parameters)
+    }
+
+    func recordVerifiedPurchase(_ transaction: Transaction) {
+        Analytics.logTransaction(transaction)
     }
 }

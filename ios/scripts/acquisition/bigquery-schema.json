@@ -1,0 +1,97 @@
+[
+  {
+    "name": "app_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "request_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "report_key",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "event_date",
+    "type": "DATE",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "processing_date",
+    "type": "DATE",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "granularity",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "instance_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "row_index",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "territory",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "device",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "app_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "page_type",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "event_type",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "metric_name",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "metric_value",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "additive",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "population",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "raw_fields_json",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

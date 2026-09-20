@@ -1,4 +1,5 @@
 #if canImport(UIKit)
+import StoreKit
 import XCTest
 @testable import PrismRoll
 
@@ -193,6 +194,7 @@ final class AnalyticsServiceTests: XCTestCase {
         func setAnalyticsConsent(granted: Bool) { actions.append("consent:\(granted)") }
         func resetAnalyticsData() { actions.append("reset") }
         func record(_ name: String, parameters: [String: Any]) { events.append((name, parameters)) }
+        func recordVerifiedPurchase(_ transaction: Transaction) { actions.append("purchase:\(transaction.id)") }
     }
 }
 #endif

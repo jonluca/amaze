@@ -1,4 +1,5 @@
 import Foundation
+import StoreKit
 
 /// The SDK boundary stays injectable so privacy behavior can be tested without networking.
 @MainActor
@@ -9,4 +10,5 @@ protocol AnalyticsTransport: AnyObject {
     func setAnalyticsConsent(granted: Bool)
     func resetAnalyticsData()
     func record(_ name: String, parameters: [String: Any])
+    func recordVerifiedPurchase(_ transaction: Transaction)
 }

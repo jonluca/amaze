@@ -18,18 +18,21 @@ final class PurchaseService: ObservableObject {
     @Published private(set) var coinStatus = "Checking coin packs…"
     private let productID: String
     private let analytics: any AnalyticsRecording
+    private let purchaseAnalytics: any PurchaseAnalyticsRecording
     private let diagnostics: any DiagnosticsRecording
     private var updatesTask: Task<Void, Never>?
     private var deliverCoins: (@MainActor (CoinPurchase) throws -> CoinDeliveryResult)?
 
     init(bundle: Bundle = .main,
          analytics: (any AnalyticsRecording)? = nil,
+         purchaseAnalytics: (any PurchaseAnalyticsRecording)? = nil,
          diagnostics: (any DiagnosticsRecording)? = nil,
          deliverCoins: (@MainActor (CoinPurchase) throws -> CoinDeliveryResult)? = nil) {
         let configured = (bundle.object(forInfoDictionaryKey: "PrismRemoveAdsProductID") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         productID = configured.flatMap { $0.isEmpty ? nil : $0 } ?? "com.jonluca.prismroll.removeads"
         self.analytics = analytics ?? AnalyticsService.shared
+        self.purchaseAnalytics = purchaseAnalytics ?? AnalyticsService.shared
         self.diagnostics = diagnostics ?? DiagnosticsService.shared
         self.deliverCoins = deliverCoins
         updatesTask = Task { [weak self] in
@@ -131,6 +134,7 @@ final class PurchaseService: ObservableObject {
                     return
                 }
                 await refreshEntitlements()
+                if removesAds { purchaseAnalytics.recordVerifiedPurchase(transaction) }
                 await transaction.finish()
                 status = removesAds ? "No Ads is active. Thank you!" : "This purchase is not currently active."
                 recordPurchaseResult(removesAds ? .success : .inactive, productID: productID)
@@ -198,6 +202,9 @@ final class PurchaseService: ObservableObject {
         }
         guard transaction.productID == productID, transaction.productType == .nonConsumable else { return }
         await refreshEntitlements()
+        if removesAds, transaction.revocationDate == nil, !transaction.isUpgraded {
+            purchaseAnalytics.recordVerifiedPurchase(transaction)
+        }
         await transaction.finish()
         status = removesAds ? "No Ads is active." : "No Ads is no longer active for this account."
     }
@@ -229,6 +236,7 @@ final class PurchaseService: ObservableObject {
             // No suspension between checking the ledger and saving the credit. The
             // wallet owns idempotency if updates and purchase completion overlap.
             let delivery = try deliverCoins(purchase)
+            purchaseAnalytics.recordVerifiedPurchase(transaction)
             await transaction.finish()
             switch delivery {
             case .credited(let coins): coinStatus = "Added \(coins.formatted()) coins."
@@ -251,7 +259,8 @@ final class PurchaseService: ObservableObject {
     private func recordPurchaseResult(_ result: PurchaseOutcome, productID: String) {
         guard isCatalogProduct(productID) else { return }
         // Count the explicit purchase attempt once. StoreKit updates and recovery
-        // must not duplicate this funnel or Firebase's automatic in_app_purchase.
+        // must not duplicate this funnel. The separate verified-purchase bridge
+        // uses Firebase's StoreKit 2 API for revenue instead of a custom event.
         analytics.record("purchase_result", parameters: ["product_id": productID, "result": result.rawValue])
     }
 

@@ -43,6 +43,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: PrismRoll/Resources/PrismRoll.entitlements
         DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
     dependencies:
+      - sdk: AdServices.framework
       - package: Firebase
         product: FirebaseAnalyticsCore
       - package: Firebase

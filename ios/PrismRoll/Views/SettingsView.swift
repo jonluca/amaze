@@ -3,6 +3,7 @@ import StoreKit
 
 struct SettingsView: View {
     @ObservedObject private var analytics = AnalyticsService.shared
+    @ObservedObject private var attribution = AppsFlyerAttributionService.shared
     @ObservedObject private var diagnostics = DiagnosticsService.shared
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var ads: AdService
@@ -103,6 +104,15 @@ struct SettingsView: View {
                     .accessibilityIdentifier("analyticsToggle")
                     Text("Help improve Prism Roll by sharing gameplay, feature use, and purchase activity with Google Analytics. No name, email, Game Center identity, or advertising identifier is sent by analytics. You can turn this off at any time.")
                         .font(.caption).foregroundStyle(.secondary)
+                    if attribution.isAvailable {
+                        Toggle("Share install attribution", isOn: Binding(
+                            get: { attribution.isEnabled }, set: attribution.setEnabled
+                        ))
+                        .disabled(!analytics.isEnabled && !attribution.isEnabled)
+                        .accessibilityIdentifier("attributionToggle")
+                        Text("Share install and app-session information, campaign attribution, app and device information, IP address, and an installation identifier with AppsFlyer to understand how people find Prism Roll. AppsFlyer advertising and vendor identifiers, personalized advertising, and sharing with advertising partners are disabled. This also requires Share usage analytics; turning either choice off stops new AppsFlyer measurement.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     NavigationLink {
                         PrivacyPolicyView()
                     } label: {

@@ -1,6 +1,6 @@
 # Native attribution and purchase revenue
 
-This source change requires a new iOS release. It does not configure or spend on Apple Ads, add AppsFlyer, or establish that a paid campaign has attributed a real installation.
+This source change requires a new iOS release. It does not configure or spend on Apple Ads or establish that a paid campaign has attributed a real installation. The separately prepared [AppsFlyer integration](APPSFLYER_SETUP.md) remains inactive pending free account setup and its real developer key.
 
 ## Apple Ads
 

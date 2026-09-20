@@ -16,6 +16,7 @@ final class AnalyticsService: ObservableObject, AnalyticsRecording, PurchaseAnal
     private let defaults: UserDefaults
     private let transport: any AnalyticsTransport
     private let runtime: AnalyticsRuntime
+    private let attribution: (any InstallAttributionConsentUpdating)?
     private let dateProvider: () -> Date
     private var isConfigured = false
     private var isCollecting = false
@@ -23,14 +24,17 @@ final class AnalyticsService: ObservableObject, AnalyticsRecording, PurchaseAnal
     private var purchasePeriodStart: Date?
 
     convenience init() {
-        self.init(defaults: .standard, transport: FirebaseAnalyticsTransport(), runtime: .current)
+        self.init(defaults: .standard, transport: FirebaseAnalyticsTransport(), runtime: .current,
+                  attribution: AppsFlyerAttributionService.shared)
     }
 
     init(defaults: UserDefaults, transport: any AnalyticsTransport, runtime: AnalyticsRuntime,
+         attribution: (any InstallAttributionConsentUpdating)? = nil,
          dateProvider: @escaping () -> Date = Date.init) {
         self.defaults = defaults
         self.transport = transport
         self.runtime = runtime
+        self.attribution = attribution
         self.dateProvider = dateProvider
         hasMadeChoice = defaults.object(forKey: Self.consentDefaultsKey) != nil
         isEnabled = defaults.bool(forKey: Self.consentDefaultsKey)
@@ -84,6 +88,9 @@ final class AnalyticsService: ObservableObject, AnalyticsRecording, PurchaseAnal
     }
 
     private func applyChoice() {
+        // The separate attribution choice never overrides usage consent or a failed
+        // Analytics configuration. Every early return also reconciles its gate.
+        defer { attribution?.setUsageAnalyticsEnabled(isEnabled && isCollecting) }
         // UI tests and ordinary debug runs cannot initialize the SDK, even after opt-in.
         guard runtime.allowsCollection, isAvailable else { return }
 

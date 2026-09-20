@@ -17,6 +17,9 @@ packages:
   SnapshotTesting:
     url: https://github.com/pointfreeco/swift-snapshot-testing.git
     exactVersion: 1.19.5
+  AppsFlyerStrict:
+    url: https://github.com/AppsFlyerSDK/AppsFlyerFramework-Strict.git
+    exactVersion: 7.0.2
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk.git
     exactVersion: 12.19.2
@@ -42,7 +45,10 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: PrismRoll/Resources/PrismRoll.entitlements
         DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+        APPSFLYER_DEV_KEY: ''
     dependencies:
+      - package: AppsFlyerStrict
+        product: AppsFlyerLib-Strict
       - sdk: AdServices.framework
       - package: Firebase
         product: FirebaseAnalyticsCore

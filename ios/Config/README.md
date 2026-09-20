@@ -28,6 +28,12 @@ both player choices still apply, including suppression in normal Debug/test runs
 To build without AppsFlyer configuration locally, temporarily remove the local
 file or pass an explicit empty build setting, `APPSFLYER_DEV_KEY=`, to
 `xcodebuild`. Command-line build settings override this file. Do not place the
-actual key in a shell command or public CI setting. A future enabled CI release
-must deliberately provision the ignored file from its existing secret mechanism;
-the committed CI workflow remains keyless.
+actual key in a shell command or public CI setting. The committed CI workflow
+remains keyless. For its unsigned production archive, verify the original artifact
+checksum and source provenance, then set only `PrismAppsFlyerDevKey` in the app's
+`Info.plist` from this local configuration before distribution signing. This is a
+runtime bundle setting, not a compilation condition. Record the configuration
+step without its value, sign and export, then verify that the final IPA's key
+matches the local value and that signatures, entitlements, compiler metadata and
+privacy manifests remain correct. Never modify an already signed distribution
+artifact or claim that the keyless CI artifact is an enabled release.

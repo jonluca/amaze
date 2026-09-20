@@ -97,8 +97,8 @@ jobs:
           info = plistlib.loads((app / "Info.plist").read_bytes())
           expected = {
               "CFBundleIdentifier": "com.jonluca.prismroll",
-              "CFBundleShortVersionString": "1.1.0",
-              "CFBundleVersion": "15",
+              "CFBundleShortVersionString": "1.1.1",
+              "CFBundleVersion": "16",
               "CADisableMinimumFrameDurationOnPhone": True,
               "DTXcodeBuild": "17F113",
               "DTSDKName": "iphoneos26.5",
@@ -113,6 +113,22 @@ jobs:
           }
           for key, value in expected.items():
               assert info.get(key) == value, (key, info.get(key), value)
+          # The release Mac applies the issued client key before distribution signing.
+          # Keep this original CI artifact keyless and independently verifiable.
+          assert info.get("PrismAppsFlyerDevKey", "") == ""
+          appsflyer_config = plistlib.loads((app / "AppsFlyerLibConfig.plist").read_bytes())
+          assert appsflyer_config == {
+              "debug_mode": False,
+              "disable_idfa_collection": True,
+              "disable_idfv_collection": True,
+              "disable_skadnetwork": True,
+          }
+          privacy = plistlib.loads((app / "PrivacyInfo.xcprivacy").read_bytes())
+          other_data = next(item for item in privacy["NSPrivacyCollectedDataTypes"]
+                            if item["NSPrivacyCollectedDataType"] == "NSPrivacyCollectedDataTypeOtherDataTypes")
+          assert other_data["NSPrivacyCollectedDataTypeLinked"] is True
+          assert other_data["NSPrivacyCollectedDataTypeTracking"] is False
+          assert other_data["NSPrivacyCollectedDataTypePurposes"] == ["NSPrivacyCollectedDataTypePurposeAnalytics"]
           executable = app / info["CFBundleExecutable"]
           architecture = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).strip()
           assert architecture == "arm64", architecture
@@ -140,6 +156,8 @@ jobs:
               "scheme": "PrismRoll",
               "configuration": "Release",
               "signed": False,
+              "appsFlyerConfigured": False,
+              "requiresLocalAppsFlyerConfigurationBeforeSigning": True,
               "appMetadata": expected,
           }
           destination = Path("build/deliverables")
@@ -161,7 +179,7 @@ jobs:
       - name: Upload the unsigned archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: PrismRoll-1.1.0-15-xcode26.6-unsigned-${{ github.run_id }}
+          name: PrismRoll-1.1.1-16-xcode26.6-unsigned-${{ github.run_id }}
           path: build/deliverables/
           if-no-files-found: error
           retention-days: 7

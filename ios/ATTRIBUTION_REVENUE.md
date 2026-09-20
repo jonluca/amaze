@@ -1,6 +1,6 @@
 # Native attribution and purchase revenue
 
-This source change requires a new iOS release. It does not configure or spend on Apple Ads or establish that a paid campaign has attributed a real installation. The [AppsFlyer integration](APPSFLYER_SETUP.md) now has a confirmed free Welcome account and a privately stored real developer key. Genuine-key QA session and fresh-install requests received HTTP 200; dashboard report receipt and an enabled App Store release remain outstanding.
+This source change requires a new iOS release. It does not configure or spend on Apple Ads or establish that a paid campaign has attributed a real installation. The [AppsFlyer integration](APPSFLYER_SETUP.md) now has a confirmed free Welcome account and a privately stored real developer key. Genuine-key QA session and fresh-install requests received HTTP 200. The refreshed Marketing Overview for Prism Roll on September 20 UTC showed **1 Organic install** in its metric and chart, verifying internal QA install-report receipt rather than customer acquisition. Active users and revenue still showed **No data found**; session reporting and paid/link attribution are not established. An enabled App Store release remains outstanding.
 
 ## Apple Ads
 

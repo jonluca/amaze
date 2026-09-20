@@ -38,6 +38,9 @@ targets:
     sources:
       - path: PrismRoll
         excludes: ['**/*.md']
+    configFiles:
+      Debug: Config/PrismRoll.xcconfig
+      Release: Config/PrismRoll.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jonluca.prismroll
@@ -45,7 +48,6 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: PrismRoll/Resources/PrismRoll.entitlements
         DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
-        APPSFLYER_DEV_KEY: ''
     dependencies:
       - package: AppsFlyerStrict
         product: AppsFlyerLib-Strict

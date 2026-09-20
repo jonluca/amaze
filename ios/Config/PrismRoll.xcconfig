@@ -1,0 +1,6 @@
+// Clean checkouts and CI leave optional install attribution unconfigured.
+APPSFLYER_DEV_KEY =
+
+// Local Xcode builds and archives can opt in to the issued SDK configuration.
+// This file is ignored by Git and must never contain an administrative API token.
+#include? "Local.xcconfig"

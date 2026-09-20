@@ -5,6 +5,9 @@ xcuserdata/
 artifacts/
 .DS_Store
 
+# Private local build settings (never copied into the app as a resource).
+/Config/Local.xcconfig
+
 # Local App Store account records, uploads, and release evidence.
 release/
 release-screenshots/

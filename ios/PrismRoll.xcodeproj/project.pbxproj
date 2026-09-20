@@ -419,6 +419,7 @@
 		43A75826F7C021A23F1B9730 /* MazePerfectMoveCatalog+Generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MazePerfectMoveCatalog+Generated.swift"; sourceTree = "<group>"; };
 		43C5B13C4D9EDA845A1928AE /* DiagnosticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsService.swift; sourceTree = "<group>"; };
 		44AFD1C6E4A710ECF7581E7E /* SaveMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveMigrationTests.swift; sourceTree = "<group>"; };
+		44E8DD615678DB5BAFFBD477 /* PrismRoll.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = PrismRoll.xcconfig; sourceTree = "<group>"; };
 		452886034B07D311DFC43D1D /* PendingCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCompletion.swift; sourceTree = "<group>"; };
 		45AFAF156FA541F77F56B199 /* DirectionControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionControls.swift; sourceTree = "<group>"; };
 		46BBB81203DFD7C463C8222F /* SceneFrameRatePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneFrameRatePolicy.swift; sourceTree = "<group>"; };
@@ -709,6 +710,7 @@
 		3DC80E4D85D75E9BF6BA2038 = {
 			isa = PBXGroup;
 			children = (
+				6E6264201C7E51068EDA5B37 /* Config */,
 				A7FA0BC4C7EAC218A380A33E /* Packages */,
 				A2E49A6980BDCB39104D86EF /* PrismRoll */,
 				48949C2E452B1A070FD9B1BF /* PrismRollTests */,
@@ -822,6 +824,14 @@
 				B83CD0C8F2A751A61561A4C4 /* ThirdPartyNotices.txt */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		6E6264201C7E51068EDA5B37 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				44E8DD615678DB5BAFFBD477 /* PrismRoll.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		7B822C358228507021B14877 /* Services */ = {
@@ -1626,8 +1636,8 @@
 /* Begin XCBuildConfiguration section */
 		163A02892A29136182E608D1 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 44E8DD615678DB5BAFFBD477 /* PrismRoll.xcconfig */;
 			buildSettings = {
-				APPSFLYER_DEV_KEY = "";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PrismRoll/Resources/PrismRoll.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -1833,8 +1843,8 @@
 		};
 		C4A56621B8A48D0BDAD7BAF3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 44E8DD615678DB5BAFFBD477 /* PrismRoll.xcconfig */;
 			buildSettings = {
-				APPSFLYER_DEV_KEY = "";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PrismRoll/Resources/PrismRoll.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";

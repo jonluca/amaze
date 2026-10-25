@@ -95,7 +95,7 @@ struct SettingsView: View {
                     ))
                     .disabled(!diagnostics.isAvailable)
                     .accessibilityIdentifier("diagnosticsToggle")
-                    Text("Send saved and future crash reports, selected save or purchase errors, app and device information, and an installation identifier to Firebase Crashlytics. Saved reports may include crashes from before you enabled this setting. Sharing is optional and separate from usage analytics. Turning it off stops new error recording and future upload requests; reports already authorized may still be sent.")
+                    Text("Send saved and future crash reports and selected save or purchase errors to our self-hosted GlitchTip service. Reports contain crash stacks and app and device versions, without installation identifiers, player details, or analytics events. Sharing is optional and separate from usage analytics. Turning it off stops new error recording and future report authorization; reports already authorized may still be sent.")
                         .font(.caption).foregroundStyle(.secondary)
                     Toggle("Share usage analytics", isOn: Binding(
                         get: { analytics.isEnabled }, set: analytics.setEnabled

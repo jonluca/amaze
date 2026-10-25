@@ -36,4 +36,5 @@
     <key>PrismRewardedAdUnitID</key><string>ca-app-pub-8314265628354618/1472545489</string>
     <key>PrismInterstitialAdUnitID</key><string>ca-app-pub-8314265628354618/4122030604</string>
     <key>SKAdNetworkItems</key><array><dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict></array>
+    <key>GlitchTipDSN</key><string>https://f8ddc0e786b340809711ece3fa8c815e@http--watchtrader-errors--7rqh4vysrzq7.y8cdxt7gqw.code.run/16</string>
 </dict></plist>

@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		005BE756EBDE4416B29E671F /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 8D5122BF402CD63FF346D1DC /* FirebaseCrashlytics */; };
+		005BE756EBDE4416B29E671F /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 7E589319F1BDF6A78B66EB29 /* Sentry */; };
 		013912332FDFFDFC4ACA2C9D /* MazeChannelOcclusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = EABD35063E5AA60E674E32AA /* MazeChannelOcclusion.swift */; };
 		0230A21AA875A3F133FAC662 /* GameCenterProgressSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 727D5E18A7C6204E601A23B6 /* GameCenterProgressSnapshot.swift */; };
 		02F693F2AAA178BE6FB08EF7 /* ChallengeShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A2AB918815E42FA8E9174F /* ChallengeShareCard.swift */; };
@@ -170,7 +170,6 @@
 		8A184D36B4C33D39CBA6C7B0 /* MazeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090FD7FB0CBF081ADD210B08 /* MazeEngineTests.swift */; };
 		8A28D3634A01696C01708C59 /* DailyCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620D81D0ECCB360ADBD75574 /* DailyCalendar.swift */; };
 		8B454AF3F3A9A5EA1BD775C0 /* ProgressData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E555604F10819DAA930D88BD /* ProgressData.swift */; };
-		8C0D572706E17ABF814917A4 /* FirebaseDiagnosticsTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA2EFB1D57B41BD76324B454 /* FirebaseDiagnosticsTransport.swift */; };
 		8E27982521DA87674723AA5C /* UIKitMazeHapticOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2FE53E58D815221E832484 /* UIKitMazeHapticOutput.swift */; };
 		8E41DDEEFDE28E0712F7D9F1 /* GameDifficultyCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2336B5504CED02AFAC5BE403 /* GameDifficultyCompatibilityTests.swift */; };
 		8E47D507C8B1937AFA9838BF /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = E0D9431986DC1FE69E59ABC7 /* GoogleMobileAds */; };
@@ -207,6 +206,7 @@
 		A7B27108171D90321CEDC9FD /* MazeCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E9CD4A176FCE43B011A8CEF /* MazeCanvasView.swift */; };
 		AA9CAF0228D26C303A83A0EA /* GameCenterAccountProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DF6E7D7359DF019103E0CFE /* GameCenterAccountProgress.swift */; };
 		AB99CFC92A3BAEE6A20E7F5E /* ProgressDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14591A5048EF4483AEA7DF30 /* ProgressDataTests.swift */; };
+		AC1E4B81E363B38E76C17FB0 /* GlitchTipDiagnosticsTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DB23A37CA8B94956852B040 /* GlitchTipDiagnosticsTransport.swift */; };
 		ACBB2B22E6516FF63A5EC3E3 /* DiagnosticOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B860E1A93FF37C202B83690 /* DiagnosticOperation.swift */; };
 		AED7D09B9D7937CFE914F159 /* PerfectSolveAward.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DEACBE005A483F62579B38 /* PerfectSolveAward.swift */; };
 		B0CE61900FE098004E584FC4 /* MazeRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D1A7F6096F8B2806A06AB3 /* MazeRenderingTests.swift */; };
@@ -234,6 +234,7 @@
 		C26455597470EB203749DCED /* MazePerfectMoveCatalog+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43A75826F7C021A23F1B9730 /* MazePerfectMoveCatalog+Generated.swift */; };
 		C28FAE6BBACDB12D355661DF /* DuelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0040EE1C091A24C4874AFD /* DuelService.swift */; };
 		C2A6FBE24A0EC52EB4A624F0 /* MazeSceneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B97E6671A86E8301672B29D /* MazeSceneRenderer.swift */; };
+		C3DBDE70647564EF4F755672 /* Sentry-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = EE4013C0E4DE6713DDB0E3AD /* Sentry-LICENSE.txt */; };
 		C56E88DB9D609F470C21F587 /* AdExperienceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D9BF0BF5991E2B87469C68 /* AdExperienceTests.swift */; };
 		C606EAAB85EC754D61027F9F /* GameStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ADCCA59DDC969355B06988B /* GameStore.swift */; };
 		C6E2072A1F328E833770E7C8 /* SharedChallengeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6DA410D628FBF8E8DBB33B /* SharedChallengeView.swift */; };
@@ -298,6 +299,7 @@
 		F6259E5558F28A946FA20F09 /* GameplaySwipeHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADAE35C1B6E03067FFEF713 /* GameplaySwipeHostView.swift */; };
 		F63D8880A854CD98D01EC61F /* DuelMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA35E3D97C08FDF1B8B4842 /* DuelMessage.swift */; };
 		F69DA34F67584651DEF9E0B0 /* ChallengesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBF044EA347A82CB1A897A /* ChallengesView.swift */; };
+		F73AB5D1A1D9CDC44772D1BB /* ErrorReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A3518B883944994CF6B159 /* ErrorReporting.swift */; };
 		F7F7321BE98A865F56CF25C0 /* PurchaseRevenuePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 312FBEBA3B759BD0761FDAE7 /* PurchaseRevenuePolicyTests.swift */; };
 		F80CB15F857A61183C65A03C /* AutoAdvanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D906ED922AFE021DE3C28347 /* AutoAdvanceUITests.swift */; };
 		F870BE070529F2D8A3D8DEAA /* MoveDirection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 623C2AE5FE26F90FCFE8FAF7 /* MoveDirection.swift */; };
@@ -525,6 +527,7 @@
 		9AB5473C546E2C5D519F56F9 /* MazeCoinBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeCoinBuilder.swift; sourceTree = "<group>"; };
 		9AC449CD4FA7FA20E1404D87 /* ExactBoardProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExactBoardProgressTests.swift; sourceTree = "<group>"; };
 		9C9748755046A3A4B6AF84DC /* TimeRushSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeRushSessionTests.swift; sourceTree = "<group>"; };
+		9DB23A37CA8B94956852B040 /* GlitchTipDiagnosticsTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlitchTipDiagnosticsTransport.swift; sourceTree = "<group>"; };
 		9EDB890ED0183C1BDEEF10E2 /* InterstitialFrequencyPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterstitialFrequencyPolicy.swift; sourceTree = "<group>"; };
 		9F9B23770A07AFFA42C8D504 /* PerfectSolveAwardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfectSolveAwardUITests.swift; sourceTree = "<group>"; };
 		A04F4AFEB7E0E73F14BA3B6A /* MazeNativeOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeNativeOptimizer.swift; sourceTree = "<group>"; };
@@ -585,6 +588,7 @@
 		D409CA7BC68705AF40801815 /* PurchaseRevenueAnalyticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseRevenueAnalyticsTests.swift; sourceTree = "<group>"; };
 		D4CC24D7279AC45A23420A23 /* GameplayReward.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayReward.swift; sourceTree = "<group>"; };
 		D5670E436B92A338BB592F9F /* AdPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdPresentation.swift; sourceTree = "<group>"; };
+		D5A3518B883944994CF6B159 /* ErrorReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorReporting.swift; sourceTree = "<group>"; };
 		D80577F46B2C677771D4425A /* AdLoadRetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdLoadRetryPolicy.swift; sourceTree = "<group>"; };
 		D872775D458D0773DC90F576 /* DiagnosticsRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsRecording.swift; sourceTree = "<group>"; };
 		D8DB4C4F8A2BE91640FBEAC7 /* GameNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameNavigationTests.swift; sourceTree = "<group>"; };
@@ -617,13 +621,13 @@
 		E8C250516713C4C22C4F3DC1 /* GameCenterControllerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterControllerView.swift; sourceTree = "<group>"; };
 		E91E4A7BD14F8EF0CB0DF4DF /* SharedChallengeSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedChallengeSessionTests.swift; sourceTree = "<group>"; };
 		E9592F2D7735E6A3DE490033 /* SkinCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinCard.swift; sourceTree = "<group>"; };
-		EA2EFB1D57B41BD76324B454 /* FirebaseDiagnosticsTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseDiagnosticsTransport.swift; sourceTree = "<group>"; };
 		EABD35063E5AA60E674E32AA /* MazeChannelOcclusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeChannelOcclusion.swift; sourceTree = "<group>"; };
 		EB4F1A74465EA5AF6F4F38E0 /* MazeOptimality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeOptimality.swift; sourceTree = "<group>"; };
 		ED7B18B6369DA901145AB113 /* DiagnosticFailureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticFailureTests.swift; sourceTree = "<group>"; };
 		EDC83A717B51216FC5F691AA /* DiagnosticsTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsTransport.swift; sourceTree = "<group>"; };
 		EDCAECD83566567559CF0509 /* SwipeSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeSample.swift; sourceTree = "<group>"; };
 		EE2019717B82700D9C461EAF /* MazeCanvasLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeCanvasLayoutTests.swift; sourceTree = "<group>"; };
+		EE4013C0E4DE6713DDB0E3AD /* Sentry-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Sentry-LICENSE.txt"; sourceTree = "<group>"; };
 		F24D8F9DFEEC0025CA9B67EB /* MazeLevelTransitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeLevelTransitionTests.swift; sourceTree = "<group>"; };
 		F3A2AB918815E42FA8E9174F /* ChallengeShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeShareCard.swift; sourceTree = "<group>"; };
 		F8BAD30403583CD69EE24AA9 /* AppsFlyerAttributionTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsFlyerAttributionTransport.swift; sourceTree = "<group>"; };
@@ -644,7 +648,7 @@
 				9ADAB8BC7FF329AC6825B4E0 /* AppsFlyerLib-Strict in Frameworks */,
 				7FEED0D15659FAA9524EC369 /* AdServices.framework in Frameworks */,
 				A1874BD8927EE6C7815CDFD1 /* FirebaseAnalyticsCore in Frameworks */,
-				005BE756EBDE4416B29E671F /* FirebaseCrashlytics in Frameworks */,
+				005BE756EBDE4416B29E671F /* Sentry in Frameworks */,
 				2508E6F7C1102967E41F21D7 /* CPrismOptimizer in Frameworks */,
 				8E47D507C8B1937AFA9838BF /* GoogleMobileAds in Frameworks */,
 				FC985B51C2225DE21A03FB26 /* GoogleUserMessagingPlatform in Frameworks */,
@@ -821,6 +825,7 @@
 				15B83A71B2D67FEF7C430E4A /* Info.plist */,
 				0EEA3AE29E32D5330EDB1EA2 /* PrismRoll.entitlements */,
 				CB9410635D4F7209037FDB36 /* PrivacyInfo.xcprivacy */,
+				EE4013C0E4DE6713DDB0E3AD /* Sentry-LICENSE.txt */,
 				B83CD0C8F2A751A61561A4C4 /* ThirdPartyNotices.txt */,
 			);
 			path = Resources;
@@ -988,7 +993,8 @@
 				5EC01FBC3675C7CFF643426B /* DiagnosticsRuntime.swift */,
 				43C5B13C4D9EDA845A1928AE /* DiagnosticsService.swift */,
 				EDC83A717B51216FC5F691AA /* DiagnosticsTransport.swift */,
-				EA2EFB1D57B41BD76324B454 /* FirebaseDiagnosticsTransport.swift */,
+				D5A3518B883944994CF6B159 /* ErrorReporting.swift */,
+				9DB23A37CA8B94956852B040 /* GlitchTipDiagnosticsTransport.swift */,
 			);
 			path = Diagnostics;
 			sourceTree = "<group>";
@@ -1174,7 +1180,7 @@
 			packageProductDependencies = (
 				FF77E85524B0F610C0F7730F /* AppsFlyerLib-Strict */,
 				D40A81B65A8DBDBB140F843B /* FirebaseAnalyticsCore */,
-				8D5122BF402CD63FF346D1DC /* FirebaseCrashlytics */,
+				7E589319F1BDF6A78B66EB29 /* Sentry */,
 				7A04AFD6D867134E1120B37D /* CPrismOptimizer */,
 				E0D9431986DC1FE69E59ABC7 /* GoogleMobileAds */,
 				1833D866BAFAF8572C8AC11C /* GoogleUserMessagingPlatform */,
@@ -1260,6 +1266,7 @@
 				FB2CAB20609E0C60E283B3EA /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Strict" */,
 				B3DF7344BD50BC9210D3E4D5 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				CA28435D56BEB8BAD6FE815D /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				12D81F8D1205E851F6757911 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				08396C6BAC760FA7594C8210 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 				AD7EA556E0392862AA40F967 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */,
 				1CB635726FA813320C976537 /* XCLocalSwiftPackageReference "Packages/PrismOptimizer" */,
@@ -1301,6 +1308,7 @@
 				4CC88F6DCDB8ED1B022D5B16 /* Assets.xcassets in Resources */,
 				6EBC216BC8520BEE383CC065 /* GoogleService-Info.plist in Resources */,
 				4D4F9EBF8931A05223463913 /* PrivacyInfo.xcprivacy in Resources */,
+				C3DBDE70647564EF4F755672 /* Sentry-LICENSE.txt in Resources */,
 				16F76F3870422F022CFE7BF1 /* ThirdPartyNotices.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1467,8 +1475,8 @@
 				B254E9152057687E32BF9E75 /* DuelService+MatchmakerDelegate.swift in Sources */,
 				C28FAE6BBACDB12D355661DF /* DuelService.swift in Sources */,
 				9A0316A5D835E29FDF30F5DE /* DuelSession.swift in Sources */,
+				F73AB5D1A1D9CDC44772D1BB /* ErrorReporting.swift in Sources */,
 				DF481BCBF52EB62BF1048C91 /* FirebaseAnalyticsTransport.swift in Sources */,
-				8C0D572706E17ABF814917A4 /* FirebaseDiagnosticsTransport.swift in Sources */,
 				AA9CAF0228D26C303A83A0EA /* GameCenterAccountProgress.swift in Sources */,
 				3FD3FDC92689782E48D69C80 /* GameCenterAchievement.swift in Sources */,
 				84BC3BD9ACF85DA6B159AC1E /* GameCenterActivityCoordinator+Listener.swift in Sources */,
@@ -1502,6 +1510,7 @@
 				D3A50BA6A3EEAAB5B334C357 /* GameplaySwipeGestureRecognizer.swift in Sources */,
 				F6259E5558F28A946FA20F09 /* GameplaySwipeHostView.swift in Sources */,
 				563DD90F2BD93E0997EC8628 /* GameplayTouchPolicy.swift in Sources */,
+				AC1E4B81E363B38E76C17FB0 /* GlitchTipDiagnosticsTransport.swift in Sources */,
 				71E610F45328869A4910EA07 /* GridCell.swift in Sources */,
 				E2A0E6269F1D01BC4EA901A4 /* InstallAttributionConsentUpdating.swift in Sources */,
 				658984CDF13975B21CEBF3D0 /* InstallAttributionTransport.swift in Sources */,
@@ -1705,7 +1714,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = F35YQQ5672;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1804,7 +1813,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = F35YQQ5672;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1934,6 +1943,14 @@
 				version = 1.19.5;
 			};
 		};
+		12D81F8D1205E851F6757911 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = exactVersion;
+				version = 9.31.0;
+			};
+		};
 		AD7EA556E0392862AA40F967 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git";
@@ -1978,10 +1995,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = CPrismOptimizer;
 		};
-		8D5122BF402CD63FF346D1DC /* FirebaseCrashlytics */ = {
+		7E589319F1BDF6A78B66EB29 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B3DF7344BD50BC9210D3E4D5 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCrashlytics;
+			package = 12D81F8D1205E851F6757911 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 		948E1FA3BF95C57268AF2008 /* SnapshotTesting */ = {
 			isa = XCSwiftPackageProductDependency;

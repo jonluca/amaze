@@ -4,7 +4,7 @@ import GoogleMobileAds
 @main
 struct PrismRollApp: App {
     init() {
-        // AdMob's exception handlers otherwise replace Crashlytics' handlers.
+        // AdMob's exception handlers otherwise replace the native crash reporter's handlers.
         MobileAds.shared.disableSDKCrashReporting()
         DiagnosticsService.shared.configure()
         AnalyticsService.shared.configure()

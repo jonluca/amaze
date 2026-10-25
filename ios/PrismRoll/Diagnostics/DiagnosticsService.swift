@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class DiagnosticsService: ObservableObject, DiagnosticsRecording {
     static let shared = DiagnosticsService()
-    static let consentDefaultsKey = "prismroll.diagnostics.enabled"
+    static let consentDefaultsKey = "prismroll.diagnostics.glitchtip.enabled"
     static let maximumReportsPerSession = 8
 
     @Published private(set) var isEnabled: Bool
@@ -20,7 +20,7 @@ final class DiagnosticsService: ObservableObject, DiagnosticsRecording {
     private var reportedFailures: Set<DiagnosticFailure> = []
 
     convenience init() {
-        self.init(defaults: .standard, transport: FirebaseDiagnosticsTransport(), runtime: .current)
+        self.init(defaults: .standard, transport: GlitchTipDiagnosticsTransport(), runtime: .current)
     }
 
     init(defaults: UserDefaults, transport: any DiagnosticsTransport, runtime: DiagnosticsRuntime) {
@@ -51,7 +51,7 @@ final class DiagnosticsService: ObservableObject, DiagnosticsRecording {
         if enabled {
             configure()
         } else {
-            // Crashlytics cannot retract a pending-report action already granted
+            // The collector cannot retract a pending-report action already granted
             // this launch. Stop new custom errors and future authorizations only.
             isCollecting = false
         }

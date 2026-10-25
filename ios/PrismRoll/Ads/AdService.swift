@@ -17,6 +17,27 @@ final class AdService: NSObject, ObservableObject {
         case presentationFailed = "presentation_failed"
     }
 
+    /// One latch per single-use full-screen ad; no identifiers or receipt history persist.
+    @MainActor
+    private final class PaidEventReceipt {
+        let analytics: any AnalyticsRecording
+        let format: String
+        private var consumed = false
+
+        init(analytics: any AnalyticsRecording, rewarded: Bool) {
+            self.analytics = analytics
+            format = rewarded ? "rewarded" : "interstitial"
+        }
+
+        func record(value: Double, currency: String, precision: Int, occurredAt: ContinuousClock.Instant) {
+            guard !consumed else { return }
+            // Consume even if consent/validation drops it; later opt-in must not replay it.
+            consumed = true
+            analytics.recordAdRevenue(value: value, currency: currency, precision: precision,
+                                      format: format, occurredAt: occurredAt)
+        }
+    }
+
     @Published private(set) var rewardedAvailability: RewardedAdAvailability = .loading
     @Published private(set) var isPresenting = false
     @Published private(set) var privacyOptionsRequired = false
@@ -214,6 +235,21 @@ final class AdService: NSObject, ObservableObject {
         recordPresentationEvent("ad_shown", presentation: presentation)
     }
 
+    func makePaidEventHandler(rewarded: Bool) -> GADPaidEventHandler {
+        let receipt = PaidEventReceipt(analytics: analytics, rewarded: rewarded)
+        return { adValue in
+            // Capture SDK values at receipt; never hold the ad object or read its response IDs.
+            let occurredAt = ContinuousClock.now
+            let value = adValue.value.doubleValue
+            let currency = adValue.currencyCode
+            let precision = adValue.precision.rawValue
+            // The SDK callback type has no actor contract. Cross into the owner once.
+            DispatchQueue.main.async {
+                receipt.record(value: value, currency: currency, precision: precision, occurredAt: occurredAt)
+            }
+        }
+    }
+
     func finishPresentation(_ ad: any FullScreenPresentingAd, failed: Bool) {
         guard let presentation = activePresentation, presentation.ad === ad else { return }
         activePresentation = nil
@@ -289,6 +325,7 @@ final class AdService: NSObject, ObservableObject {
                 guard !Task.isCancelled, revision == consentRevision,
                       ConsentInformation.shared.canRequestAds else { return }
                 ad.fullScreenContentDelegate = self
+                ad.paidEventHandler = makePaidEventHandler(rewarded: true)
                 rewardedAd = LoadedAd(ad: ad)
                 rewardedRetry.succeeded()
                 statusMessage = "Optional reward videos are ready."
@@ -318,6 +355,7 @@ final class AdService: NSObject, ObservableObject {
                 guard !Task.isCancelled, !interstitialsDisabled, revision == consentRevision,
                       ConsentInformation.shared.canRequestAds else { return }
                 ad.fullScreenContentDelegate = self
+                ad.paidEventHandler = makePaidEventHandler(rewarded: false)
                 interstitialAd = LoadedAd(ad: ad)
                 interstitialRetry.succeeded()
             } catch {

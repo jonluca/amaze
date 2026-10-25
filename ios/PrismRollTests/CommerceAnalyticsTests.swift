@@ -116,6 +116,11 @@ final class CommerceAnalyticsTests: XCTestCase {
         func record(_ name: String, parameters: [String: Any]) {
             events.append((name, parameters))
         }
+
+        func recordAdRevenue(value: Double, currency: String, precision: Int, format: String, occurredAt: ContinuousClock.Instant) {
+            record("ad_revenue_paid", parameters: ["ad_value": value, "ad_currency": currency,
+                                                  "ad_value_precision": precision, "ad_format": format])
+        }
     }
 }
 #endif

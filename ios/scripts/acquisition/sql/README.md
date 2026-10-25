@@ -1,8 +1,8 @@
 # GA4 BigQuery analysis templates
 
-These are **unexecuted GoogleSQL templates**, not live query results. On September 20, 2026, the owner configured daily exports for both streams into project `prism-roll`, region `US`; expected dataset `analytics_554682731` was not yet created. Wait for actual `events_YYYYMMDD` tables before validating/executing. No historical backfill is assumed.
+These are **prepared GoogleSQL templates**, not live dashboard results. Daily exports use project `prism-roll`, region `US`, dataset `analytics_554682731`. The first export was verified on September 23; the October 25 table inventory contained `events_20260920`, `events_20260927` and `events_20261018`. That inventory does not establish complete date coverage or validate these full reports. Inspect actual `events_YYYYMMDD` tables before validating/executing each template. No historical backfill is assumed.
 
-Known streams: iOS `15792271279` (`com.jonluca.prismroll`), web `15812996264` (`playprismroll.com`). The property timezone still needs verification. Queries use exported `event_date` calendar labels instead of guessing UTC. `event_timestamp` is used only for ordered 24-hour activation. The Apple Date timezone remains independently unverified; matching date labels do not establish a common clock or audience.
+Known streams: iOS `15792271279` (`com.jonluca.prismroll`), web `15812996264` (`playprismroll.com`). The property timezone is America/Los_Angeles. Queries use exported `event_date` calendar labels instead of guessing UTC. `event_timestamp` is used only for ordered 24-hour activation. The Apple Date timezone remains independently unverified; matching date labels do not establish a common clock or audience.
 
 ## Saved GA4 views
 
@@ -44,6 +44,16 @@ GA4 daily tables can be revised for late arrivals for up to three days. Verify t
 `combined_daily_observations.sql` places Apple and GA4 rows alongside one another with `UNION ALL`; it never joins identities or manufactures a common conversion denominator. Load collector `observations.jsonl` into `prism-roll.reporting.apple_acquisition_current` with WRITE_TRUNCATE first, or edit that table reference to the authorized target. This collector does not create that dataset/table.
 
 Web events are `page_view` and `app_store_click`. The latter measures an outbound click, not installation or launch. Approved `apple_ct` campaign tokens and `campaign_source` remain web dimensions; they do not prove which Apple download belongs to that visitor. Apple territory codes and GA4 country names are explicitly labeled separately. Event counts can be summed within their metric/population; distinct identities cannot be added across date/source/event groups. Apple unique counts are excluded from the additive union.
+
+## Prepared paid-impression receipt diagnostic
+
+`ad_revenue_paid_receipts.sql` is prepared for the **unreleased** custom `ad_revenue_paid` event described in [native analytics](../../../ANALYTICS.md#next-build-paid-callback-diagnostic). It has not been run in BigQuery and is **not operational** until a new app build is released, ordinary opted-in ad activity produces a receipt, and the exported parameter types are verified. The base fields match the actual `events_20260920` schema inspected on September 22, 2026; that older table cannot establish receipt of this new event. Automatic publisher `ad_impression` events are not exported to BigQuery, so this separate diagnostic does not replace GA4 Publisher ads or AdMob reports.
+
+Supply inclusive DATE parameters `start_date` and `end_date`, spanning at most 31 past dates. The query uses only daily tables, iOS stream `15792271279`, the Prism Roll bundle, and `analytics_storage=Yes`. It returns aggregate receipt-row counts and custom `ad_value` sums by exported day, app version, currency, ad format, SDK precision and QA/debug status. It reads no installation identifiers and calculates no unique-user or acquisition totals. No QA marker means **unclassified**, not proven customer activity. Precision 0 means unknown; a reported zero is preserved and is not evidence of positive payment. Keep currencies, precision classes, QA groups and source populations separate, and never add these amounts to GA4 standard revenue, purchases, or AdMob earnings.
+
+Missing or malformed parameters remain null. A group containing an invalid receipt has a null amount total rather than a partial sum. Missing daily tables and daily tables with no matching receipts have distinct coverage labels, with null counts/amounts rather than fabricated zero revenue. The date-maturity label uses the property's verified America/Los_Angeles timezone and Google's ordinary three-day late-arrival window; it does not certify complete coverage or rule out later corrections. Debug traffic may be excluded from exports, and people who decline analytics remain outside this diagnostic population.
+
+Before any execution, inspect the current schema and table inventory, use the signed-in project/account already verified for this task, and validate the full query. Confirm the estimate is **below 100 MB** and set **Maximum bytes billed to `100000000`** in the editor's **Edit → Query settings → Advanced options**. Do not switch CLI identities, enable billing/streaming, or create persistent tables. Start with one known daily export date after the release; expand only when the displayed estimate remains within the cap. An offline parser check is not a BigQuery dry run or proof of provider receipt.
 
 ## Cost, retention and validation
 

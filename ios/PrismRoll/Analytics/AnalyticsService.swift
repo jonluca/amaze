@@ -20,6 +20,7 @@ final class AnalyticsService: ObservableObject, AnalyticsRecording, PurchaseAnal
     private let dateProvider: () -> Date
     private var isConfigured = false
     private var isCollecting = false
+    private var collectionStartedAt: ContinuousClock.Instant?
     private var purchaseRevenuePolicy: PurchaseRevenuePolicy
     private var purchasePeriodStart: Date?
 
@@ -68,6 +69,19 @@ final class AnalyticsService: ObservableObject, AnalyticsRecording, PurchaseAnal
         record("screen_view", parameters: ["screen_name": name, "screen_class": "PrismRoll"])
     }
 
+    /// A separate SDK receipt diagnostic, never a second automatic revenue event.
+    func recordAdRevenue(value: Double, currency: String, precision: Int, format: String, occurredAt: ContinuousClock.Instant) {
+        guard isEnabled, isCollecting, let collectionStartedAt, occurredAt >= collectionStartedAt,
+              value.isFinite, value >= 0, currency.utf8.count == 3,
+              currency.utf8.allSatisfy({ (65...90).contains($0) }),
+              format == "rewarded" || format == "interstitial" else { return }
+        // Custom field names keep this diagnostic out of standard revenue/event-value sums.
+        transport.record("ad_revenue_paid", parameters: [
+            "ad_value": value, "ad_currency": currency,
+            "ad_value_precision": precision, "ad_format": format
+        ])
+    }
+
     func recordVerifiedPurchase(_ transaction: Transaction) {
         guard runtime.allowsCollection, transaction.revocationDate == nil, !transaction.isUpgraded else { return }
         // Remember suppressed purchases too: enabling analytics later must not replay
@@ -108,9 +122,11 @@ final class AnalyticsService: ObservableObject, AnalyticsRecording, PurchaseAnal
             }
             transport.setAnalyticsConsent(granted: true)
             transport.setCollectionEnabled(true)
+            collectionStartedAt = .now
             isCollecting = true
         } else if isConfigured, isCollecting {
             isCollecting = false
+            collectionStartedAt = nil
             transport.setCollectionEnabled(false)
             transport.setAnalyticsConsent(granted: false)
             transport.resetAnalyticsData()
